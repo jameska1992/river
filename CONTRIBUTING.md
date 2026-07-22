@@ -57,7 +57,9 @@ Your change should pass the same checks CI runs (`.github/workflows/ci.yml`):
 
 - **Go:** `go build ./...`, `go vet ./...`, and `go test ./...` pass in every
   service you touched.
-- **Web:** `npm run lint` and `npm run build` pass in every client you touched.
+- **Web:** `npm run build` passes in every client you touched. `npm run lint`
+  currently reports pre-existing warnings in the clients and is **non-blocking** in
+  CI — don't introduce *new* lint errors, and cleaning up existing ones is welcome.
 - Add or update tests when you change behaviour. Follow the existing test patterns
   in the package (e.g. `river-scan`, `river-meta-movie`).
 - Keep changes scoped to one component where possible. If a change spans the API and

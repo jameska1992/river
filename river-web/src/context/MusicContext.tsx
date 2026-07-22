@@ -133,6 +133,7 @@ export function MusicProvider({ children }: { children: ReactNode }) {
   )
 }
 
+// eslint-disable-next-line react-refresh/only-export-components -- context hook colocated with its provider; separating adds no runtime value
 export function useMusic(): MusicState {
   const ctx = useContext(MusicContext)
   if (!ctx) throw new Error('useMusic must be used within MusicProvider')

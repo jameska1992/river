@@ -1,6 +1,6 @@
 import { useFocusable } from '../hooks/useFocus'
 import { imageUrl } from '../util/imageUrl'
-import { useRowEnsureVisible } from './Row'
+import { useRowEnsureVisible } from './rowContext'
 
 interface Props {
   title: string

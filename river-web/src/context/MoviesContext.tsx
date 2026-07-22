@@ -68,6 +68,7 @@ export function MoviesProvider({ children }: { children: ReactNode }) {
   )
 }
 
+// eslint-disable-next-line react-refresh/only-export-components -- context hook colocated with its provider; separating adds no runtime value
 export function useMovies(): MoviesState {
   const ctx = useContext(MoviesContext)
   if (!ctx) throw new Error('useMovies must be used within MoviesProvider')

@@ -155,6 +155,10 @@ function PlayerInner({
 
   // Initial controls timer.
   useEffect(() => {
+    // Show controls on mount and arm the auto-hide timer. The setState is
+    // a no-op on the first render (showControls already starts true); the
+    // point is to start the hide countdown.
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional mount-time UI initialization (arms the controls auto-hide timer)
     bumpControls()
     return () => {
       if (hideTimer.current) window.clearTimeout(hideTimer.current)
@@ -197,6 +201,10 @@ function PlayerInner({
     }
     const interval = window.setInterval(tick, 1000)
     return () => {
+      // Read the live video element at unmount time to flush its final
+      // position — copying videoRef.current at effect-setup (as the lint
+      // rule suggests) would send a stale currentTime/duration.
+      // eslint-disable-next-line react-hooks/exhaustive-deps -- cleanup must read the current ref at unmount to flush final playback progress
       const v = videoRef.current
       if (v && v.duration) sock.send(progressKind, progressId, v.currentTime, v.duration)
       window.clearInterval(interval)

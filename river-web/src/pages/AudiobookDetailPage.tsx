@@ -34,6 +34,7 @@ export function AudiobookDetailPage() {
 
   useEffect(() => {
     if (!id) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- resets loading state before refetching when the route id changes
     setIsLoading(true)
     setError(null)
     Promise.all([getOne(id), fetchChapters(id)])

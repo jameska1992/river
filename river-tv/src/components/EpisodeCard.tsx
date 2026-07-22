@@ -1,5 +1,5 @@
 import { useFocusable } from '../hooks/useFocus'
-import { useRowEnsureVisible } from './Row'
+import { useRowEnsureVisible } from './rowContext'
 
 interface Props {
   number: number

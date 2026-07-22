@@ -62,6 +62,7 @@ export function LibrariesProvider({ children }: { children: ReactNode }) {
   )
 }
 
+// eslint-disable-next-line react-refresh/only-export-components -- context hook colocated with its provider; separating adds no runtime value
 export function useLibraries(): LibrariesState {
   const ctx = useContext(LibrariesContext)
   if (!ctx) throw new Error('useLibraries must be used within LibrariesProvider')

@@ -42,7 +42,8 @@ function useSortPref(libraryId: string, fallback: SortState) {
   const [state, setState] = useState<SortState>(() => loadSort(libraryId, fallback))
   // Reset when the library changes — otherwise the hook would keep the
   // previous library's pick until the next setSort.
-  useEffect(() => { setState(loadSort(libraryId, fallback)) }, [libraryId]) // eslint-disable-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps, react-hooks/set-state-in-effect -- resyncs sort pref from storage when the library id changes
+  useEffect(() => { setState(loadSort(libraryId, fallback)) }, [libraryId])
   const setSort = useCallback((field: string, order: SortOrder) => {
     const next = { field, order }
     setState(next)

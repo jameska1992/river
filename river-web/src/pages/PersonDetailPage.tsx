@@ -16,6 +16,7 @@ export function PersonDetailPage() {
 
   useEffect(() => {
     if (!id) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- resets loading state before refetching when the route id changes
     setIsLoading(true)
     api.getPerson(id)
       .then(setPerson)
@@ -72,6 +73,7 @@ export function PersonDetailPage() {
             <p
               ref={bioRef}
               className={`body-md ${styles.bio}`}
+              // eslint-disable-next-line react-hooks/refs -- reads measured scrollHeight to animate the bio expand; the ?? fallback covers the first render before the ref attaches
               style={{ maxHeight: bioExpanded ? `${bioRef.current?.scrollHeight ?? 9999}px` : '6.8em' }}
             >
               {person.biography}

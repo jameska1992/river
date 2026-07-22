@@ -100,6 +100,7 @@ export function TVShowDetailPage() {
 
   useEffect(() => {
     if (!id) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- resets loading state before refetching when the route id changes
     setIsLoading(true)
     Promise.all([getOne(id), fetchSeasons(id), api.getTVShowCredits(id).catch(() => null)])
       .then(([s, seas, c]) => {
@@ -132,6 +133,7 @@ export function TVShowDetailPage() {
   // Load episodes for initially expanded season
   useEffect(() => {
     if (expandedSeason && !episodes[expandedSeason]) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- lazily fetches episodes for the expanded season; guarded to run once per season
       loadEpisodes(expandedSeason)
     }
   }, [expandedSeason, episodes, loadEpisodes])

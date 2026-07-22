@@ -74,6 +74,7 @@ export function OverviewPage() {
   }
 
   const timeAgo = (iso: string) => {
+    // eslint-disable-next-line react-hooks/purity -- relative-time label read from the current clock; refreshes naturally on the page's periodic re-renders
     const secs = Math.floor((Date.now() - new Date(iso).getTime()) / 1000)
     if (secs < 60) return `${secs}s ago`
     const mins = Math.floor(secs / 60)

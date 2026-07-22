@@ -117,12 +117,13 @@ export function MovieWatchPage() {
     meta.title = movie.title
     if (movie.poster_path) meta.images = [{ url: movie.poster_path }]
     loadCastMedia(videoSrc, 'video/mp4', meta, videoRef.current?.currentTime)
-  }, [isCasting, movie, videoSrc, loadCastMedia]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isCasting, movie, videoSrc, loadCastMedia])
 
   // Fetch and parse VTT when active subtitle changes
   useEffect(() => {
     if (!activeSubtitleId) {
       subtitleCuesRef.current = []
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- clears rendered subtitle text when the active subtitle is turned off
       setSubtitleText('')
       return
     }
@@ -172,6 +173,7 @@ export function MovieWatchPage() {
 
   useEffect(() => {
     if (!playing) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- shows/schedules hiding of the controls overlay in response to play state
       setControlsVisible(true)
       if (hideTimerRef.current) clearTimeout(hideTimerRef.current)
     } else {
@@ -247,7 +249,8 @@ export function MovieWatchPage() {
   const togglePlay = () => {
     const v = videoRef.current
     if (!v || (partyId && !isHost)) return
-    v.paused ? v.play() : v.pause()
+    if (v.paused) void v.play()
+    else v.pause()
   }
 
   const toggleMute = () => {
@@ -294,6 +297,7 @@ export function MovieWatchPage() {
     const nativeTracks = (videoRef.current as VideoWithAudioTracks | null)?.audioTracks
     if (nativeTracks && nativeTracks.length > 0) {
       for (let i = 0; i < nativeTracks.length; i++) {
+        // eslint-disable-next-line react-hooks/immutability -- mutating the native HTMLMediaElement AudioTrackList (a DOM API), not React ref state
         nativeTracks[i].enabled = i === index
       }
     } else {
@@ -308,7 +312,8 @@ export function MovieWatchPage() {
   const toggleFullscreen = () => {
     const el = containerRef.current
     if (!el) return
-    document.fullscreenElement ? document.exitFullscreen() : el.requestFullscreen()
+    if (document.fullscreenElement) void document.exitFullscreen()
+    else void el.requestFullscreen()
   }
 
   const togglePip = () => {

@@ -1,31 +1,20 @@
 import {
-  createContext,
   useCallback,
-  useContext,
   useEffect,
   useState,
   type ReactNode,
 } from 'react'
-import { api, ApiError, type User } from '../api'
-
-interface AuthState {
-  user: User | null
-  isLoading: boolean
-  login: (username: string, password: string) => Promise<void>
-  logout: () => Promise<void>
-}
-
-const AuthContext = createContext<AuthState | null>(null)
+import { api, type User } from '../api'
+import { AuthContext } from './authContext'
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+  // Only authenticated sessions need an async "me()" fetch; if there's no
+  // token we're immediately settled, so start loading=false in that case.
+  const [isLoading, setIsLoading] = useState(() => api.isAuthenticated)
 
   useEffect(() => {
-    if (!api.isAuthenticated) {
-      setIsLoading(false)
-      return
-    }
+    if (!api.isAuthenticated) return
     api.me()
       .then(setUser)
       .catch(() => api.clearAuth())
@@ -48,11 +37,3 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     </AuthContext.Provider>
   )
 }
-
-export function useAuth(): AuthState {
-  const ctx = useContext(AuthContext)
-  if (!ctx) throw new Error('useAuth must be used within AuthProvider')
-  return ctx
-}
-
-export { ApiError }

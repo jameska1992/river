@@ -1,6 +1,6 @@
 import { useRef, useState, type ChangeEvent, type FormEvent } from 'react'
-import { useAuth, ApiError } from '../context/AuthContext'
-import { api } from '../api'
+import { useAuth } from '../context/authContext'
+import { api, ApiError } from '../api'
 import { FocusProvider, useFocusable } from '../hooks/useFocus'
 import { Popup } from '../components/Popup'
 

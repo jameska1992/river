@@ -89,6 +89,7 @@ export function AudiobooksProvider({ children }: { children: ReactNode }) {
   )
 }
 
+// eslint-disable-next-line react-refresh/only-export-components -- context hook colocated with its provider; separating adds no runtime value
 export function useAudiobooks(): AudiobooksState {
   const ctx = useContext(AudiobooksContext)
   if (!ctx) throw new Error('useAudiobooks must be used within AudiobooksProvider')

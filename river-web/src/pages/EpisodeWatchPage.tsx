@@ -92,17 +92,6 @@ export function EpisodeWatchPage() {
     () => showId && seasonId && episodeId ? episodeStreamUrl(showId, seasonId, episodeId) : undefined
   )
 
-  // Re-sync stream URL and reset playback state when params change
-  useEffect(() => {
-    if (!showId || !seasonId || !episodeId) return
-    setVideoSrc(episodeStreamUrl(showId, seasonId, episodeId))
-    setCurrentTime(0)
-    setDuration(0)
-    setUpNextDismissed(false)
-    lastReportRef.current = 0
-    progressRef.current = { position: 0, duration: 0 }
-  }, [showId, seasonId, episodeId, episodeStreamUrl])
-
   const [playing, setPlaying] = useState(false)
   const [muted, setMuted] = useState(false)
   const [volume, setVolume] = useState(1)
@@ -124,6 +113,18 @@ export function EpisodeWatchPage() {
   const [prevEpisode, setPrevEpisode] = useState<NextEpisodeInfo | null>(null)
   const [nextEpisode, setNextEpisode] = useState<NextEpisodeInfo | null>(null)
   const [upNextDismissed, setUpNextDismissed] = useState(false)
+
+  // Re-sync stream URL and reset playback state when params change
+  useEffect(() => {
+    if (!showId || !seasonId || !episodeId) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- resets the player when the show/season/episode params change
+    setVideoSrc(episodeStreamUrl(showId, seasonId, episodeId))
+    setCurrentTime(0)
+    setDuration(0)
+    setUpNextDismissed(false)
+    lastReportRef.current = 0
+    progressRef.current = { position: 0, duration: 0 }
+  }, [showId, seasonId, episodeId, episodeStreamUrl])
 
   // Resolve prev/next sequential episodes, crossing season boundaries as needed
   useEffect(() => {
@@ -205,7 +206,7 @@ export function EpisodeWatchPage() {
     const meta = new chrome.cast.media.GenericMediaMetadata()
     meta.title = title
     loadCastMedia(videoSrc, 'video/mp4', meta, videoRef.current?.currentTime)
-  }, [isCasting, videoSrc, title, loadCastMedia]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isCasting, videoSrc, title, loadCastMedia])
 
   useEffect(() => {
     if (!showId || !seasonId || !episodeId) return
@@ -220,6 +221,7 @@ export function EpisodeWatchPage() {
   useEffect(() => {
     if (!activeSubtitleId) {
       subtitleCuesRef.current = []
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- clears rendered subtitle text when the active subtitle is turned off
       setSubtitleText('')
       return
     }
@@ -268,6 +270,7 @@ export function EpisodeWatchPage() {
 
   useEffect(() => {
     if (!playing) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- shows/schedules hiding of the controls overlay in response to play state
       setControlsVisible(true)
       if (hideTimerRef.current) clearTimeout(hideTimerRef.current)
     } else {
@@ -349,7 +352,8 @@ export function EpisodeWatchPage() {
   const togglePlay = () => {
     const v = videoRef.current
     if (!v || (partyId && !isHost)) return
-    v.paused ? v.play() : v.pause()
+    if (v.paused) void v.play()
+    else v.pause()
   }
 
   const toggleMute = () => {
@@ -396,6 +400,7 @@ export function EpisodeWatchPage() {
     const nativeTracks = (videoRef.current as VideoWithAudioTracks | null)?.audioTracks
     if (nativeTracks && nativeTracks.length > 0) {
       for (let i = 0; i < nativeTracks.length; i++) {
+        // eslint-disable-next-line react-hooks/immutability -- mutating the native HTMLMediaElement AudioTrackList (a DOM API), not React ref state
         nativeTracks[i].enabled = i === index
       }
     } else {
@@ -410,7 +415,8 @@ export function EpisodeWatchPage() {
   const toggleFullscreen = () => {
     const el = containerRef.current
     if (!el) return
-    document.fullscreenElement ? document.exitFullscreen() : el.requestFullscreen()
+    if (document.fullscreenElement) void document.exitFullscreen()
+    else void el.requestFullscreen()
   }
 
   const togglePip = () => {

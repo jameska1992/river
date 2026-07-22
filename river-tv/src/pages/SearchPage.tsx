@@ -24,6 +24,8 @@ export default function SearchPage() {
   // fast one would overwrite newer results.
   useEffect(() => {
     if (!q.trim()) {
+      // Clear stale results immediately when the query is emptied.
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- debounced-search effect; result/loading state syncs synchronously with the query input
       setResult(null)
       setLoading(false)
       return

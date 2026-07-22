@@ -44,6 +44,7 @@ export function MovieDetailPage() {
 
   useEffect(() => {
     if (!id) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- resets loading state before refetching when the route id changes
     setIsLoading(true)
     setError(null)
     Promise.all([getOne(id), api.getMovieCredits(id).catch(() => null)])
@@ -101,6 +102,7 @@ export function MovieDetailPage() {
   // would matter (more than a few minutes idle) the user has either
   // started the movie or moved on. movie.runtime is in minutes.
   const endsAt = movie.runtime > 0
+    // eslint-disable-next-line react-hooks/purity -- intentional one-shot wall-clock read for a display-only "ends at" estimate (see comment above)
     ? new Date(Date.now() + movie.runtime * 60_000)
         .toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
     : null

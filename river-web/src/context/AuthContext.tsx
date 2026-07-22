@@ -21,13 +21,10 @@ const AuthContext = createContext<AuthState | null>(null)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+  const [isLoading, setIsLoading] = useState(() => api.isAuthenticated)
 
   useEffect(() => {
-    if (!api.isAuthenticated) {
-      setIsLoading(false)
-      return
-    }
+    if (!api.isAuthenticated) return
     api.me()
       .then(setUser)
       .catch(() => api.clearAuth())
@@ -60,6 +57,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   )
 }
 
+// eslint-disable-next-line react-refresh/only-export-components -- context hook colocated with its provider; separating adds no runtime value
 export function useAuth(): AuthState {
   const ctx = useContext(AuthContext)
   if (!ctx) throw new Error('useAuth must be used within AuthProvider')

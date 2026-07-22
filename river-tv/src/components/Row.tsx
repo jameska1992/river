@@ -1,16 +1,5 @@
-import { createContext, useCallback, useContext, useMemo, useRef, type ReactNode } from 'react'
-
-interface RowCtx {
-  ensureVisible: () => void
-}
-
-const Ctx = createContext<RowCtx | null>(null)
-
-/** Cards inside a Row call this to scroll the entire section (title +
- *  cards + a bit of margin) into view when they gain focus. */
-export function useRowEnsureVisible() {
-  return useContext(Ctx)?.ensureVisible
-}
+import { useCallback, useMemo, useRef, type ReactNode } from 'react'
+import { RowCtx } from './rowContext'
 
 interface Props {
   title: string
@@ -30,14 +19,14 @@ export function Row({ title, children }: Props) {
   const ctx = useMemo(() => ({ ensureVisible }), [ensureVisible])
 
   return (
-    <Ctx.Provider value={ctx}>
+    <RowCtx.Provider value={ctx}>
       <section ref={sectionRef} style={styles.section}>
         <h2 style={styles.title}>{title}</h2>
         <div style={styles.scroller}>
           {children}
         </div>
       </section>
-    </Ctx.Provider>
+    </RowCtx.Provider>
   )
 }
 

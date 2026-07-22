@@ -58,6 +58,7 @@ export function AudiobookListenPage() {
 
   useEffect(() => {
     if (!audiobookId) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- resets loading state before refetching when the audiobook id changes
     setIsLoading(true)
     Promise.all([getOne(audiobookId), fetchChapters(audiobookId)])
       .then(([b, chs]) => {
@@ -85,6 +86,7 @@ export function AudiobookListenPage() {
 
   useEffect(() => {
     if (!audiobookId || !currentChapter) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- resets playback position when the current chapter changes
     setCurrentTime(0)
     lastReportRef.current = 0
     setAudioSrc(chapterStreamUrl(audiobookId, currentChapter.id))
@@ -151,7 +153,7 @@ export function AudiobookListenPage() {
       : `${book.title} · Chapter ${currentChapter.number}`
     if (book.cover_path) meta.images = [{ url: book.cover_path }]
     loadCastMedia(audioSrc, 'audio/mp4', meta, audioRef.current?.currentTime)
-  }, [isCasting, book, currentChapter, audioSrc, loadCastMedia]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isCasting, book, currentChapter, audioSrc, loadCastMedia])
 
   const onLoadedMetadata = () => {
     const a = audioRef.current
@@ -217,7 +219,8 @@ export function AudiobookListenPage() {
   const togglePlay = useCallback(() => {
     const a = audioRef.current
     if (!a) return
-    a.paused ? a.play() : a.pause()
+    if (a.paused) void a.play()
+    else a.pause()
   }, [])
 
   const toggleMute = useCallback(() => {

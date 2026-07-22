@@ -23,9 +23,11 @@ export function useWatchParty(
   const socketRef = useRef<ReturnType<typeof api.openWatchPartySocket> | null>(null)
   // Refs so message handler always sees current values without re-registering
   const isHostRef = useRef(isHost)
-  isHostRef.current = isHost
   const videoRefRef = useRef<React.RefObject<HTMLVideoElement | null>>(videoRef)
-  videoRefRef.current = videoRef
+  useEffect(() => {
+    isHostRef.current = isHost
+    videoRefRef.current = videoRef
+  })
 
   const sendCommand = useCallback((type: 'play' | 'pause' | 'seek', position: number) => {
     socketRef.current?.send(type, position)

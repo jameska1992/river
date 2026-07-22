@@ -11,7 +11,7 @@ import {
   RiSearchLine,
   RiTv2Line,
 } from 'react-icons/ri'
-import { useAuth } from '../context/AuthContext'
+import { useAuth } from '../context/authContext'
 import { useFocusable } from '../hooks/useFocus'
 
 /*

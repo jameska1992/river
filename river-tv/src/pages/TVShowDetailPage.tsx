@@ -69,6 +69,7 @@ export default function TVShowDetailPage() {
   useEffect(() => {
     if (!id || !selectedSeasonId) return
     let alive = true
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- data-fetching effect; loading state must flip synchronously when the selected season changes
     setEpisodesLoading(true)
     api.listEpisodes(id, selectedSeasonId)
       .then(eps => { if (alive) setEpisodes([...eps].sort((a, b) => a.number - b.number)) })

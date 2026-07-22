@@ -1,0 +1,75 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  go:
+    name: go (${{ matrix.service }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service:
+          - river-api
+          - river-scan
+          - river-video-trans
+          - river-audio-trans
+          - river-meta-movie
+          - river-meta-tv
+          - river-meta-book
+          - river-meta-music
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: ${{ matrix.service }}/go.mod
+          cache-dependency-path: ${{ matrix.service }}/go.sum
+      - name: build
+        working-directory: ${{ matrix.service }}
+        run: go build ./...
+      - name: vet
+        working-directory: ${{ matrix.service }}
+        run: go vet ./...
+      - name: test
+        working-directory: ${{ matrix.service }}
+        run: go test ./...
+
+  web:
+    name: web (${{ matrix.client }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        client:
+          - river-web
+          - river-tv
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: ${{ matrix.client }}/package-lock.json
+      - name: install
+        working-directory: ${{ matrix.client }}
+        run: npm ci
+      # Non-blocking: the clients carry pre-existing eslint debt. Surfaced
+      # for feedback so new errors are visible, but it doesn't fail CI yet.
+      - name: lint
+        working-directory: ${{ matrix.client }}
+        continue-on-error: true
+        run: npm run lint
+      - name: build
+        working-directory: ${{ matrix.client }}
+        run: npm run build

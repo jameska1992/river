@@ -48,6 +48,7 @@ export function LogsPage() {
   }, [level, service, from, to])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- resets to the first page and refetches when filters change
     setPage(1)
     void load(1)
   }, [level, service, from, to, load])

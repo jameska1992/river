@@ -43,6 +43,7 @@ export function MusicPlayerPage() {
 
   useEffect(() => {
     if (!albumId) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- resets loading state before refetching when the album id changes
     setIsLoading(true)
     getAlbum(albumId)
       .then(async a => {
@@ -70,6 +71,7 @@ export function MusicPlayerPage() {
   useEffect(() => {
     if (!currentTrack) return
     pendingPlayRef.current = playing
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- resets playback position when the current track changes
     setCurrentTime(0)
     setAudioSrc(trackStreamUrl(currentTrack.id))
   }, [currentTrack?.id]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -139,7 +141,8 @@ export function MusicPlayerPage() {
   const togglePlay = useCallback(() => {
     const a = audioRef.current
     if (!a) return
-    a.paused ? a.play() : a.pause()
+    if (a.paused) void a.play()
+    else a.pause()
   }, [])
 
   const toggleMute = useCallback(() => {

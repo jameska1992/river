@@ -86,6 +86,7 @@ interface FocusCtx {
 
 const Ctx = createContext<FocusCtx | null>(null)
 
+// eslint-disable-next-line react-refresh/only-export-components -- hook co-located with FocusProvider by design; splitting the focus manager across files is high-risk. Only affects dev-only HMR.
 export function useFocusContext() {
   return useContext(Ctx)
 }
@@ -297,6 +298,7 @@ export function FocusProvider({
 let nextId = 0
 function genId() { return `f${++nextId}` }
 
+// eslint-disable-next-line react-refresh/only-export-components -- hook co-located with FocusProvider by design; splitting the focus manager across files is high-risk. Only affects dev-only HMR.
 export function useFocusable<T extends HTMLElement = HTMLElement>(
   onSelect?: () => void,
   options?: {
@@ -326,8 +328,10 @@ export function useFocusable<T extends HTMLElement = HTMLElement>(
   // Stash inline-object options via refs so callers can pass them
   // without triggering re-registration each render.
   const overridesRef = useRef(options?.overrides)
+  // eslint-disable-next-line react-hooks/refs -- intentional "latest value" ref; stashing options here keeps registration stable across renders (see comment above)
   overridesRef.current = options?.overrides
   const customDirectionsRef = useRef(options?.customDirections)
+  // eslint-disable-next-line react-hooks/refs -- intentional "latest value" ref; stashing options here keeps registration stable across renders
   customDirectionsRef.current = options?.customDirections
 
   // Stash handlers in refs so re-renders that pass new function
@@ -337,8 +341,10 @@ export function useFocusable<T extends HTMLElement = HTMLElement>(
   // currently focused element, the unregister cascade would shift focus
   // away before the next register call finished.
   const onSelectRef = useRef(onSelect)
+  // eslint-disable-next-line react-hooks/refs -- intentional "latest handler" ref so inline callbacks don't force unregister/register churn (see comment above)
   onSelectRef.current = onSelect
   const onFocusChangeRef = useRef(options?.onFocusChange)
+  // eslint-disable-next-line react-hooks/refs -- intentional "latest handler" ref so inline callbacks don't force unregister/register churn
   onFocusChangeRef.current = options?.onFocusChange
 
   useEffect(() => {

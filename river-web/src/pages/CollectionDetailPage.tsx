@@ -33,7 +33,8 @@ function loadSort(collectionId: string, fallback: SortState): SortState {
 
 function useSortPref(collectionId: string, fallback: SortState) {
   const [state, setState] = useState<SortState>(() => loadSort(collectionId, fallback))
-  useEffect(() => { setState(loadSort(collectionId, fallback)) }, [collectionId]) // eslint-disable-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps, react-hooks/set-state-in-effect -- resyncs sort pref from storage when the collection id changes
+  useEffect(() => { setState(loadSort(collectionId, fallback)) }, [collectionId])
   const setSort = useCallback((field: string, order: SortOrder) => {
     const next = { field, order }
     setState(next)
@@ -368,6 +369,7 @@ function AddMediaModal({
 
   useEffect(() => {
     const q = query.trim()
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- debounced search: resets results and toggles the searching flag when the query changes
     if (!q) { setResults([]); return }
     setSearching(true)
     const timer = setTimeout(() => {

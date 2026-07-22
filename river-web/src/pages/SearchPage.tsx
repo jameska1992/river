@@ -17,6 +17,7 @@ export function SearchPage() {
 
   useEffect(() => {
     if (!query.trim() && !genre.trim()) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- clears search results when the query/genre are emptied
       setResult(null)
       return
     }

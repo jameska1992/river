@@ -41,6 +41,7 @@ export function ScannerStatePage() {
     }
   }, [])
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch-on-mount; load() sets state from the API response
   useEffect(() => { void load() }, [load])
 
   const directoryRows = useMemo(() => {

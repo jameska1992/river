@@ -95,9 +95,13 @@ function ValueCell({ value }: { value: unknown }) {
   }
   const s = String(value)
   if (isoDateRe.test(s)) {
+    let formatted: string | null = null
     try {
-      return <span title={s}>{new Date(s).toLocaleString()}</span>
+      formatted = new Date(s).toLocaleString()
     } catch { /* fall through to plain string */ }
+    if (formatted !== null) {
+      return <span title={s}>{formatted}</span>
+    }
   }
   if (looksLikePathOrURL(s)) {
     return <CopyableText text={s} />

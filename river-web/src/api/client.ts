@@ -59,7 +59,8 @@ export class RiverClient {
   }
 
   private setAccessToken(v: string | null) {
-    v ? localStorage.setItem(ACCESS_KEY, v) : localStorage.removeItem(ACCESS_KEY)
+    if (v) localStorage.setItem(ACCESS_KEY, v)
+    else localStorage.removeItem(ACCESS_KEY)
   }
 
   get refreshToken(): string | null {
@@ -67,7 +68,8 @@ export class RiverClient {
   }
 
   private setRefreshToken(v: string | null) {
-    v ? localStorage.setItem(REFRESH_KEY, v) : localStorage.removeItem(REFRESH_KEY)
+    if (v) localStorage.setItem(REFRESH_KEY, v)
+    else localStorage.removeItem(REFRESH_KEY)
   }
 
   get streamToken(): string | null {
@@ -75,7 +77,8 @@ export class RiverClient {
   }
 
   private setStreamToken(v: string | null) {
-    v ? localStorage.setItem(STREAM_KEY, v) : localStorage.removeItem(STREAM_KEY)
+    if (v) localStorage.setItem(STREAM_KEY, v)
+    else localStorage.removeItem(STREAM_KEY)
   }
 
   get isAuthenticated(): boolean {

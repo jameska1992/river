@@ -24,6 +24,7 @@ export function UnidentifiedPage() {
       })
   }, [])
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch-on-mount; load() sets state from the API response
   useEffect(() => { load('initial') }, [load])
 
   // After identifying succeeds, give the meta worker a moment to enrich

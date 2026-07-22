@@ -48,6 +48,7 @@ export function UsersPage() {
       .finally(() => setLoading(false))
   }
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch-on-mount; reload() sets state from the API response
   useEffect(() => { reload() }, [])
 
   return (

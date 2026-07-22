@@ -126,12 +126,7 @@ export default function AudiobookDetailPage() {
                   ))}
                 </Row>
                 {/* Cast/credits-style row hook for future "About the author" */}
-                <div style={styles.spacer} ref={el => {
-                  // Trigger scroll-to-bottom when focus arrives at the
-                  // last chapter — handled via Row's ensureVisible plus
-                  // the wrapper's own scrollMargin (set on EpisodeCard).
-                  if (el && chapters.length > 0) scrollToBottom
-                }} />
+                <div style={styles.spacer} />
               </section>
             )}
 

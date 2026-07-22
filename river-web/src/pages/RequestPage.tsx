@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { RiFilmLine, RiTv2Line, RiCheckLine, RiAddLine, RiLoaderLine } from 'react-icons/ri'
 import { api, ApiError } from '../api'
 import type { MovieSearchResult, ShowSearchResult } from '../api'
@@ -22,24 +22,7 @@ export function RequestPage() {
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  useEffect(() => {
-    if (debounceRef.current) clearTimeout(debounceRef.current)
-    if (!query.trim()) {
-      setMovieResults([])
-      setShowResults([])
-      setNotConfigured(false)
-      return
-    }
-    debounceRef.current = setTimeout(() => {
-      void runSearch(query.trim(), tab)
-    }, 400)
-    return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current)
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [query, tab])
-
-  async function runSearch(q: string, t: Tab) {
+  const runSearch = useCallback(async (q: string, t: Tab) => {
     setLoading(true)
     setNotConfigured(false)
     setSearchError(null)
@@ -64,7 +47,24 @@ export function RequestPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    if (!query.trim()) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- debounced search: clears results when the query is emptied
+      setMovieResults([])
+      setShowResults([])
+      setNotConfigured(false)
+      return
+    }
+    debounceRef.current = setTimeout(() => {
+      void runSearch(query.trim(), tab)
+    }, 400)
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current)
+    }
+  }, [query, tab, runSearch])
 
   function switchTab(t: Tab) {
     setTab(t)

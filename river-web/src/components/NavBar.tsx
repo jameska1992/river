@@ -48,12 +48,14 @@ export function NavBar() {
   useEffect(() => {
     if (location.pathname === '/search') {
       const q = new URLSearchParams(location.search).get('q') ?? ''
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- syncs the search input to the URL query on navigation (external route state)
       setQuery(q)
     }
   }, [location])
 
   // Close mobile menu on route change
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- closes the mobile menu in response to route (external navigation) changes
     setMobileOpen(false)
   }, [location.pathname])
 

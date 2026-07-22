@@ -29,6 +29,7 @@ export function SimilarCarousel({
 
   useEffect(() => {
     let alive = true
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- resets state before refetching when the source/type changes
     setLoaded(false)
     setItems([])
     const fetcher =

@@ -83,6 +83,10 @@ export function BrowsePage<T>({
 
   useEffect(() => {
     let alive = true
+    // Show the spinner immediately when the page/sort changes, before the
+    // async fetch resolves. Deferring this to the async callback would
+    // leave stale results visible during the request.
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- data-fetching effect; loading state must flip synchronously on dependency change
     setLoading(true)
     fetchPage(page, PAGE_SIZE, sortOpt.sort, sortOpt.order)
       .then(res => {

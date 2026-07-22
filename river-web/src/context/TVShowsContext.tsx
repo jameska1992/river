@@ -98,6 +98,7 @@ export function TVShowsProvider({ children }: { children: ReactNode }) {
   )
 }
 
+// eslint-disable-next-line react-refresh/only-export-components -- context hook colocated with its provider; separating adds no runtime value
 export function useTVShows(): TVShowsState {
   const ctx = useContext(TVShowsContext)
   if (!ctx) throw new Error('useTVShows must be used within TVShowsProvider')

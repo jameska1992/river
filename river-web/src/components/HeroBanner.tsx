@@ -109,6 +109,7 @@ function Slide({
     const cwItem = continueWatching.find(cw => cw.show_id === item.id)
 
     if (cwItem && !cwItem.completed && cwItem.season_id) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time CTA resolution guarded by resolvedRef; runs only when the slide becomes active
       setTvCTA({
         label: 'Continue',
         watchUrl: `/show/${item.id}/season/${cwItem.season_id}/episode/${cwItem.media_id}/watch`,

@@ -30,6 +30,7 @@ export function AlbumDetailPage() {
 
   useEffect(() => {
     if (!id) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- resets loading state before refetching when the route id changes
     setIsLoading(true)
     setError(null)
     getAlbum(id)

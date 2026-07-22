@@ -22,6 +22,7 @@ export function SettingsPage() {
 
   useEffect(() => {
     if (user) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- seeds the email field once the async-loaded user becomes available
       setEmail(user.email)
     }
   }, [user])

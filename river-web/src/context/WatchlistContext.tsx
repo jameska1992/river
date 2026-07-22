@@ -67,6 +67,7 @@ export function WatchlistProvider({ children }: { children: React.ReactNode }) {
   )
 }
 
+// eslint-disable-next-line react-refresh/only-export-components -- context hook colocated with its provider; separating adds no runtime value
 export function useWatchlist() {
   const ctx = useContext(WatchlistContext)
   if (!ctx) throw new Error('useWatchlist must be used inside WatchlistProvider')

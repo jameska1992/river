@@ -1,6 +1,6 @@
 # River
 
-![River](./river-logo.png)
+![River](./river-logo-small.png)
 
 Self-hosted media platform. Movies, TV shows, music, and audiobooks — scanned from disk, transcoded to browser-friendly formats, enriched with metadata, streamed to a web browser or a TV app.
 

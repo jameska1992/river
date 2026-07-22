@@ -1,0 +1,176 @@
+.page {
+  padding-inline: var(--container-margin);
+  padding-bottom: var(--space-8);
+
+  @media (max-width: 768px) {
+    padding-inline: var(--space-2);
+  }
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.headerSpacer {
+  flex: 1;
+}
+
+.sortControl {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--color-on-surface-variant);
+}
+
+.sortLabel {
+  white-space: nowrap;
+}
+
+.sortSelect {
+  appearance: none;
+  background: var(--color-surface-low);
+  color: var(--color-on-surface);
+  border: 1px solid var(--color-outline-variant);
+  border-radius: var(--radius-sm);
+  padding: 6px 28px 6px 10px;
+  font-size: 13px;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2399a'><path d='M7 10l5 5 5-5z'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 6px center;
+  background-size: 18px;
+}
+
+.sortSelect:focus {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+}
+
+.count {
+  color: var(--color-on-surface-variant);
+  margin: 0;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.toolbarRight {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+/* ---- Media grid ----
+   Column counts are chosen to divide a page of 50 cleanly so the last row
+   is always full: 2 → 25 rows, 5 → 10 rows, 10 → 5 rows. Anything else
+   (3, 4, 6, 7, 8, 9 cols) would leave a partial trailing row at the
+   default page size. */
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: var(--space-2);
+
+  @media (min-width: 1820px) {
+    grid-template-columns: repeat(10, 1fr);
+  }
+
+  @media (max-width: 700px) {
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-1);
+  }
+}
+
+/* ---- Skeleton loading ---- */
+
+.skeletonGrid {
+  padding-inline: var(--container-margin);
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: var(--space-2);
+
+  @media (min-width: 1820px) {
+    grid-template-columns: repeat(10, 1fr);
+  }
+
+  @media (max-width: 700px) {
+    padding-inline: var(--space-2);
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-1);
+  }
+}
+
+@keyframes shimmer {
+  0%   { opacity: 0.4; }
+  50%  { opacity: 0.7; }
+  100% { opacity: 0.4; }
+}
+
+.skeleton {
+  background: var(--color-surface-high) !important;
+  animation: shimmer 1.6s ease-in-out infinite;
+  cursor: default;
+}
+
+.skeleton:hover {
+  transform: none !important;
+  box-shadow: var(--shadow-card) !important;
+}
+
+/* ---- Pagination ---- */
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: var(--space-4);
+  padding-block: var(--space-2);
+}
+
+/* Inline variant for the toolbar row (top of the grid): no standalone margin
+   so it lines up with the count text and sort dropdowns. */
+.paginationInline {
+  margin-top: 0;
+  padding-block: 0;
+}
+
+.pageBtn {
+  min-width: 36px;
+  padding: 0 10px;
+  height: 36px;
+}
+
+.pageBtnActive {
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  border-color: var(--color-primary);
+}
+
+.pageBtnActive:hover {
+  background: var(--color-primary);
+}
+
+.pageEllipsis {
+  color: var(--color-on-surface-variant);
+  padding: 0 6px;
+  user-select: none;
+}
+
+/* ---- Empty / error ---- */
+
+.empty {
+  padding: var(--space-8) 0;
+  text-align: center;
+}

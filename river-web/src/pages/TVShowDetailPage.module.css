@@ -1,0 +1,555 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+
+.errorPage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40vh;
+}
+
+/* ── Hero (shared pattern with MovieDetailPage) ───────── */
+
+.hero {
+  position: relative;
+  height: 480px;
+  overflow: hidden;
+  flex-shrink: 0;
+
+  @media (max-width: 768px) { height: 280px; }
+}
+
+.heroImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 20%;
+}
+
+.heroFallback {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-surface-low);
+}
+
+.heroFallbackIcon {
+  font-size: 80px;
+  color: var(--color-outline-variant);
+}
+
+.heroGradient {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to top,
+    var(--color-background) 0%,
+    rgba(19, 19, 19, 0.60) 40%,
+    rgba(19, 19, 19, 0.10) 100%
+  );
+}
+
+.backBtn {
+  position: absolute;
+  top: var(--space-3);
+  left: var(--space-3);
+
+  @media (max-width: 768px) {
+    top: var(--space-2);
+    left: var(--space-2);
+  }
+}
+
+/* ── Content row ──────────────────────────────────────── */
+
+.content {
+  display: flex;
+  gap: var(--space-5);
+  margin-top: -140px;
+  position: relative;
+  padding-bottom: var(--space-6);
+  align-items: flex-start;
+
+  @media (max-width: 768px) {
+    margin-top: -80px;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+}
+
+.poster {
+  flex-shrink: 0;
+  width: 220px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.70), 0 4px 12px rgba(0, 0, 0, 0.50);
+
+  @media (max-width: 768px) { width: 140px; }
+}
+
+.posterFallback {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-outline-variant);
+}
+
+.meta {
+  flex: 1;
+  min-width: 0;
+  padding-top: 140px;
+
+  @media (max-width: 768px) { padding-top: 0; }
+}
+
+.titleRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-bottom: var(--space-1);
+}
+
+.title {
+  margin: 0;
+  flex: 1;
+  min-width: 0;
+}
+
+.originalTitle {
+  margin: 0 0 var(--space-2);
+  font-style: italic;
+}
+
+.attrs {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin-bottom: var(--space-2);
+}
+
+.attrItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--color-on-surface-variant);
+}
+
+.genres {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin-bottom: var(--space-3);
+}
+
+.description {
+  margin: 0 0 var(--space-3);
+  color: var(--color-on-surface-variant);
+  line-height: 1.7;
+}
+
+.mediaActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin-top: var(--space-3);
+}
+
+.playNextBtn {
+  gap: var(--space-1);
+}
+
+.watchlistBtnActive {
+  color: var(--color-primary) !important;
+}
+
+.watchedBtnActive {
+  color: var(--color-secondary) !important;
+}
+
+.playNextSpinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  display: block;
+  flex-shrink: 0;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Content body (left column + trailer) ─────────────── */
+
+.contentBody {
+  display: flex;
+  gap: var(--space-4);
+  align-items: flex-start;
+
+  @media (max-width: 640px) {
+    flex-direction: column;
+  }
+}
+
+.contentLeft {
+  flex: 1;
+  min-width: 0;
+}
+
+.trailerEmbed {
+  flex: 1;
+  min-width: 0;
+  aspect-ratio: 16 / 9;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: var(--color-surface-low);
+}
+
+.trailerEmbed iframe {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  display: block;
+}
+
+/* ── Seasons section ──────────────────────────────────── */
+
+.seasonsSection {
+  padding-bottom: var(--space-8);
+}
+
+.seasonsTitle {
+  margin: 0 0 var(--space-3);
+}
+
+.seasonsList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.season {
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-low);
+  border: 1px solid var(--color-outline-variant);
+  overflow: hidden;
+  transition: border-color 0.15s ease;
+}
+
+.seasonExpanded {
+  border-color: var(--color-primary);
+}
+
+/* Header row hosts the toggle button + an optional admin-only edit icon
+   pinned to the right edge. Without this wrapper the edit button would be
+   inside the toggle's <button> (invalid HTML, swallows the click). */
+.seasonHeaderRow {
+  display: flex;
+  align-items: center;
+}
+
+.seasonHeader {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-2) var(--space-3);
+  background: none;
+  border: none;
+  color: var(--color-on-surface);
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s ease;
+}
+
+.seasonEdit {
+  flex-shrink: 0;
+  margin-right: var(--space-2);
+  color: var(--color-on-surface-variant);
+}
+
+.seasonEdit:hover {
+  color: var(--color-on-surface);
+}
+
+.seasonHeader:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.seasonMeta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-on-surface-variant);
+  flex-shrink: 0;
+}
+
+/* Single chevron rotated via CSS rather than swapping icons. The transition
+   matches the height animation timing below so they finish together. */
+.seasonChevron {
+  transition: transform 220ms ease;
+}
+
+.seasonExpanded .seasonChevron {
+  transform: rotate(180deg);
+}
+
+/* ── Episode list ─────────────────────────────────────── */
+
+/* Height animation uses the grid-template-rows 0fr → 1fr pattern: a single
+   grid track can transition between collapsed (0fr) and content-sized (1fr)
+   without needing JS to measure the inner height. Inner div carries
+   overflow:hidden + min-height:0 so the clipped content actually shrinks. */
+.episodeListWrap {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 220ms ease;
+}
+
+.seasonExpanded .episodeListWrap {
+  grid-template-rows: 1fr;
+}
+
+.episodeListInner {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.episodeList {
+  border-top: 1px solid var(--color-outline-variant);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .episodeListWrap,
+  .seasonChevron {
+    transition: none;
+  }
+}
+
+.episode {
+  display: grid;
+  grid-template-columns: 40px 1fr auto auto;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  @media (max-width: 640px) {
+    grid-template-columns: 36px 1fr auto;
+  }
+}
+
+.epActions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.epNum {
+  color: var(--color-on-surface-variant);
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.epInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.epDesc {
+  color: var(--color-on-surface-variant);
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.epMeta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  color: var(--color-on-surface-variant);
+  flex-shrink: 0;
+  white-space: nowrap;
+
+  @media (max-width: 640px) {
+    display: none;
+  }
+}
+
+.epMetaItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.epPlay {
+  flex-shrink: 0;
+}
+
+.epPlay:disabled {
+  opacity: 0.25;
+  cursor: not-allowed;
+}
+
+.epPlayWrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.epNotReady {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #f5a623;
+  color: #1a1100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+  pointer-events: none;
+}
+
+.epDownload {
+  flex-shrink: 0;
+  color: var(--color-on-surface-variant);
+
+  &:hover { color: var(--color-on-surface); }
+}
+
+/* ── Skeleton ─────────────────────────────────────────── */
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--color-surface-low) 25%,
+    var(--color-surface-high) 50%,
+    var(--color-surface-low) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
+  border-radius: var(--radius-lg);
+}
+
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.skeletonHero { border-radius: 0; }
+
+.skeletonTitle {
+  height: 40px;
+  width: 55%;
+  margin-bottom: var(--space-2);
+}
+
+.skeletonLine {
+  height: 18px;
+  width: 45%;
+  margin-bottom: var(--space-1);
+  border-radius: var(--radius-sm);
+}
+
+.skeletonLineShort { width: 30%; }
+
+/* ── Credits ──────────────────────────────────────────── */
+
+.creditsSection {
+  margin-top: var(--space-4);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-outline-variant);
+  max-width: 700px;
+}
+
+.creditsRow {
+  display: grid;
+  grid-template-columns: 90px 1fr;
+  gap: 4px var(--space-2);
+  margin: 0 0 var(--space-2);
+}
+
+.creditsRow dt {
+  margin: 0;
+  padding-top: 2px;
+  color: var(--color-on-surface-variant);
+}
+
+.creditsRow dd {
+  margin: 0;
+  color: var(--color-on-surface);
+}
+
+.castGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.castCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 80px;
+  gap: 4px;
+  text-decoration: none;
+  color: inherit;
+}
+
+.castCard:hover .castPhoto {
+  outline: 2px solid var(--color-primary);
+}
+
+.castPhoto {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: var(--color-surface-high);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-outline-variant);
+  flex-shrink: 0;
+}
+
+.castPhoto img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.castName {
+  text-align: center;
+  color: var(--color-on-surface);
+  line-height: 1.3;
+  word-break: break-word;
+}
+
+.castCharacter {
+  text-align: center;
+  color: var(--color-on-surface-variant);
+  font-style: italic;
+  line-height: 1.2;
+}

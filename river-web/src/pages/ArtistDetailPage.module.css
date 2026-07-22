@@ -1,0 +1,246 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+
+.errorPage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40vh;
+}
+
+/* ── Hero ─────────────────────────────────────────────── */
+
+.hero {
+  position: relative;
+  height: 400px;
+  overflow: hidden;
+  flex-shrink: 0;
+
+  @media (max-width: 768px) { height: 240px; }
+}
+
+.heroImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center top;
+  filter: blur(24px) brightness(0.35);
+  transform: scale(1.08);
+}
+
+.heroFallback {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-surface-low);
+}
+
+.heroFallbackIcon {
+  font-size: 80px;
+  color: var(--color-outline-variant);
+}
+
+.heroGradient {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to top,
+    var(--color-background) 0%,
+    rgba(19, 19, 19, 0.40) 40%,
+    rgba(19, 19, 19, 0.10) 100%
+  );
+}
+
+.backBtn {
+  position: absolute;
+  top: var(--space-3);
+  left: var(--space-3);
+
+  @media (max-width: 768px) {
+    top: var(--space-2);
+    left: var(--space-2);
+  }
+}
+
+/* ── Content row ──────────────────────────────────────── */
+
+.content {
+  display: flex;
+  gap: var(--space-5);
+  margin-top: -100px;
+  position: relative;
+  padding-bottom: var(--space-6);
+  align-items: flex-start;
+
+  @media (max-width: 768px) {
+    margin-top: -60px;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+}
+
+/* ── Avatar ───────────────────────────────────────────── */
+
+.avatar {
+  flex-shrink: 0;
+  width: 180px;
+  height: 180px;
+  border-radius: 50%;
+  overflow: hidden;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.70), 0 4px 12px rgba(0, 0, 0, 0.50);
+  background: var(--color-surface-low);
+
+  @media (max-width: 768px) { width: 120px; height: 120px; }
+}
+
+.avatarImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center top;
+  display: block;
+}
+
+.avatarFallback {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-outline-variant);
+}
+
+/* ── Meta ─────────────────────────────────────────────── */
+
+.meta {
+  flex: 1;
+  min-width: 0;
+  padding-top: 100px;
+
+  @media (max-width: 768px) { padding-top: 0; }
+}
+
+.titleRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-bottom: var(--space-1);
+}
+
+.title {
+  margin: 0;
+  flex: 1;
+  min-width: 0;
+}
+
+.bio {
+  margin: 0 0 var(--space-4);
+  color: var(--color-on-surface-variant);
+  line-height: 1.7;
+
+  /* Truncate long bios with a show-more pattern */
+  display: -webkit-box;
+  -webkit-line-clamp: 6;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ── Albums section ───────────────────────────────────── */
+
+.albumsSection {
+  padding-bottom: var(--space-8);
+}
+
+.albumsTitle {
+  margin: 0 0 var(--space-4);
+}
+
+.albumsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: var(--space-4);
+
+  @media (max-width: 640px) {
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: var(--space-3);
+  }
+}
+
+.albumCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  text-decoration: none;
+  color: inherit;
+
+  &:hover .albumCover {
+    transform: scale(1.03);
+  }
+}
+
+.albumCover {
+  width: 100%;
+  transition: transform 0.2s ease;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.40);
+}
+
+.albumCoverFallback {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-outline-variant);
+}
+
+.albumTitle {
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.albumYear {
+  margin: 0;
+  color: var(--color-on-surface-variant);
+}
+
+/* ── Skeleton ─────────────────────────────────────────── */
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--color-surface-low) 25%,
+    var(--color-surface-high) 50%,
+    var(--color-surface-low) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
+  border-radius: var(--radius-lg);
+}
+
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.skeletonHero { border-radius: 0; }
+
+.skeletonTitle {
+  height: 40px;
+  width: 55%;
+  margin-bottom: var(--space-2);
+}
+
+.skeletonLine {
+  height: 18px;
+  width: 45%;
+  margin-bottom: var(--space-1);
+  border-radius: var(--radius-sm);
+}

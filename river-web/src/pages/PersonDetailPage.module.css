@@ -1,0 +1,192 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  padding-bottom: var(--space-8);
+}
+
+/* ── Header ───────────────────────────────────────────── */
+
+.header {
+  padding-top: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.backBtn {
+  align-self: flex-start;
+}
+
+.profile {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.photo {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: var(--color-surface-high);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-outline-variant);
+  flex-shrink: 0;
+}
+
+.photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.name {
+  margin: 0;
+}
+
+/* ── Bio ──────────────────────────────────────────────── */
+
+.bioWrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+  max-width: 680px;
+}
+
+.bio {
+  margin: 0;
+  color: var(--color-on-surface-variant);
+  line-height: 1.7;
+  overflow: hidden;
+  transition: max-height 0.35s ease;
+}
+
+.bioToggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--color-primary);
+  font-size: var(--font-size-sm, 0.875rem);
+  font-family: inherit;
+}
+
+.bioToggle:hover {
+  opacity: 0.8;
+}
+
+/* ── Sections ─────────────────────────────────────────── */
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.sectionTitle {
+  margin: 0;
+}
+
+/* ── Grid ─────────────────────────────────────────────── */
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: var(--space-3);
+
+  @media (max-width: 480px) {
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: var(--space-2);
+  }
+}
+
+/* ── Media card ───────────────────────────────────────── */
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  text-decoration: none;
+  color: inherit;
+}
+
+.card:hover .poster {
+  transform: scale(1.03);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.50);
+}
+
+.poster {
+  width: 100%;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.posterFallback {
+  width: 100%;
+  height: 100%;
+  background: var(--color-surface-high);
+}
+
+.cardInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0 2px;
+}
+
+.cardTitle {
+  color: var(--color-on-surface);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cardYear {
+  color: var(--color-on-surface-variant);
+}
+
+.cardRole {
+  color: var(--color-on-surface-variant);
+  font-style: italic;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Skeleton ─────────────────────────────────────────── */
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--color-surface-low) 25%,
+    var(--color-surface-high) 50%,
+    var(--color-surface-low) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
+  border-radius: var(--radius-lg);
+}
+
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.skeletonTitle {
+  height: 40px;
+  width: 200px;
+  border-radius: var(--radius-md);
+}
+
+.skeletonLine {
+  height: 14px;
+  width: 80%;
+  border-radius: var(--radius-sm);
+  margin-top: var(--space-1);
+}

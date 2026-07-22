@@ -1,0 +1,436 @@
+/* ── Page shell ───────────────────────────────────────── */
+
+.page {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  overflow: hidden;
+  background: #0d0d0d;
+}
+
+/* ── Blurred backdrop ─────────────────────────────────── */
+
+.backdrop {
+  position: absolute;
+  inset: -40px;
+  background-size: cover;
+  background-position: center;
+  filter: blur(60px) brightness(0.25) saturate(1.4);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.backdropOverlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.loadingState {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+}
+
+/* ── Top bar ──────────────────────────────────────────── */
+
+.topBar {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  flex-shrink: 0;
+}
+
+.topTitle {
+  flex: 1;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.75);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.topBtn {
+  color: rgba(255, 255, 255, 0.80);
+  background: transparent;
+  flex-shrink: 0;
+}
+
+.topBtn:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.10);
+}
+
+.topBtnActive {
+  color: var(--color-primary) !important;
+}
+
+/* ── Main player ──────────────────────────────────────── */
+
+.player {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  width: 100%;
+  max-width: 440px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-5) var(--space-5);
+
+  @media (max-width: 480px) {
+    padding: var(--space-2) var(--space-4) var(--space-4);
+    gap: var(--space-3);
+  }
+}
+
+/* ── Cover art ────────────────────────────────────────── */
+
+.coverWrap {
+  width: clamp(200px, 50vmin, 280px);
+  aspect-ratio: 2 / 3;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.70), 0 4px 16px rgba(0, 0, 0, 0.60);
+  flex-shrink: 0;
+  background: var(--color-surface-low);
+}
+
+.cover {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.coverFallback {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.20);
+}
+
+/* ── Track info ───────────────────────────────────────── */
+
+.info {
+  width: 100%;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.infoTitle {
+  margin: 0;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.infoAuthor {
+  margin: 0;
+  color: var(--color-primary);
+}
+
+.infoChapter {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+/* ── Seek bar ─────────────────────────────────────────── */
+
+.seekWrap {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.timeRow {
+  display: flex;
+  justify-content: space-between;
+}
+
+.time {
+  color: rgba(255, 255, 255, 0.50);
+}
+
+/* ── Range inputs (shared) ────────────────────────────── */
+
+.seekBar {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 4px;
+  border-radius: var(--radius-full);
+  outline: none;
+  cursor: pointer;
+  width: 100%;
+  background: linear-gradient(
+    to right,
+    var(--color-primary) 0%,
+    var(--color-primary) var(--progress, 0%),
+    rgba(255, 255, 255, 0.20) var(--progress, 0%),
+    rgba(255, 255, 255, 0.20) 100%
+  );
+}
+
+.seekBar::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  cursor: pointer;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.5);
+  transition: transform 0.1s ease;
+}
+
+.seekBar:hover::-webkit-slider-thumb {
+  transform: scale(1.25);
+}
+
+.seekBar::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border: none;
+  border-radius: 50%;
+  background: #fff;
+  cursor: pointer;
+}
+
+.volumeBar {
+  width: 80px;
+  flex-shrink: 0;
+}
+
+/* ── Transport controls ───────────────────────────────── */
+
+.transport {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  width: 100%;
+}
+
+.transportBtn {
+  color: rgba(255, 255, 255, 0.80);
+  background: transparent;
+  width: 44px;
+  height: 44px;
+}
+
+.transportBtn:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.10);
+}
+
+.transportBtn:disabled {
+  opacity: 0.25;
+  cursor: not-allowed;
+}
+
+.skipLabel {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  color: inherit;
+  line-height: 1;
+}
+
+.playPauseBtn {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 4px 20px rgba(var(--color-primary-rgb, 98, 0, 238), 0.45);
+}
+
+/* ── Secondary controls ───────────────────────────────── */
+
+.secondary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: var(--space-2);
+}
+
+.volumeGroup {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+}
+
+.secondaryBtn {
+  color: rgba(255, 255, 255, 0.65);
+  background: transparent;
+  flex-shrink: 0;
+}
+
+.secondaryBtn:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.10);
+}
+
+.speedBtn {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  color: rgba(255, 255, 255, 0.65);
+  background: rgba(255, 255, 255, 0.10);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: var(--radius-sm);
+  padding: 5px 10px;
+  flex-shrink: 0;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.speedBtn:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.chapterCounter {
+  color: rgba(255, 255, 255, 0.40);
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.castBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  opacity: 0.65;
+  cursor: pointer;
+  flex-shrink: 0;
+  --connected-color: var(--color-primary);
+  --disconnected-color: rgba(255, 255, 255, 0.65);
+}
+
+.castBtn:hover {
+  opacity: 1;
+}
+
+/* ── Chapters panel ───────────────────────────────────── */
+
+.chaptersPanel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 320px;
+  background: rgba(18, 18, 18, 0.96);
+  backdrop-filter: blur(24px);
+  border-left: 1px solid rgba(255, 255, 255, 0.10);
+  display: flex;
+  flex-direction: column;
+  z-index: 10;
+
+  @media (max-width: 600px) {
+    width: 100%;
+    border-left: none;
+    border-top: 1px solid rgba(255, 255, 255, 0.10);
+    top: auto;
+    height: 60vh;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  }
+}
+
+.chaptersPanelHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3) var(--space-3) var(--space-2);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  flex-shrink: 0;
+}
+
+.chaptersPanelTitle {
+  margin: 0;
+  color: #fff;
+}
+
+.chaptersPanelList {
+  flex: 1;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: var(--space-1) 0;
+}
+
+.chapterItem {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 28px 1fr auto auto;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 10px var(--space-3);
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.70);
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.chapterItem:hover {
+  background: rgba(255, 255, 255, 0.07);
+  color: #fff;
+}
+
+.chapterItemActive {
+  color: var(--color-primary) !important;
+  background: rgba(var(--color-primary-rgb, 98, 0, 238), 0.10);
+}
+
+.chapterItemNum {
+  color: rgba(255, 255, 255, 0.30);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.chapterItemActive .chapterItemNum {
+  color: var(--color-primary);
+  opacity: 0.7;
+}
+
+.chapterItemTitle {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.chapterItemDuration {
+  color: rgba(255, 255, 255, 0.30);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.chapterItemCheck {
+  color: var(--color-primary);
+  flex-shrink: 0;
+}

@@ -1,0 +1,351 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+
+/* ── Hero ─────────────────────────────────────────────── */
+
+.hero {
+  position: relative;
+  height: 480px;
+  overflow: hidden;
+  flex-shrink: 0;
+
+  @media (max-width: 768px) {
+    height: 280px;
+  }
+}
+
+.heroImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 20%;
+}
+
+.heroFallback {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-surface-low);
+}
+
+.heroFallbackIcon {
+  font-size: 80px;
+  color: var(--color-outline-variant);
+}
+
+.heroGradient {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to top,
+    var(--color-background) 0%,
+    rgba(19, 19, 19, 0.60) 40%,
+    rgba(19, 19, 19, 0.10) 100%
+  );
+}
+
+.backBtn {
+  position: absolute;
+  top: var(--space-3);
+  left: var(--space-3);
+
+  @media (max-width: 768px) {
+    top: var(--space-2);
+    left: var(--space-2);
+  }
+}
+
+/* ── Content row ──────────────────────────────────────── */
+
+.content {
+  display: flex;
+  gap: var(--space-5);
+  margin-top: -140px;
+  position: relative;
+  padding-bottom: var(--space-8);
+  align-items: flex-start;
+
+  @media (max-width: 768px) {
+    margin-top: -80px;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+}
+
+/* ── Poster ───────────────────────────────────────────── */
+
+.poster {
+  flex-shrink: 0;
+  width: 220px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.70), 0 4px 12px rgba(0, 0, 0, 0.50);
+
+  @media (max-width: 768px) {
+    width: 140px;
+  }
+}
+
+.posterFallback {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-outline-variant);
+}
+
+/* ── Meta ─────────────────────────────────────────────── */
+
+.meta {
+  flex: 1;
+  min-width: 0;
+  padding-top: 140px;
+
+  @media (max-width: 768px) {
+    padding-top: 0;
+  }
+}
+
+.titleRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-bottom: var(--space-1);
+}
+
+.title {
+  margin: 0;
+  flex: 1;
+  min-width: 0;
+}
+
+.originalTitle {
+  margin: 0 0 var(--space-2);
+  font-style: italic;
+}
+
+.attrs {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
+.attrItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--color-on-surface-variant);
+}
+
+.genres {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin-bottom: var(--space-3);
+}
+
+.description {
+  margin: 0 0 var(--space-4);
+  color: var(--color-on-surface-variant);
+  line-height: 1.7;
+}
+
+.mediaActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.playBtn {
+  font-size: 16px;
+  padding: 12px 28px;
+}
+
+.watchlistBtnActive {
+  color: var(--color-primary) !important;
+}
+
+.watchedBtnActive {
+  color: var(--color-secondary) !important;
+}
+
+.playBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* Inline warning glyph inside the Play button when the canonical transcode
+   hasn't completed and the API will fall back to streaming the original
+   source file. */
+.notReadyInline {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 4px;
+  color: #f5a623;
+}
+
+/* ── Content body (left column + trailer) ─────────────── */
+
+.contentBody {
+  display: flex;
+  gap: var(--space-4);
+  align-items: flex-start;
+
+  @media (max-width: 640px) {
+    flex-direction: column;
+  }
+}
+
+.contentLeft {
+  flex: 1;
+  min-width: 0;
+}
+
+.trailerEmbed {
+  flex: 1;
+  min-width: 0;
+  aspect-ratio: 16 / 9;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: var(--color-surface-low);
+}
+
+.trailerEmbed iframe {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  display: block;
+}
+
+/* ── Credits ──────────────────────────────────────────── */
+
+.creditsSection {
+  margin-top: var(--space-4);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-outline-variant);
+  max-width: 700px;
+}
+
+.credits {
+  display: grid;
+  grid-template-columns: 90px 1fr;
+  gap: 4px var(--space-2);
+  margin: 0 0 var(--space-2);
+}
+
+.credits dt {
+  margin: 0;
+  padding-top: 2px;
+  color: var(--color-on-surface-variant);
+}
+
+.credits dd {
+  margin: 0;
+  color: var(--color-on-surface);
+}
+
+.castGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.castCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 80px;
+  gap: 4px;
+  text-decoration: none;
+  color: inherit;
+}
+
+.castCard:hover .castPhoto {
+  outline: 2px solid var(--color-primary);
+}
+
+.castPhoto {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: var(--color-surface-high);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-outline-variant);
+  flex-shrink: 0;
+}
+
+.castPhoto img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.castName {
+  text-align: center;
+  color: var(--color-on-surface);
+  line-height: 1.3;
+  word-break: break-word;
+}
+
+.castCharacter {
+  text-align: center;
+  color: var(--color-on-surface-variant);
+  font-style: italic;
+  line-height: 1.2;
+}
+
+/* ── Skeleton states ──────────────────────────────────── */
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--color-surface-low) 25%,
+    var(--color-surface-high) 50%,
+    var(--color-surface-low) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
+  border-radius: var(--radius-lg);
+}
+
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.skeletonHero {
+  border-radius: 0;
+}
+
+.skeletonTitle {
+  height: 40px;
+  width: 60%;
+  margin-bottom: var(--space-2);
+
+  @media (max-width: 768px) {
+    width: 80%;
+  }
+}
+
+.skeletonLine {
+  height: 18px;
+  width: 50%;
+  margin-bottom: var(--space-1);
+  border-radius: var(--radius-sm);
+}
+
+.skeletonLineShort {
+  width: 35%;
+}

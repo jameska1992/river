@@ -1,0 +1,120 @@
+.pageHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-3);
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.heading {
+  margin: 0;
+}
+
+.filters {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.filterSelect,
+.filterInput {
+  /* color-scheme tells the browser to render native dropdown/calendar
+     popups with the dark theme — fixes the otherwise-white options panel. */
+  color-scheme: dark;
+  background: var(--color-surface-low);
+  border: 1px solid var(--color-outline-variant);
+  border-radius: var(--radius-sm);
+  color: var(--color-on-surface);
+  font-size: 13px;
+  padding: 6px 10px;
+  height: 34px;
+}
+
+.filterSelect {
+  /* Hide the browser's default caret and draw our own — the native one
+     ignores `color` and often renders black on the dark background. */
+  appearance: none;
+  padding-right: 28px;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2399a'><path d='M7 10l5 5 5-5z'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 6px center;
+  background-size: 18px;
+}
+
+/* Explicit option styling — most browsers respect this on Linux/Windows
+   even though they ignore <select>-level rules for the options panel. */
+.filterSelect option {
+  background: var(--color-surface-low);
+  color: var(--color-on-surface);
+}
+
+.filterSelect:focus,
+.filterInput:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.table th {
+  text-align: left;
+  padding: 8px 12px;
+  color: var(--color-on-surface-variant);
+  border-bottom: 1px solid var(--color-outline-variant);
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+.table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  vertical-align: top;
+}
+
+.table tr:last-child td {
+  border-bottom: none;
+}
+
+.colTime  { width: 160px; white-space: nowrap; color: var(--color-on-surface-variant); }
+.colSvc   { width: 160px; white-space: nowrap; }
+.colLevel { width: 80px; }
+.colMsg   { word-break: break-word; }
+
+.badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+}
+
+.badgeInfo  { background: rgba(124,124,252,0.15); color: var(--color-primary); }
+.badgeWarn  { background: rgba(251,191,36,0.15);  color: #fbbf24; }
+.badgeError { background: rgba(239,68,68,0.15);   color: var(--color-error); }
+
+.empty {
+  padding: var(--space-5);
+  text-align: center;
+  color: var(--color-on-surface-variant);
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: var(--space-3);
+  gap: var(--space-2);
+}
+
+.pageInfo {
+  color: var(--color-on-surface-variant);
+}

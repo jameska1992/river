@@ -1,0 +1,224 @@
+.hero {
+  position: relative;
+  height: 88vh;
+  min-height: 520px;
+  max-height: 860px;
+  overflow: hidden;
+  background: var(--color-surface-low);
+}
+
+/* ── Skeleton ─────────────────────────────────── */
+
+.skeleton {
+  height: 88vh;
+  min-height: 520px;
+  max-height: 860px;
+  background: linear-gradient(
+    90deg,
+    var(--color-surface-low) 25%,
+    var(--color-surface-high) 50%,
+    var(--color-surface-low) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.6s infinite;
+}
+
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ── Slide ────────────────────────────────────── */
+
+.slide {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 0.9s ease;
+  pointer-events: none;
+}
+
+.slideActive {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* ── Backdrop ─────────────────────────────────── */
+
+.backdrop {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 20%;
+}
+
+.backdropFallback {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, var(--color-surface-low), var(--color-surface-variant));
+}
+
+/* Gradient to pull focus down-left where content lives */
+.gradientTop {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    rgba(19, 19, 19, 0.15) 0%,
+    transparent 40%
+  );
+}
+
+.gradientBottom {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to top,
+    var(--color-background) 0%,
+    rgba(19, 19, 19, 0.85) 25%,
+    rgba(19, 19, 19, 0.4) 50%,
+    transparent 75%
+  );
+
+  @media (max-width: 768px) {
+    background: linear-gradient(
+      to top,
+      var(--color-background) 0%,
+      rgba(19, 19, 19, 0.9) 35%,
+      rgba(19, 19, 19, 0.5) 60%,
+      transparent 80%
+    );
+  }
+}
+
+/* ── Content ──────────────────────────────────── */
+
+.content {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding-bottom: var(--space-8);
+}
+
+.meta {
+  max-width: 560px;
+}
+
+.genres {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin-bottom: var(--space-2);
+}
+
+.title {
+  margin: 0 0 var(--space-1);
+  text-shadow: 0 2px 16px rgba(0, 0, 0, 0.6);
+  line-height: 1.1;
+}
+
+.attrs {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.rating {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--color-tertiary);
+}
+
+.description {
+  margin: 0 0 var(--space-3);
+  color: rgba(229, 226, 225, 0.85);
+  line-height: 1.65;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.actions {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* ── Navigation arrows ────────────────────────── */
+
+.arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 10;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s ease, background 0.15s ease;
+
+  &:hover { background: rgba(0, 0, 0, 0.75); }
+}
+
+.arrowLeft  { left: var(--space-3); }
+.arrowRight { right: var(--space-3); }
+
+.hero:hover .arrow { opacity: 1; }
+
+/* ── Dots ─────────────────────────────────────── */
+
+.dots {
+  position: absolute;
+  bottom: var(--space-3);
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 6px;
+  z-index: 10;
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.35);
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.dotActive {
+  background: var(--color-primary);
+  transform: scale(1.4);
+}
+
+/* ── Responsive ───────────────────────────────── */
+
+@media (max-width: 768px) {
+  .hero {
+    height: 80vh;
+    min-height: 440px;
+  }
+
+  .meta { max-width: 100%; }
+
+  .description { -webkit-line-clamp: 2; }
+
+  .arrow { display: none; }
+}

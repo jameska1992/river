@@ -1,0 +1,162 @@
+.page {
+  min-height: 100svh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4) var(--space-2);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Ambient glow behind the card */
+.glow {
+  position: absolute;
+  width: 600px;
+  height: 600px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(208, 188, 255, 0.08) 0%, transparent 70%);
+  pointer-events: none;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.card {
+  width: 100%;
+  max-width: 400px;
+  padding: var(--space-5) var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  position: relative;
+  z-index: 1;
+}
+
+.wordmark {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--color-primary);
+  margin-bottom: var(--space-2);
+}
+
+.wordmark > span {
+  font-family: var(--font-logo);
+  font-weight: 900;
+  font-size: 44px;
+  line-height: 1;
+  letter-spacing: 0.04em;
+}
+
+.wordmarkIcon {
+  font-size: 64px;
+  filter: drop-shadow(0 0 12px rgba(208, 188, 255, 0.50));
+}
+
+.heading {
+  margin: 0;
+  color: var(--color-on-surface);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.field label {
+  color: var(--color-on-surface-variant);
+}
+
+.passwordWrap {
+  position: relative;
+}
+
+.passwordInput {
+  padding-right: 44px;
+}
+
+.eyeBtn {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--color-outline);
+}
+
+.eyeBtn:hover {
+  color: var(--color-on-surface-variant);
+}
+
+.error {
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: var(--radius);
+  background: rgba(255, 180, 171, 0.10);
+  border: 1px solid rgba(255, 180, 171, 0.25);
+  color: var(--color-error);
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.submit {
+  width: 100%;
+  margin-top: var(--space-1);
+}
+
+.submit:disabled {
+  opacity: 0.50;
+  cursor: not-allowed;
+}
+
+.footer {
+  text-align: center;
+  color: var(--color-on-surface-variant);
+  margin: 0;
+}
+
+.link {
+  color: var(--color-primary);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.link:hover {
+  text-decoration: underline;
+}
+
+/* Download page */
+.blurb {
+  margin: 0;
+  color: var(--color-on-surface-variant);
+  text-align: center;
+  line-height: 22px;
+}
+
+.downloadBtn {
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-decoration: none;
+  margin-top: var(--space-1);
+}
+
+.downloadIcon {
+  font-size: 20px;
+}
+
+.hint {
+  margin: 0;
+  text-align: center;
+  color: var(--color-on-surface-variant);
+}

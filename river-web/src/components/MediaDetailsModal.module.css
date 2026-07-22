@@ -1,0 +1,133 @@
+/* Reuses the visual language of MetadataModal — same overlay backdrop,
+   dialog frame, header — but laid out as a read-only definition list
+   rather than a form. */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(0, 0, 0, 0.70);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-3);
+  backdrop-filter: blur(4px);
+  animation: fadeIn 0.15s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.dialog {
+  background: var(--color-surface-high);
+  border: 1px solid var(--color-outline-variant);
+  border-radius: var(--radius-xl);
+  width: 100%;
+  max-width: 680px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  animation: slideUp 0.15s ease;
+  overflow: hidden;
+}
+
+@keyframes slideUp {
+  from { transform: translateY(16px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--color-outline-variant);
+  flex-shrink: 0;
+}
+
+.headerTitle {
+  margin: 0;
+}
+
+.list {
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: minmax(140px, 1fr) 3fr;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--color-outline-variant);
+  align-items: start;
+}
+
+.row:last-child {
+  border-bottom: none;
+}
+
+.key {
+  color: var(--color-on-surface-variant);
+  word-break: break-word;
+}
+
+.value {
+  margin: 0;
+  color: var(--color-on-surface);
+  word-break: break-word;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.empty {
+  color: var(--color-on-surface-variant);
+  font-style: italic;
+}
+
+/* Pre-formatted JSON for nested objects — kept inside the value cell
+   without breaking the grid. */
+.json {
+  margin: 0;
+  padding: var(--space-2);
+  background: var(--color-surface-low);
+  border-radius: var(--radius-md);
+  font-size: 12px;
+  white-space: pre-wrap;
+  overflow-x: auto;
+}
+
+/* Path / URL with a copy button alongside. The wrap is inline-flex so a
+   long path can still wrap naturally to a new line while the button
+   stays aligned with the last line. */
+.copyableWrap {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  max-width: 100%;
+}
+
+.code {
+  font-family: var(--font-mono, ui-monospace, "SF Mono", Menlo, Consolas, monospace);
+  font-size: 12px;
+  background: var(--color-surface-low);
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  word-break: break-all;
+  user-select: all;
+}
+
+.copyBtn {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  color: var(--color-on-surface-variant);
+}
+
+.copyBtn:hover {
+  color: var(--color-on-surface);
+}

@@ -1,0 +1,68 @@
+# Go binaries
+river-api/river-api
+river-scan/river-scan
+river-video-trans/river-video-trans
+river-audio-trans/river-audio-trans
+river-meta-movie/river-meta-movie
+river-meta-tv/river-meta-tv
+river-meta-book/river-meta-book
+river-meta-music/river-meta-music
+
+# Go build cache / test artifacts
+**/vendor/
+**/*.test
+**/coverage.out
+
+# river-api
+river-api/*.db
+river-api/*.sqlite
+river-api/*.sqlite-shm
+river-api/*.sqlite-wal
+
+# river-scan
+river-scan/scanner-state.json
+
+# river-web
+river-web/node_modules/
+river-web/dist/
+
+# river-tv (Vite web app — same shape as river-web)
+river-tv/node_modules/
+river-tv/dist/
+
+# Capacitor / Gradle daemon leftover under river-tv. Not a real Android
+# project (that lives in river-tv-android); this directory is Gradle's
+# caches + generated .iml files from an earlier wrap experiment.
+river-tv/android/
+
+# Deploy bundles — regenerated on every run, don't want them tracked.
+*.tar
+*.tar.gz
+
+# Built APKs — build outputs, regenerated on each run.
+*.apk
+
+# Local scratch notes
+todo.md
+
+# Media files
+media/
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Android build artifacts / local SDK config
+**/local.properties
+river-tv-android/.gradle/
+river-tv-android/.kotlin/
+river-tv-android/**/build/
+
+# Claude Code local settings (machine-specific paths / allow-lists)
+.claude/
+**/.claude/
+
+# OS
+.DS_Store
+Thumbs.db

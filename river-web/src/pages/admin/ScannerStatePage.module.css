@@ -1,0 +1,196 @@
+.pageHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-3);
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.heading {
+  margin: 0;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.filterInput {
+  color-scheme: dark;
+  background: var(--color-surface-low);
+  border: 1px solid var(--color-outline-variant);
+  border-radius: var(--radius-sm);
+  color: var(--color-on-surface);
+  font-size: 13px;
+  padding: 6px 10px;
+  height: 34px;
+  min-width: 220px;
+}
+
+.filterInput:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
+.intro {
+  color: var(--color-on-surface-variant);
+  margin: 0 0 var(--space-3) 0;
+  max-width: 70ch;
+  line-height: 1.5;
+}
+
+.tabs {
+  display: flex;
+  gap: var(--space-1);
+  border-bottom: 1px solid var(--color-outline-variant);
+  margin-bottom: var(--space-2);
+}
+
+.tab {
+  background: transparent;
+  border: none;
+  color: var(--color-on-surface-variant);
+  padding: 8px 14px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+
+.tab:hover {
+  color: var(--color-on-surface);
+}
+
+.tabActive {
+  color: var(--color-on-surface);
+  border-bottom-color: var(--color-primary);
+}
+
+.error {
+  background: rgba(239, 68, 68, 0.12);
+  color: var(--color-error);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  margin-bottom: var(--space-2);
+  font-size: 13px;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  table-layout: fixed;
+}
+
+.table th {
+  text-align: left;
+  padding: 8px 12px;
+  color: var(--color-on-surface-variant);
+  border-bottom: 1px solid var(--color-outline-variant);
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+.table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  vertical-align: top;
+}
+
+.table tr:last-child td {
+  border-bottom: none;
+}
+
+.colPath    { word-break: break-all; }
+.colHash    { width: 180px; color: var(--color-on-surface-variant); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.colTime    { width: 160px; white-space: nowrap; color: var(--color-on-surface-variant); }
+.colActions { width: 200px; text-align: right; white-space: nowrap; }
+
+.rowAction {
+  background: transparent;
+  border: 1px solid var(--color-outline-variant);
+  border-radius: var(--radius-sm);
+  color: var(--color-on-surface);
+  padding: 4px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  margin-left: 4px;
+}
+
+.rowAction:hover:not(:disabled) {
+  background: var(--color-surface-low);
+}
+
+.rowAction:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.rowActionDanger {
+  color: var(--color-error);
+  border-color: rgba(239, 68, 68, 0.35);
+  padding: 4px 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.rowActionDanger:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.12);
+}
+
+.empty {
+  padding: var(--space-5);
+  text-align: center;
+  color: var(--color-on-surface-variant);
+}
+
+.modalBackdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.modal {
+  background: var(--color-surface);
+  border: 1px solid var(--color-outline-variant);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  max-width: 480px;
+  width: 90%;
+}
+
+.modalTitle {
+  margin: 0 0 var(--space-2) 0;
+}
+
+.modalBody {
+  color: var(--color-on-surface-variant);
+  margin: 0 0 var(--space-2) 0;
+  line-height: 1.5;
+}
+
+.modalPath {
+  background: var(--color-surface-low);
+  border: 1px solid var(--color-outline-variant);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  word-break: break-all;
+  margin: 0 0 var(--space-3) 0;
+}
+
+.modalActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}

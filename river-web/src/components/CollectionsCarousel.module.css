@@ -1,0 +1,163 @@
+.section {
+  margin-bottom: var(--space-6);
+}
+
+/* ── Header ── */
+
+.header {
+  display: flex;
+  align-items: center;
+  margin-bottom: var(--space-2);
+}
+
+.titleLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  text-decoration: none;
+  color: var(--color-on-surface);
+  border-radius: var(--radius-sm);
+  padding: 4px 0;
+  transition: color 0.15s ease;
+
+  &:hover { color: var(--color-primary); }
+}
+
+.title {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.titleArrow {
+  color: var(--color-on-surface-variant);
+  flex-shrink: 0;
+  opacity: 0;
+  transform: translateX(-4px);
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.titleLink:hover .titleArrow {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+/* ── Carousel shell ── */
+
+.carousel {
+  position: relative;
+}
+
+.track {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  scroll-snap-type: x proximity;
+  padding-inline: 2px;
+  padding-block: 6px;
+
+  &::-webkit-scrollbar { display: none; }
+}
+
+.item {
+  flex-shrink: 0;
+  width: 231px;
+  scroll-snap-align: start;
+
+  @media (max-width: 480px) { width: 192px; }
+}
+
+/* ── Edge fades ── */
+
+.fade {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 80px;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.fadeLeft {
+  left: 0;
+  background: linear-gradient(to right, var(--color-background), transparent);
+}
+
+.fadeRight {
+  right: 0;
+  background: linear-gradient(to left, var(--color-background), transparent);
+}
+
+/* ── Arrow buttons ── */
+
+.arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 3;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--color-surface-high);
+  border: 1px solid var(--color-outline-variant);
+  color: var(--color-on-surface);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+  transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease;
+
+  &:hover {
+    background: var(--color-surface-highest);
+    color: var(--color-primary);
+    transform: translateY(-50%) scale(1.08);
+  }
+}
+
+.arrowLeft  { left: -16px; }
+.arrowRight { right: -16px; }
+
+/* ── Collection card ── */
+
+.card {
+  display: flex;
+  flex-direction: column;
+  text-decoration: none;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: var(--color-surface-low);
+  border: 1px solid var(--color-surface-variant);
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-card-hover);
+  border-color: var(--color-outline-variant);
+}
+
+/* Meta */
+.cardMeta {
+  padding: 8px 10px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.cardName {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-on-surface);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cardCount {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--color-on-surface-variant);
+}
+

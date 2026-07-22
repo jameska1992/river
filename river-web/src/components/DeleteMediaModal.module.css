@@ -1,0 +1,162 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(0, 0, 0, 0.70);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-3);
+  backdrop-filter: blur(4px);
+  animation: fadeIn 0.15s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.dialog {
+  background: var(--color-surface-high);
+  border: 1px solid var(--color-outline-variant);
+  border-radius: var(--radius-xl);
+  width: 100%;
+  max-width: 520px;
+  display: flex;
+  flex-direction: column;
+  animation: slideUp 0.15s ease;
+  overflow: hidden;
+}
+
+@keyframes slideUp {
+  from { transform: translateY(16px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--color-outline-variant);
+  flex-shrink: 0;
+}
+
+.headerTitle {
+  margin: 0;
+}
+
+.body {
+  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.subtitle {
+  margin: 0;
+  color: var(--color-on-surface-variant);
+  font-size: 14px;
+  word-break: break-word;
+}
+
+.lead {
+  margin: var(--space-1) 0 0;
+  color: var(--color-on-surface);
+}
+
+/* Option buttons: a vertical stack of two large click targets, each
+   showing a title + descriptive subtext. Hover lifts the background to
+   make the affordance obvious. */
+.option {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  text-align: left;
+  background: var(--color-surface-low);
+  border: 1px solid var(--color-outline-variant);
+  border-radius: var(--radius-lg);
+  padding: var(--space-3);
+  color: var(--color-on-surface);
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+  position: relative;
+}
+
+.option:hover:not(:disabled) {
+  background: var(--color-surface);
+  border-color: var(--color-outline);
+}
+
+.option:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.optionDanger {
+  border-color: rgba(255, 90, 90, 0.35);
+}
+
+.optionDanger:hover:not(:disabled) {
+  background: rgba(255, 90, 90, 0.08);
+  border-color: rgba(255, 90, 90, 0.7);
+}
+
+.optionIcon {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: var(--color-on-surface-variant);
+}
+
+.optionDanger .optionIcon {
+  color: rgb(255, 110, 110);
+}
+
+.optionBody {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+
+.optionTitle {
+  font-weight: 600;
+}
+
+.optionDesc {
+  color: var(--color-on-surface-variant);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.error {
+  margin: 0;
+  color: rgb(255, 110, 110);
+  font-size: 13px;
+}
+
+.spinner {
+  position: absolute;
+  top: 50%;
+  right: var(--space-2);
+  transform: translateY(-50%);
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--color-on-surface-variant);
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: translateY(-50%) rotate(360deg); }
+}
+
+.footer {
+  display: flex;
+  justify-content: flex-end;
+  padding: var(--space-2) var(--space-3);
+  border-top: 1px solid var(--color-outline-variant);
+  flex-shrink: 0;
+}

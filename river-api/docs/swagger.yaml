@@ -1,0 +1,4997 @@
+basePath: /api
+definitions:
+  handlers.MovieSearchResult:
+    properties:
+      added:
+        type: boolean
+      overview:
+        type: string
+      poster:
+        type: string
+      title:
+        type: string
+      tmdbId:
+        type: integer
+      year:
+        type: integer
+    type: object
+  handlers.ShowSearchResult:
+    properties:
+      added:
+        type: boolean
+      overview:
+        type: string
+      poster:
+        type: string
+      title:
+        type: string
+      tvdbId:
+        type: integer
+      year:
+        type: integer
+    type: object
+  handlers.addMovieReq:
+    properties:
+      title:
+        type: string
+      tmdbId:
+        type: integer
+      year:
+        type: integer
+    required:
+    - title
+    - tmdbId
+    type: object
+  handlers.addShowReq:
+    properties:
+      title:
+        type: string
+      tvdbId:
+        type: integer
+      year:
+        type: integer
+    required:
+    - title
+    - tvdbId
+    type: object
+  handlers.adminCreateUserRequest:
+    properties:
+      email:
+        type: string
+      password:
+        minLength: 8
+        type: string
+      role:
+        enum:
+        - admin
+        - user
+        type: string
+      username:
+        maxLength: 32
+        minLength: 3
+        type: string
+    required:
+    - email
+    - password
+    - role
+    - username
+    type: object
+  handlers.adminSetPasswordRequest:
+    properties:
+      password:
+        minLength: 8
+        type: string
+    required:
+    - password
+    type: object
+  handlers.adminUpdateUserRequest:
+    properties:
+      email:
+        type: string
+      role:
+        enum:
+        - admin
+        - user
+        type: string
+      username:
+        maxLength: 32
+        minLength: 3
+        type: string
+    required:
+    - email
+    - role
+    - username
+    type: object
+  handlers.albumRequest:
+    properties:
+      artist_id:
+        type: string
+      cover_path:
+        type: string
+      genre:
+        type: string
+      library_id:
+        type: string
+      title:
+        type: string
+      year:
+        type: integer
+    required:
+    - library_id
+    - title
+    type: object
+  handlers.artistRequest:
+    properties:
+      bio:
+        type: string
+      image_path:
+        type: string
+      library_id:
+        type: string
+      name:
+        type: string
+    required:
+    - library_id
+    - name
+    type: object
+  handlers.audiobookRequest:
+    properties:
+      author:
+        type: string
+      cover_path:
+        type: string
+      description:
+        type: string
+      duration:
+        type: integer
+      genre:
+        type: string
+      library_id:
+        type: string
+      narrator:
+        type: string
+      title:
+        type: string
+      year:
+        type: integer
+    required:
+    - library_id
+    - title
+    type: object
+  handlers.castEntryRequest:
+    properties:
+      biography:
+        type: string
+      character:
+        type: string
+      name:
+        type: string
+      order:
+        type: integer
+      profile_path:
+        type: string
+      tmdb_id:
+        type: integer
+    required:
+    - name
+    type: object
+  handlers.changePasswordRequest:
+    properties:
+      current_password:
+        type: string
+      new_password:
+        minLength: 8
+        type: string
+    required:
+    - current_password
+    - new_password
+    type: object
+  handlers.chapterRequest:
+    properties:
+      duration:
+        type: integer
+      file_path:
+        type: string
+      number:
+        type: integer
+      title:
+        type: string
+    required:
+    - file_path
+    - number
+    type: object
+  handlers.collectionItemRequest:
+    properties:
+      media_id:
+        type: string
+      media_type:
+        enum:
+        - movie
+        - tvshow
+        - audiobook
+        type: string
+    required:
+    - media_id
+    - media_type
+    type: object
+  handlers.collectionRequest:
+    properties:
+      description:
+        type: string
+      name:
+        type: string
+    required:
+    - name
+    type: object
+  handlers.createAudioTrackRequest:
+    properties:
+      file_path:
+        type: string
+      label:
+        type: string
+      language:
+        type: string
+      media_id:
+        type: string
+      media_type:
+        type: string
+      stream_index:
+        type: integer
+    required:
+    - file_path
+    - language
+    - media_id
+    - media_type
+    type: object
+  handlers.createLogReq:
+    properties:
+      level:
+        type: string
+      message:
+        type: string
+      service:
+        type: string
+    required:
+    - level
+    - message
+    - service
+    type: object
+  handlers.createSubtitleRequest:
+    properties:
+      file_path:
+        type: string
+      label:
+        type: string
+      language:
+        type: string
+      media_id:
+        type: string
+      media_type:
+        type: string
+    required:
+    - file_path
+    - language
+    - media_id
+    - media_type
+    type: object
+  handlers.creditsRequest:
+    properties:
+      cast:
+        items:
+          $ref: '#/definitions/handlers.castEntryRequest'
+        type: array
+      crew:
+        items:
+          $ref: '#/definitions/handlers.crewEntryRequest'
+        type: array
+    type: object
+  handlers.crewEntryRequest:
+    properties:
+      biography:
+        type: string
+      department:
+        type: string
+      job:
+        type: string
+      name:
+        type: string
+      profile_path:
+        type: string
+      tmdb_id:
+        type: integer
+    required:
+    - name
+    type: object
+  handlers.episodeRequest:
+    properties:
+      aired_at:
+        description: RFC3339
+        type: string
+      description:
+        type: string
+      file_path:
+        type: string
+      number:
+        type: integer
+      runtime:
+        type: integer
+      source_path:
+        type: string
+      title:
+        type: string
+    required:
+    - number
+    type: object
+  handlers.libraryRequest:
+    properties:
+      name:
+        type: string
+      paths:
+        type: string
+      type:
+        allOf:
+        - $ref: '#/definitions/models.LibraryType'
+        enum:
+        - movie
+        - tvshow
+        - music
+        - audiobook
+    required:
+    - name
+    - type
+    type: object
+  handlers.loginRequest:
+    properties:
+      password:
+        type: string
+      username:
+        type: string
+    required:
+    - password
+    - username
+    type: object
+  handlers.movieRequest:
+    properties:
+      backdrop_path:
+        type: string
+      description:
+        type: string
+      file_path:
+        type: string
+      genres:
+        type: string
+      library_id:
+        type: string
+      original_title:
+        type: string
+      poster_path:
+        type: string
+      rating:
+        type: number
+      runtime:
+        type: integer
+      source_path:
+        type: string
+      title:
+        type: string
+      trailer_url:
+        type: string
+      year:
+        type: integer
+    required:
+    - library_id
+    - title
+    type: object
+  handlers.recentItem:
+    properties:
+      added_at:
+        type: string
+      backdrop_path:
+        type: string
+      description:
+        type: string
+      file_path:
+        description: empty for tvshow
+        type: string
+      genres:
+        type: string
+      id:
+        type: string
+      media_type:
+        description: '"movie" | "tvshow"'
+        type: string
+      poster_path:
+        type: string
+      rating:
+        type: number
+      title:
+        type: string
+      year:
+        type: integer
+    type: object
+  handlers.registerRequest:
+    properties:
+      email:
+        type: string
+      password:
+        minLength: 8
+        type: string
+      username:
+        maxLength: 32
+        minLength: 3
+        type: string
+    required:
+    - email
+    - password
+    - username
+    type: object
+  handlers.seasonRequest:
+    properties:
+      description:
+        type: string
+      number:
+        type: integer
+      poster_path:
+        type: string
+      title:
+        type: string
+      year:
+        type: integer
+    required:
+    - number
+    type: object
+  handlers.tokenRequest:
+    properties:
+      refresh_token:
+        type: string
+    required:
+    - refresh_token
+    type: object
+  handlers.trackRequest:
+    properties:
+      album_id:
+        type: string
+      artist_id:
+        type: string
+      disc_number:
+        type: integer
+      duration:
+        type: integer
+      file_path:
+        type: string
+      library_id:
+        type: string
+      number:
+        type: integer
+      title:
+        type: string
+    required:
+    - album_id
+    - file_path
+    - library_id
+    - title
+    type: object
+  handlers.tvShowRequest:
+    properties:
+      backdrop_path:
+        type: string
+      description:
+        type: string
+      folder_path:
+        type: string
+      genres:
+        type: string
+      library_id:
+        type: string
+      original_title:
+        type: string
+      poster_path:
+        type: string
+      rating:
+        type: number
+      status:
+        type: string
+      title:
+        type: string
+      trailer_url:
+        type: string
+      year:
+        type: integer
+    required:
+    - library_id
+    - title
+    type: object
+  handlers.unidentifiedItem:
+    properties:
+      file_path:
+        type: string
+      id:
+        type: string
+      library_id:
+        type: string
+      title:
+        type: string
+      type:
+        description: '"movie" | "tvshow"'
+        type: string
+      year:
+        type: integer
+    type: object
+  handlers.updateMeRequest:
+    properties:
+      email:
+        type: string
+    required:
+    - email
+    type: object
+  handlers.watchPartyCreateReq:
+    properties:
+      media_id:
+        type: string
+      media_type:
+        type: string
+      season_id:
+        type: string
+      show_id:
+        type: string
+    required:
+    - media_id
+    - media_type
+    type: object
+  handlers.watchlistAddRequest:
+    properties:
+      media_id:
+        type: string
+      media_type:
+        enum:
+        - movie
+        - tvshow
+        - audiobook
+        type: string
+    required:
+    - media_id
+    - media_type
+    type: object
+  models.Album:
+    properties:
+      artist_id:
+        type: string
+      cover_path:
+        type: string
+      created_at:
+        type: string
+      genre:
+        type: string
+      id:
+        type: string
+      library_id:
+        type: string
+      title:
+        type: string
+      tracks:
+        items:
+          $ref: '#/definitions/models.Track'
+        type: array
+      updated_at:
+        type: string
+      year:
+        type: integer
+    type: object
+  models.Artist:
+    properties:
+      albums:
+        items:
+          $ref: '#/definitions/models.Album'
+        type: array
+      bio:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: string
+      image_path:
+        type: string
+      library_id:
+        type: string
+      name:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  models.AudioTrack:
+    properties:
+      created_at:
+        type: string
+      file_path:
+        description: variant MP4 (video + this audio only)
+        type: string
+      id:
+        type: string
+      label:
+        description: human-readable e.g. "English"
+        type: string
+      language:
+        description: BCP-47 tag e.g. "en"
+        type: string
+      media_id:
+        type: string
+      media_type:
+        description: '"movie" or "episode"'
+        type: string
+      stream_index:
+        description: 0-based audio stream index in the video file
+        type: integer
+      updated_at:
+        type: string
+    type: object
+  models.Audiobook:
+    properties:
+      author:
+        type: string
+      chapters:
+        items:
+          $ref: '#/definitions/models.AudiobookChapter'
+        type: array
+      cover_path:
+        type: string
+      created_at:
+        type: string
+      description:
+        type: string
+      duration:
+        description: seconds
+        type: integer
+      genre:
+        type: string
+      id:
+        type: string
+      library_id:
+        type: string
+      narrator:
+        type: string
+      title:
+        type: string
+      updated_at:
+        type: string
+      year:
+        type: integer
+    type: object
+  models.AudiobookChapter:
+    properties:
+      audiobook_id:
+        type: string
+      created_at:
+        type: string
+      duration:
+        description: seconds
+        type: integer
+      file_path:
+        type: string
+      id:
+        type: string
+      number:
+        type: integer
+      title:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  models.Collection:
+    properties:
+      created_at:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      updated_at:
+        type: string
+      user_id:
+        type: string
+    type: object
+  models.CollectionItem:
+    properties:
+      collection_id:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: string
+      media_id:
+        type: string
+      media_type:
+        description: '"movie" | "tvshow"'
+        type: string
+      sort_order:
+        type: integer
+      updated_at:
+        type: string
+    type: object
+  models.Episode:
+    properties:
+      aired_at:
+        type: string
+      created_at:
+        type: string
+      description:
+        type: string
+      file_path:
+        type: string
+      id:
+        type: string
+      number:
+        type: integer
+      runtime:
+        description: minutes
+        type: integer
+      season_id:
+        type: string
+      source_path:
+        description: |-
+          SourcePath is the original on-disk location of this episode before
+          transcoding/copying. Stream/download fall back to it when FilePath
+          isn't yet pointing at a real file (transcode hasn't finished). See
+          the matching field on Movie for the full rationale.
+        type: string
+      title:
+        type: string
+      tv_show_id:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  models.Library:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      paths:
+        description: JSON-encoded []string
+        type: string
+      type:
+        $ref: '#/definitions/models.LibraryType'
+      updated_at:
+        type: string
+    type: object
+  models.LibraryType:
+    enum:
+    - movie
+    - tvshow
+    - music
+    - audiobook
+    type: string
+    x-enum-varnames:
+    - LibraryTypeMovie
+    - LibraryTypeTVShow
+    - LibraryTypeMusic
+    - LibraryTypeAudiobook
+  models.Movie:
+    properties:
+      backdrop_path:
+        type: string
+      created_at:
+        type: string
+      description:
+        type: string
+      file_path:
+        type: string
+      genres:
+        description: JSON-encoded []string
+        type: string
+      id:
+        type: string
+      library_id:
+        type: string
+      original_title:
+        type: string
+      poster_path:
+        type: string
+      rating:
+        type: number
+      runtime:
+        description: minutes
+        type: integer
+      source_path:
+        description: |-
+          SourcePath is the original on-disk location the scanner discovered
+          the movie at (typically under MEDIA_PATH). FilePath is the canonical
+          post-transcode/post-copy location (typically under OUTPUT_PATH).
+          Stream/download endpoints prefer FilePath but fall back to SourcePath
+          when FilePath is empty or the file isn't on disk yet — this lets the
+          UI offer playback before the transcode/copy step has finished.
+        type: string
+      title:
+        type: string
+      trailer_url:
+        type: string
+      updated_at:
+        type: string
+      year:
+        type: integer
+    type: object
+  models.Role:
+    enum:
+    - admin
+    - user
+    type: string
+    x-enum-varnames:
+    - RoleAdmin
+    - RoleUser
+  models.Season:
+    properties:
+      created_at:
+        type: string
+      description:
+        type: string
+      episodes:
+        items:
+          $ref: '#/definitions/models.Episode'
+        type: array
+      id:
+        type: string
+      number:
+        type: integer
+      poster_path:
+        type: string
+      title:
+        type: string
+      tv_show_id:
+        type: string
+      updated_at:
+        type: string
+      year:
+        type: integer
+    type: object
+  models.Subtitle:
+    properties:
+      created_at:
+        type: string
+      file_path:
+        type: string
+      id:
+        type: string
+      label:
+        description: human-readable e.g. "English"
+        type: string
+      language:
+        description: BCP-47 tag e.g. "en"
+        type: string
+      media_id:
+        type: string
+      media_type:
+        description: '"movie" or "episode"'
+        type: string
+      updated_at:
+        type: string
+    type: object
+  models.TVShow:
+    properties:
+      backdrop_path:
+        type: string
+      created_at:
+        type: string
+      description:
+        type: string
+      folder_path:
+        description: |-
+          FolderPath is the show's root directory on disk, recorded by
+          river-scan when it first discovers (or resolves) the show. The admin
+          "identify" flow uses this to trigger a targeted re-scan that picks
+          up episodes added after the initial scan.
+        type: string
+      genres:
+        description: JSON-encoded []string
+        type: string
+      id:
+        type: string
+      library_id:
+        type: string
+      original_title:
+        type: string
+      poster_path:
+        type: string
+      rating:
+        type: number
+      seasons:
+        items:
+          $ref: '#/definitions/models.Season'
+        type: array
+      status:
+        description: e.g. "Ended", "Continuing"
+        type: string
+      title:
+        type: string
+      trailer_url:
+        type: string
+      updated_at:
+        type: string
+      year:
+        type: integer
+    type: object
+  models.Track:
+    properties:
+      album_id:
+        type: string
+      artist_id:
+        type: string
+      created_at:
+        type: string
+      disc_number:
+        type: integer
+      duration:
+        description: seconds
+        type: integer
+      file_path:
+        type: string
+      id:
+        type: string
+      library_id:
+        type: string
+      number:
+        type: integer
+      title:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  models.User:
+    properties:
+      created_at:
+        type: string
+      email:
+        type: string
+      id:
+        type: string
+      role:
+        $ref: '#/definitions/models.Role'
+      updated_at:
+        type: string
+      username:
+        type: string
+    type: object
+  models.WatchParty:
+    properties:
+      created_at:
+        type: string
+      host_id:
+        type: string
+      id:
+        type: string
+      media_id:
+        type: string
+      media_type:
+        description: '"movie" | "episode"'
+        type: string
+      season_id:
+        type: string
+      show_id:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  models.WatchProgress:
+    properties:
+      completed:
+        description: position/duration >= 0.9
+        type: boolean
+      created_at:
+        type: string
+      duration:
+        description: seconds
+        type: number
+      id:
+        type: string
+      media_id:
+        type: string
+      media_type:
+        description: '"movie" | "episode"'
+        type: string
+      position:
+        description: seconds
+        type: number
+      updated_at:
+        type: string
+      user_id:
+        type: string
+    type: object
+  models.WatchlistItem:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: string
+      mediaID:
+        type: string
+      mediaType:
+        description: '"movie" | "tvshow" | "audiobook"'
+        type: string
+      updated_at:
+        type: string
+      userID:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: |-
+    REST API for the River self-hosted media platform.
+    Auth flow: POST /api/auth/login → use the returned
+    access_token as a Bearer token on the protected routes.
+    The stream_token is a longer-lived JWT restricted to
+    /stream and /download endpoints (the <video> element
+    can't send custom auth headers; it goes in the URL as
+    ?token=…).
+  title: River API
+  version: "1.0"
+paths:
+  /admin/active-sessions:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              type: object
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Active sessions
+      tags:
+      - admin
+  /admin/logs:
+    get:
+      parameters:
+      - description: Filter by level (info|warn|error)
+        in: query
+        name: level
+        type: string
+      - description: Filter by service name
+        in: query
+        name: service
+        type: string
+      - description: ISO8601 lower bound
+        in: query
+        name: from
+        type: string
+      - description: ISO8601 upper bound
+        in: query
+        name: to
+        type: string
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      - description: Page size
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{logs, total}'
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List service log entries
+      tags:
+      - logs
+  /admin/requeue-untranscoded:
+    post:
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "502":
+          description: Bad Gateway
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "503":
+          description: Service Unavailable
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Requeue untranscoded media
+      tags:
+      - admin
+  /admin/scan:
+    post:
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "502":
+          description: river-scan unreachable
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "503":
+          description: RIVER_SCAN_URL not configured
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Trigger library scan
+      tags:
+      - admin
+  /admin/stats:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{movies, tv_shows, tracks, audiobooks}'
+          schema:
+            additionalProperties:
+              type: integer
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Library counts
+      tags:
+      - admin
+  /admin/unidentified:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/handlers.unidentifiedItem'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List unidentified media
+      tags:
+      - admin
+  /admin/upload:
+    post:
+      consumes:
+      - multipart/form-data
+      parameters:
+      - description: Media file
+        in: formData
+        name: file
+        required: true
+        type: file
+      - description: movie | episode
+        in: formData
+        name: type
+        required: true
+        type: string
+      - description: Target library
+        in: formData
+        name: library_id
+        required: true
+        type: string
+      - description: Used as folder/file name
+        in: formData
+        name: title
+        required: true
+        type: string
+      - description: Season number (episodes only)
+        in: formData
+        name: season
+        type: integer
+      - description: Episode number (episodes only)
+        in: formData
+        name: episode
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: '{library_id, path}'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Upload media file
+      tags:
+      - admin
+  /admin/users:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.User'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List users
+      tags:
+      - admin-users
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: User details
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.adminCreateUserRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.User'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create user
+      tags:
+      - admin-users
+  /admin/users/{id}:
+    delete:
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: cannot delete your own account
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete user
+      tags:
+      - admin-users
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Fields to update
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.adminUpdateUserRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.User'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update user
+      tags:
+      - admin-users
+  /admin/users/{id}/activity:
+    get:
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              type: object
+            type: array
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get user activity
+      tags:
+      - admin-users
+  /admin/users/{id}/set-password:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: New password
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.adminSetPasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Set user password
+      tags:
+      - admin-users
+  /albums:
+    get:
+      parameters:
+      - description: Filter by library
+        in: query
+        name: library_id
+        type: string
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      - description: Page size
+        in: query
+        name: limit
+        type: integer
+      - description: title | year | added
+        in: query
+        name: sort
+        type: string
+      - description: asc | desc
+        in: query
+        name: order
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Album'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List albums
+      tags:
+      - music
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Album fields
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.albumRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.Album'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create album
+      tags:
+      - music
+  /albums/{id}:
+    delete:
+      parameters:
+      - description: Album ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete album
+      tags:
+      - music
+    get:
+      parameters:
+      - description: Album ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Album'
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get album
+      tags:
+      - music
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Album ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Album fields
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.albumRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Album'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update album
+      tags:
+      - music
+  /albums/{id}/tracks:
+    get:
+      parameters:
+      - description: Album ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      - description: Page size
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Track'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List album tracks
+      tags:
+      - music
+  /artists:
+    get:
+      parameters:
+      - description: Filter by library
+        in: query
+        name: library_id
+        type: string
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      - description: Page size
+        in: query
+        name: limit
+        type: integer
+      - description: name | added
+        in: query
+        name: sort
+        type: string
+      - description: asc | desc
+        in: query
+        name: order
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Artist'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List artists
+      tags:
+      - music
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Artist fields
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.artistRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.Artist'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create artist
+      tags:
+      - music
+  /artists/{id}:
+    delete:
+      parameters:
+      - description: Artist ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete artist
+      tags:
+      - music
+    get:
+      parameters:
+      - description: Artist ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Artist'
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get artist
+      tags:
+      - music
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Artist ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Artist fields
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.artistRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Artist'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update artist
+      tags:
+      - music
+  /artists/{id}/albums:
+    get:
+      parameters:
+      - description: Artist ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      - description: Page size
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Album'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List artist albums
+      tags:
+      - music
+  /artists/{id}/refresh-metadata:
+    post:
+      parameters:
+      - description: Artist ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "502":
+          description: Bad Gateway
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "503":
+          description: Service Unavailable
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Refresh artist metadata
+      tags:
+      - admin
+  /audio-tracks:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Audio track metadata
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.createAudioTrackRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.AudioTrack'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create audio track
+      tags:
+      - audio-tracks
+  /audio-tracks/{id}:
+    delete:
+      parameters:
+      - description: Audio track ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete audio track
+      tags:
+      - audio-tracks
+  /audio-tracks/{id}/stream:
+    get:
+      parameters:
+      - description: Audio track ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Stream JWT
+        in: query
+        name: token
+        type: string
+      produces:
+      - audio/mp4
+      responses:
+        "200":
+          description: OK
+        "206":
+          description: Partial Content
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Stream audio track
+      tags:
+      - audio-tracks
+  /audiobooks:
+    get:
+      parameters:
+      - description: Filter by library
+        in: query
+        name: library_id
+        type: string
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      - description: Page size
+        in: query
+        name: limit
+        type: integer
+      - description: title | author | year | added
+        in: query
+        name: sort
+        type: string
+      - description: asc | desc
+        in: query
+        name: order
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Audiobook'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List audiobooks
+      tags:
+      - audiobooks
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Audiobook fields
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.audiobookRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.Audiobook'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create audiobook
+      tags:
+      - audiobooks
+  /audiobooks/{id}:
+    delete:
+      parameters:
+      - description: Audiobook ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete audiobook
+      tags:
+      - audiobooks
+    get:
+      parameters:
+      - description: Audiobook ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Audiobook'
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get audiobook
+      tags:
+      - audiobooks
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Audiobook ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Audiobook fields
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.audiobookRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Audiobook'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update audiobook
+      tags:
+      - audiobooks
+  /audiobooks/{id}/chapters:
+    get:
+      parameters:
+      - description: Audiobook ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.AudiobookChapter'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List chapters
+      tags:
+      - audiobooks
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Audiobook ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Chapter fields
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.chapterRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.AudiobookChapter'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create chapter
+      tags:
+      - audiobooks
+  /audiobooks/{id}/chapters/{chapterId}/stream:
+    get:
+      parameters:
+      - description: Audiobook ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Chapter ID
+        in: path
+        name: chapterId
+        required: true
+        type: string
+      - description: Stream JWT
+        in: query
+        name: token
+        type: string
+      produces:
+      - audio/mp4
+      responses:
+        "200":
+          description: OK
+        "206":
+          description: Partial Content
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Stream chapter
+      tags:
+      - audiobooks
+  /audiobooks/{id}/refresh-metadata:
+    post:
+      parameters:
+      - description: Audiobook ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "502":
+          description: Bad Gateway
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "503":
+          description: Service Unavailable
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Refresh audiobook metadata
+      tags:
+      - admin
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Credentials
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.loginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{access_token, refresh_token, stream_token, user}'
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: invalid credentials
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Login
+      tags:
+      - auth
+  /auth/logout:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Refresh token to revoke
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.tokenRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Logout
+      tags:
+      - auth
+  /auth/me:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.User'
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get current user
+      tags:
+      - auth
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: New email
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.updateMeRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.User'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update current user
+      tags:
+      - auth
+  /auth/me/password:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Current + new password
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.changePasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: current password incorrect
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Change password
+      tags:
+      - auth
+  /auth/refresh:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Refresh token
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.tokenRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{access_token, refresh_token, stream_token}'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: invalid or expired refresh token
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Refresh access token
+      tags:
+      - auth
+  /auth/register:
+    post:
+      consumes:
+      - application/json
+      description: Public endpoint. The first registered user becomes admin.
+      parameters:
+      - description: Registration details
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.registerRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.User'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: username/email already in use
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Register a new user
+      tags:
+      - auth
+  /collections:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              type: object
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List collections
+      tags:
+      - collections
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Collection fields
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.collectionRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.Collection'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create collection
+      tags:
+      - collections
+  /collections/{id}:
+    delete:
+      parameters:
+      - description: Collection ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete collection
+      tags:
+      - collections
+    get:
+      parameters:
+      - description: Collection ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get collection
+      tags:
+      - collections
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Collection ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Collection fields
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.collectionRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Collection'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update collection
+      tags:
+      - collections
+  /collections/{id}/items:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Collection ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Item reference
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.collectionItemRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.CollectionItem'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Add collection item
+      tags:
+      - collections
+  /collections/{id}/items/{itemId}:
+    delete:
+      parameters:
+      - description: Collection ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Item ID
+        in: path
+        name: itemId
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Remove collection item
+      tags:
+      - collections
+  /libraries:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Library'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List libraries
+      tags:
+      - libraries
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Library details
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.libraryRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.Library'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create library
+      tags:
+      - libraries
+  /libraries/{id}:
+    delete:
+      parameters:
+      - description: Library ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete library
+      tags:
+      - libraries
+    get:
+      parameters:
+      - description: Library ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Library'
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get library
+      tags:
+      - libraries
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Library ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Library details
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.libraryRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Library'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update library
+      tags:
+      - libraries
+  /logs:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Log entry
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.createLogReq'
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Append service log entry
+      tags:
+      - logs
+  /movies:
+    get:
+      parameters:
+      - description: Filter by library
+        in: query
+        name: library_id
+        type: string
+      - description: Page number (default 1)
+        in: query
+        name: page
+        type: integer
+      - description: Page size (default 50, max 200)
+        in: query
+        name: limit
+        type: integer
+      - description: title | year | rating | added
+        in: query
+        name: sort
+        type: string
+      - description: asc | desc
+        in: query
+        name: order
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Movie'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List movies
+      tags:
+      - movies
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Movie fields
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.movieRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.Movie'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create movie
+      tags:
+      - movies
+  /movies/{id}:
+    delete:
+      parameters:
+      - description: Movie ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Also remove source/transcoded files
+        in: query
+        name: delete_files
+        type: boolean
+      responses:
+        "204":
+          description: No Content
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete movie
+      tags:
+      - movies
+    get:
+      parameters:
+      - description: Movie ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Movie'
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get movie
+      tags:
+      - movies
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Movie ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Movie fields
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.movieRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Movie'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update movie
+      tags:
+      - movies
+  /movies/{id}/audio-tracks:
+    get:
+      parameters:
+      - description: Movie ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.AudioTrack'
+            type: array
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List movie audio tracks
+      tags:
+      - audio-tracks
+  /movies/{id}/credits:
+    get:
+      parameters:
+      - description: Movie ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{cast, crew}'
+          schema:
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get movie credits
+      tags:
+      - credits
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Movie ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: '{cast[], crew[]}'
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.creditsRequest'
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Set movie credits
+      tags:
+      - credits
+  /movies/{id}/download:
+    get:
+      parameters:
+      - description: Movie ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Stream JWT
+        in: query
+        name: token
+        type: string
+      produces:
+      - video/mp4
+      responses:
+        "200":
+          description: OK
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Download movie
+      tags:
+      - movies
+  /movies/{id}/file-path:
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: Movie ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: '{file_path}'
+        in: body
+        name: body
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Movie'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Patch movie file path
+      tags:
+      - movies
+  /movies/{id}/identify:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Movie ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: '{title?, year?, imdb_id?}'
+        in: body
+        name: body
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "502":
+          description: Bad Gateway
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "503":
+          description: Service Unavailable
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Identify movie
+      tags:
+      - admin
+  /movies/{id}/refresh-metadata:
+    post:
+      parameters:
+      - description: Movie ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "502":
+          description: Bad Gateway
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "503":
+          description: Service Unavailable
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Refresh movie metadata
+      tags:
+      - admin
+  /movies/{id}/source-path:
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: Movie ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: '{source_path}'
+        in: body
+        name: body
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Movie'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Patch movie source path
+      tags:
+      - movies
+  /movies/{id}/stream:
+    get:
+      parameters:
+      - description: Movie ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Stream JWT (alternative to Authorization header)
+        in: query
+        name: token
+        type: string
+      produces:
+      - video/mp4
+      responses:
+        "200":
+          description: OK
+        "206":
+          description: Partial Content
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Stream movie
+      tags:
+      - movies
+  /movies/{id}/subtitles:
+    get:
+      parameters:
+      - description: Movie ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Subtitle'
+            type: array
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List movie subtitles
+      tags:
+      - subtitles
+  /people/{id}:
+    get:
+      parameters:
+      - description: Person ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get person
+      tags:
+      - credits
+  /progress:
+    delete:
+      parameters:
+      - description: movie | episode | chapter
+        in: query
+        name: media_type
+        required: true
+        type: string
+      - description: Media ID
+        in: query
+        name: media_id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete watch progress
+      tags:
+      - progress
+    get:
+      parameters:
+      - description: movie | episode | chapter
+        in: query
+        name: media_type
+        required: true
+        type: string
+      - description: Media ID
+        in: query
+        name: media_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.WatchProgress'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get watch progress
+      tags:
+      - progress
+  /progress/all:
+    get:
+      parameters:
+      - description: movie | episode | chapter
+        in: query
+        name: media_type
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.WatchProgress'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List watch progress
+      tags:
+      - progress
+  /progress/continue-watching:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              type: object
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Continue Watching list
+      tags:
+      - progress
+  /progress/ws:
+    get:
+      parameters:
+      - description: Access JWT (also accepted via Authorization header)
+        in: query
+        name: token
+        type: string
+      responses:
+        "101":
+          description: Switching Protocols
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Watch progress WebSocket
+      tags:
+      - progress
+  /recently-added:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/handlers.recentItem'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Recently added
+      tags:
+      - recently-added
+  /request/movies:
+    get:
+      parameters:
+      - description: Search term
+        in: query
+        name: q
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/handlers.MovieSearchResult'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "502":
+          description: Bad Gateway
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "503":
+          description: Radarr not configured
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Search movies (Radarr)
+      tags:
+      - request
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: '{tmdbId, title, year}'
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.addMovieReq'
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "502":
+          description: Bad Gateway
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "503":
+          description: Service Unavailable
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Add movie via Radarr
+      tags:
+      - request
+  /request/shows:
+    get:
+      parameters:
+      - description: Search term
+        in: query
+        name: q
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/handlers.ShowSearchResult'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "502":
+          description: Bad Gateway
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "503":
+          description: Sonarr not configured
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Search TV shows (Sonarr)
+      tags:
+      - request
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: '{tvdbId, title, year}'
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.addShowReq'
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "502":
+          description: Bad Gateway
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "503":
+          description: Service Unavailable
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Add TV show via Sonarr
+      tags:
+      - request
+  /search:
+    get:
+      parameters:
+      - description: Free-text query
+        in: query
+        name: q
+        type: string
+      - description: Genre filter
+        in: query
+        name: genre
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{libraries, people}'
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Global search
+      tags:
+      - search
+  /subtitles:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Subtitle metadata
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.createSubtitleRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.Subtitle'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create subtitle
+      tags:
+      - subtitles
+  /subtitles/{id}:
+    delete:
+      parameters:
+      - description: Subtitle ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete subtitle
+      tags:
+      - subtitles
+  /subtitles/{id}/stream:
+    get:
+      parameters:
+      - description: Subtitle ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Stream JWT
+        in: query
+        name: token
+        type: string
+      produces:
+      - text/vtt
+      responses:
+        "200":
+          description: OK
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Stream subtitle
+      tags:
+      - subtitles
+  /tracks:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Track fields
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.trackRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.Track'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create track
+      tags:
+      - music
+  /tracks/{id}:
+    delete:
+      parameters:
+      - description: Track ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete track
+      tags:
+      - music
+    get:
+      parameters:
+      - description: Track ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Track'
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get track
+      tags:
+      - music
+  /tracks/{id}/stream:
+    get:
+      parameters:
+      - description: Track ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Stream JWT
+        in: query
+        name: token
+        type: string
+      produces:
+      - audio/mp4
+      responses:
+        "200":
+          description: OK
+        "206":
+          description: Partial Content
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Stream track
+      tags:
+      - music
+  /tvshows:
+    get:
+      parameters:
+      - description: Filter by library
+        in: query
+        name: library_id
+        type: string
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      - description: Page size
+        in: query
+        name: limit
+        type: integer
+      - description: title | year | rating | added
+        in: query
+        name: sort
+        type: string
+      - description: asc | desc
+        in: query
+        name: order
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.TVShow'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List TV shows
+      tags:
+      - tvshows
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Show fields
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.tvShowRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.TVShow'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create TV show
+      tags:
+      - tvshows
+  /tvshows/{id}:
+    delete:
+      parameters:
+      - description: TV show ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Also remove show folder on disk
+        in: query
+        name: delete_files
+        type: boolean
+      responses:
+        "204":
+          description: No Content
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete TV show
+      tags:
+      - tvshows
+    get:
+      parameters:
+      - description: TV show ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.TVShow'
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get TV show
+      tags:
+      - tvshows
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: TV show ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Show fields
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.tvShowRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.TVShow'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update TV show
+      tags:
+      - tvshows
+  /tvshows/{id}/credits:
+    get:
+      parameters:
+      - description: TV show ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{cast, crew}'
+          schema:
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get TV show credits
+      tags:
+      - credits
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: TV show ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: '{cast[], crew[]}'
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.creditsRequest'
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Set TV show credits
+      tags:
+      - credits
+  /tvshows/{id}/folder-path:
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: TV show ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: '{folder_path}'
+        in: body
+        name: body
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.TVShow'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Patch TV show folder path
+      tags:
+      - tvshows
+  /tvshows/{id}/identify:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: TV show ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: '{title?, year?, imdb_id?}'
+        in: body
+        name: body
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "502":
+          description: Bad Gateway
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "503":
+          description: Service Unavailable
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Identify TV show
+      tags:
+      - admin
+  /tvshows/{id}/next-episode:
+    get:
+      parameters:
+      - description: TV show ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{season_id, episode_id}'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Next episode
+      tags:
+      - tvshows
+  /tvshows/{id}/refresh-metadata:
+    post:
+      parameters:
+      - description: TV show ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "502":
+          description: Bad Gateway
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "503":
+          description: Service Unavailable
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Refresh TV show metadata
+      tags:
+      - admin
+  /tvshows/{id}/seasons:
+    get:
+      parameters:
+      - description: TV show ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Season'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List seasons
+      tags:
+      - tvshows
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: TV show ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Season fields
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.seasonRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.Season'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create season
+      tags:
+      - tvshows
+  /tvshows/{id}/seasons/{seasonId}:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: TV show ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Season ID
+        in: path
+        name: seasonId
+        required: true
+        type: string
+      - description: Season fields
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.seasonRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Season'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update season
+      tags:
+      - tvshows
+  /tvshows/{id}/seasons/{seasonId}/episodes:
+    get:
+      parameters:
+      - description: TV show ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Season ID
+        in: path
+        name: seasonId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Episode'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List episodes
+      tags:
+      - tvshows
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: TV show ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Season ID
+        in: path
+        name: seasonId
+        required: true
+        type: string
+      - description: Episode fields
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.episodeRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.Episode'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create episode
+      tags:
+      - tvshows
+  /tvshows/{id}/seasons/{seasonId}/episodes/{episodeId}:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: TV show ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Season ID
+        in: path
+        name: seasonId
+        required: true
+        type: string
+      - description: Episode ID
+        in: path
+        name: episodeId
+        required: true
+        type: string
+      - description: Episode fields
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.episodeRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Episode'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update episode
+      tags:
+      - tvshows
+  /tvshows/{id}/seasons/{seasonId}/episodes/{episodeId}/audio-tracks:
+    get:
+      parameters:
+      - description: TV show ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Season ID
+        in: path
+        name: seasonId
+        required: true
+        type: string
+      - description: Episode ID
+        in: path
+        name: episodeId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.AudioTrack'
+            type: array
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List episode audio tracks
+      tags:
+      - audio-tracks
+  /tvshows/{id}/seasons/{seasonId}/episodes/{episodeId}/download:
+    get:
+      parameters:
+      - description: TV show ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Season ID
+        in: path
+        name: seasonId
+        required: true
+        type: string
+      - description: Episode ID
+        in: path
+        name: episodeId
+        required: true
+        type: string
+      - description: Stream JWT
+        in: query
+        name: token
+        type: string
+      produces:
+      - video/mp4
+      responses:
+        "200":
+          description: OK
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Download episode
+      tags:
+      - tvshows
+  /tvshows/{id}/seasons/{seasonId}/episodes/{episodeId}/source-path:
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: TV show ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Season ID
+        in: path
+        name: seasonId
+        required: true
+        type: string
+      - description: Episode ID
+        in: path
+        name: episodeId
+        required: true
+        type: string
+      - description: '{source_path}'
+        in: body
+        name: body
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Episode'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Patch episode source path
+      tags:
+      - tvshows
+  /tvshows/{id}/seasons/{seasonId}/episodes/{episodeId}/stream:
+    get:
+      parameters:
+      - description: TV show ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Season ID
+        in: path
+        name: seasonId
+        required: true
+        type: string
+      - description: Episode ID
+        in: path
+        name: episodeId
+        required: true
+        type: string
+      - description: Stream JWT
+        in: query
+        name: token
+        type: string
+      produces:
+      - video/mp4
+      responses:
+        "200":
+          description: OK
+        "206":
+          description: Partial Content
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Stream episode
+      tags:
+      - tvshows
+  /tvshows/{id}/seasons/{seasonId}/episodes/{episodeId}/subtitles:
+    get:
+      parameters:
+      - description: TV show ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Season ID
+        in: path
+        name: seasonId
+        required: true
+        type: string
+      - description: Episode ID
+        in: path
+        name: episodeId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Subtitle'
+            type: array
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List episode subtitles
+      tags:
+      - subtitles
+  /watchlist:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              type: object
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List watchlist
+      tags:
+      - watchlist
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Media reference
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.watchlistAddRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.WatchlistItem'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Add to watchlist
+      tags:
+      - watchlist
+  /watchlist/{id}:
+    delete:
+      parameters:
+      - description: Watchlist entry ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Remove from watchlist
+      tags:
+      - watchlist
+  /watchparty:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Party details
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.watchPartyCreateReq'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.WatchParty'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create watch party
+      tags:
+      - watchparty
+  /watchparty/{id}:
+    delete:
+      parameters:
+      - description: Watch party ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete watch party
+      tags:
+      - watchparty
+    get:
+      parameters:
+      - description: Watch party ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.WatchParty'
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get watch party
+      tags:
+      - watchparty
+  /watchparty/{id}/ws:
+    get:
+      parameters:
+      - description: Watch party ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Access JWT (also accepted via Authorization header)
+        in: query
+        name: token
+        type: string
+      responses:
+        "101":
+          description: Switching Protocols
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Watch party WebSocket
+      tags:
+      - watchparty
+securityDefinitions:
+  BearerAuth:
+    description: Bearer JWT — paste "Bearer <token>" or use the Authorize button.
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

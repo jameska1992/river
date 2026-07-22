@@ -1,0 +1,195 @@
+.page {
+  padding-top: var(--space-5);
+  padding-bottom: var(--space-8);
+}
+
+.heading {
+  margin: 0 0 var(--space-4);
+}
+
+/* ── Grid ── */
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(222px, 1fr));
+  gap: var(--space-3);
+
+  @media (max-width: 640px) {
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: var(--space-2);
+  }
+}
+
+/* ── New collection card ── */
+
+.newCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  aspect-ratio: 4 / 3;
+  border-radius: var(--radius-lg);
+  border: 2px dashed var(--color-outline-variant);
+  background: transparent;
+  cursor: pointer;
+  color: var(--color-on-surface-variant);
+  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+}
+
+.newCard:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  background: rgba(208, 188, 255, 0.06);
+}
+
+.newCardIcon {
+  width: 52px;
+  height: 52px;
+  border-radius: var(--radius-full);
+  border: 2px dashed currentColor;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.newCardLabel {
+  font-weight: 600;
+}
+
+/* ── Collection card ── */
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: var(--color-surface-low);
+  border: 1px solid var(--color-surface-variant);
+  cursor: pointer;
+  text-align: left;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-card-hover);
+  border-color: var(--color-outline-variant);
+}
+
+.cardMeta {
+  padding: var(--space-2) var(--space-3) var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.cardName {
+  margin: 0;
+  font-weight: 600;
+  color: var(--color-on-surface);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cardDesc {
+  margin: 0;
+  color: var(--color-on-surface-variant);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Create modal ── */
+
+.modalBackdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+}
+
+.modal {
+  width: 100%;
+  max-width: 440px;
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+}
+
+.modalHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-4);
+}
+
+.modalClose {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-full);
+  border: none;
+  background: rgba(255, 255, 255, 0.07);
+  color: var(--color-on-surface-variant);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+
+.modalClose:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.modalForm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.field label {
+  color: var(--color-on-surface-variant);
+}
+
+.modalActions {
+  display: flex;
+  gap: var(--space-2);
+  justify-content: flex-end;
+  margin-top: var(--space-1);
+}
+
+/* ── Skeletons ── */
+
+@keyframes shimmer {
+  0%   { opacity: 0.4; }
+  50%  { opacity: 0.7; }
+  100% { opacity: 0.4; }
+}
+
+.skeletonHeading {
+  height: 36px;
+  width: 180px;
+  border-radius: var(--radius);
+  background: var(--color-surface-high);
+  animation: shimmer 1.6s ease-in-out infinite;
+  margin-bottom: var(--space-4);
+}
+
+.skeletonCard {
+  aspect-ratio: 4 / 3;
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-high);
+  animation: shimmer 1.6s ease-in-out infinite;
+}

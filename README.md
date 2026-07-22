@@ -1,0 +1,81 @@
+# River
+
+![River](./river-logo.png)
+
+Self-hosted media platform. Movies, TV shows, music, and audiobooks — scanned from disk, transcoded to browser-friendly formats, enriched with metadata, streamed to a web browser or a TV app.
+
+## Architecture at a glance
+
+```
+Filesystem
+    └─→ [river-scan] ──→ RabbitMQ (river.media topic exchange)
+                              ├─→ [river-video-trans]  H.264/AAC/MP4 (+NVENC opt.)
+                              ├─→ [river-audio-trans]  AAC .m4a
+                              ├─→ [river-meta-movie]   TMDB enrichment
+                              ├─→ [river-meta-tv]      TMDB enrichment (seasons/eps)
+                              ├─→ [river-meta-book]    Open Library
+                              └─→ [river-meta-music]   MusicBrainz
+
+              [river-api]  ← records ← every producer above
+                    ↓
+    ┌──────────────┼──────────────────┐
+[river-web]   [river-tv]      [river-tv-android]
+ (browser)     (Vite web)       (Fire/Android TV)
+```
+
+- **`river-api`** owns Postgres + auth + streaming. Every other backend service is an HTTP client to it.
+- **RabbitMQ** is the only inter-service coupling on the ingest side. Every downstream consumer listens for `media.discovered.*` events and works independently.
+- **Client apps** all talk to `river-api` and are otherwise independent.
+
+## Repo layout
+
+**Backend services** (Go, one module each):
+
+| Service | Role |
+|---|---|
+| [`river-api`](./river-api/) | Central REST API (Gin + GORM + Postgres). Auth, media CRUD, streaming, image proxy. |
+| [`river-scan`](./river-scan/) | Filesystem walker. Publishes discovery events to RabbitMQ. |
+| [`river-video-trans`](./river-video-trans/) | Transcodes movies + TV episodes. NVENC where available, libx264 fallback. |
+| [`river-audio-trans`](./river-audio-trans/) | Transcodes music + audiobooks to AAC/M4A. |
+| [`river-meta-movie`](./river-meta-movie/) | TMDB enrichment for movies. |
+| [`river-meta-tv`](./river-meta-tv/) | TMDB enrichment for shows / seasons / episodes. |
+| [`river-meta-book`](./river-meta-book/) | Open Library enrichment for audiobooks. |
+| [`river-meta-music`](./river-meta-music/) | MusicBrainz enrichment for music. |
+
+**Client apps**:
+
+| Client | Stack |
+|---|---|
+| [`river-web`](./river-web/) | Browser client — React + Vite. Also serves as the admin surface. |
+| [`river-tv`](./river-tv/) | TV-optimised web app — React + Vite. D-pad focus navigation. |
+| [`river-tv-android`](./river-tv-android/) | Android TV / Fire TV launcher app — WebView-wraps the `river-tv` build. |
+
+## Running it
+
+The whole backend runs from Docker Compose. GPU (NVENC) is opt-in.
+
+```bash
+cp .env.example .env
+# Edit .env — set POSTGRES_PASSWORD, JWT_SECRET, ADMIN_PASSWORD, TMDB_API_KEY,
+# MEDIA_PATH (host path with your files), OUTPUT_PATH (transcoder output root).
+
+docker compose up -d                        # CPU-only
+docker compose -f docker-compose.yml \
+               -f docker-compose.gpu.yml up -d   # with NVENC on nvidia GPU
+```
+
+First boot registers an admin user (username / password from `.env`).
+
+**Client apps are built and deployed separately** — see each client's own README.
+
+## Documentation
+
+Each service directory has a `CLAUDE.md` (originally written to guide Claude Code) that doubles as authoritative architecture reference — layer boundaries, patterns, tradeoffs. Start there when working on that specific service.
+
+## Environment variables
+
+Full list of required and optional env vars lives in [`.env.example`](./.env.example). Each service also documents its own subset in its README.
+
+## License
+
+River is licensed under the [GNU Affero General Public License v3.0](./LICENSE) (AGPL-3.0).

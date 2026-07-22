@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- Opt out of camera/mic APIs so Chromium's VideoCaptureSystem
+         doesn't try to register a CameraManager availability callback
+         at init. On Fire TV (no camera hardware) that callback ends
+         up in a 1 Hz "Camera service is unavailable" retry loop that
+         spams logcat. Best-effort — not every WebView build honours
+         this — but zero cost when it doesn't. -->
+    <meta http-equiv="Permissions-Policy" content="camera=(), microphone=()" />
+    <title>river-tv</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

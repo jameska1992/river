@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- Wake lock keeps the screen on during long playback sessions
+         when the activity asks for it (FLAG_KEEP_SCREEN_ON). -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+
+    <!-- TV form factor flags. Touchscreen is explicitly NOT required
+         so the same APK lights up on phones/tablets when sideloaded
+         for testing. Leanback isn't required either — TVs use the
+         LEANBACK launcher intent below to pick the app up; declaring
+         it required would block install on non-TV devices.
+
+         The Fire TV launcher honours LEANBACK_LAUNCHER the same way
+         Android TV does, so a single intent-filter covers both. -->
+    <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
+    <uses-feature android:name="android.software.leanback" android:required="false" />
+
+    <application
+        android:label="@string/app_name"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher"
+        android:banner="@drawable/banner"
+        android:theme="@style/Theme.RiverTV"
+        android:networkSecurityConfig="@xml/network_security_config"
+        android:usesCleartextTraffic="true"
+        android:hardwareAccelerated="true"
+        android:allowBackup="false"
+        tools:targetApi="33">
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:screenOrientation="landscape"
+            android:configChanges="orientation|keyboardHidden|screenSize|navigation|uiMode|fontScale|density"
+            android:theme="@style/Theme.RiverTV">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <!-- LEANBACK_LAUNCHER puts the app on Android TV and
+                     Fire TV home screens. LAUNCHER keeps it installable
+                     on phones/tablets for sideload-testing. -->
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>

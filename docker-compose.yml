@@ -1,0 +1,280 @@
+services:
+
+  # ---------------------------------------------------------------------------
+  # Infrastructure
+  # ---------------------------------------------------------------------------
+
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: river
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-river}
+      POSTGRES_DB: river
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U river"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    # Expose to host for local dev access — remove in production
+    ports:
+      - "5432:5432"
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-river}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-river}
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    ports:
+      - "5672:5672"
+      - "15672:15672"   # management UI
+
+  # ---------------------------------------------------------------------------
+  # Core API
+  # ---------------------------------------------------------------------------
+
+  river-api:
+    build:
+      context: ./river-api
+    restart: unless-stopped
+    environment:
+      PORT: 8080
+      DATABASE_URL: postgres://river:${POSTGRES_PASSWORD:-river}@postgres:5432/river?sslmode=disable
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      JWT_ACCESS_EXPIRY_MINUTES: ${JWT_ACCESS_EXPIRY_MINUTES:-15}
+      JWT_REFRESH_EXPIRY_DAYS: ${JWT_REFRESH_EXPIRY_DAYS:-7}
+      MEDIA_BASE_PATH: /media
+      RIVER_SCAN_URL: http://river-scan:8081
+      RIVER_META_MOVIE_URL: http://river-meta-movie:8081
+      RIVER_META_TV_URL: http://river-meta-tv:8082
+      RIVER_META_BOOK_URL: http://river-meta-book:8083
+      RIVER_META_MUSIC_URL: http://river-meta-music:8084
+      RADARR_URL: ${RADARR_URL:-}
+      RADARR_API_KEY: ${RADARR_API_KEY:-}
+      SONARR_URL: ${SONARR_URL:-}
+      SONARR_API_KEY: ${SONARR_API_KEY:-}
+    volumes:
+      - ${MEDIA_PATH:?MEDIA_PATH is required}:/media
+      - ${OUTPUT_PATH:?OUTPUT_PATH is required}:/output:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO/dev/null http://localhost:8080/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+    ports:
+      - "8080:8080"
+
+  # One-shot container that registers the admin user on first boot.
+  # Exits 0 whether the user is created or already exists (409 is ignored).
+  river-init:
+    image: alpine:3.21
+    restart: "no"
+    depends_on:
+      river-api:
+        condition: service_healthy
+    environment:
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@river.local}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?ADMIN_PASSWORD is required}
+    command:
+      - sh
+      - -c
+      - >-
+        wget -qO/dev/null
+        --header="Content-Type: application/json"
+        --post-data="{\"username\":\"$$ADMIN_USERNAME\",\"email\":\"$$ADMIN_EMAIL\",\"password\":\"$$ADMIN_PASSWORD\"}"
+        http://river-api:8080/api/auth/register;
+        echo "river-init complete"
+
+  # ---------------------------------------------------------------------------
+  # Media processing — all depend on river-init so the admin account exists
+  # ---------------------------------------------------------------------------
+
+  river-scan:
+    build:
+      context: ./river-scan
+    restart: unless-stopped
+    environment:
+      RIVER_API_URL: http://river-api:8080
+      RIVER_API_USERNAME: ${ADMIN_USERNAME:-admin}
+      RIVER_API_PASSWORD: ${ADMIN_PASSWORD:?ADMIN_PASSWORD is required}
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-river}:${RABBITMQ_PASSWORD:-river}@rabbitmq:5672/
+      RABBITMQ_EXCHANGE: river.media
+      SCAN_INTERVAL: ${SCAN_INTERVAL:-3600}
+      STATE_PATH: /state/scanner-state.json
+    volumes:
+      - ${MEDIA_PATH:?MEDIA_PATH is required}:/media:ro
+      - scan_state:/state
+    depends_on:
+      river-init:
+        condition: service_completed_successfully
+      river-api:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  river-video-trans:
+    build:
+      context: ./river-video-trans
+    restart: unless-stopped
+    environment:
+      RIVER_API_URL: http://river-api:8080
+      RIVER_API_USERNAME: ${ADMIN_USERNAME:-admin}
+      RIVER_API_PASSWORD: ${ADMIN_PASSWORD:?ADMIN_PASSWORD is required}
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-river}:${RABBITMQ_PASSWORD:-river}@rabbitmq:5672/
+      RABBITMQ_EXCHANGE: river.media
+      OUTPUT_DIR: /output
+      WORKER_COUNT: ${VIDEO_TRANS_WORKERS:-2}
+      NVIDIA_DRIVER_CAPABILITIES: video,compute,utility
+      NVIDIA_VISIBLE_DEVICES: ${NVIDIA_VISIBLE_DEVICES:-all}
+    volumes:
+      - ${MEDIA_PATH:?MEDIA_PATH is required}:/media:ro
+      - ${OUTPUT_PATH:?OUTPUT_PATH is required}:/output
+    depends_on:
+      river-init:
+        condition: service_completed_successfully
+      river-api:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+  river-audio-trans:
+    build:
+      context: ./river-audio-trans
+    restart: unless-stopped
+    environment:
+      RIVER_API_URL: http://river-api:8080
+      RIVER_API_USERNAME: ${ADMIN_USERNAME:-admin}
+      RIVER_API_PASSWORD: ${ADMIN_PASSWORD:?ADMIN_PASSWORD is required}
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-river}:${RABBITMQ_PASSWORD:-river}@rabbitmq:5672/
+      RABBITMQ_EXCHANGE: river.media
+      OUTPUT_DIR: /output
+      WORKER_COUNT: ${AUDIO_TRANS_WORKERS:-2}
+    volumes:
+      - ${MEDIA_PATH:?MEDIA_PATH is required}:/media:ro
+      - ${OUTPUT_PATH:?OUTPUT_PATH is required}:/output
+    depends_on:
+      river-init:
+        condition: service_completed_successfully
+      river-api:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  river-meta-movie:
+    build:
+      context: ./river-meta-movie
+    restart: unless-stopped
+    environment:
+      RIVER_API_URL: http://river-api:8080
+      RIVER_API_USERNAME: ${ADMIN_USERNAME:-admin}
+      RIVER_API_PASSWORD: ${ADMIN_PASSWORD:?ADMIN_PASSWORD is required}
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-river}:${RABBITMQ_PASSWORD:-river}@rabbitmq:5672/
+      RABBITMQ_EXCHANGE: river.media
+      TMDB_API_KEY: ${TMDB_API_KEY:?TMDB_API_KEY is required}
+      WORKER_COUNT: ${META_WORKERS:-2}
+    depends_on:
+      river-init:
+        condition: service_completed_successfully
+      river-api:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  river-meta-tv:
+    build:
+      context: ./river-meta-tv
+    restart: unless-stopped
+    environment:
+      RIVER_API_URL: http://river-api:8080
+      RIVER_API_USERNAME: ${ADMIN_USERNAME:-admin}
+      RIVER_API_PASSWORD: ${ADMIN_PASSWORD:?ADMIN_PASSWORD is required}
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-river}:${RABBITMQ_PASSWORD:-river}@rabbitmq:5672/
+      RABBITMQ_EXCHANGE: river.media
+      TMDB_API_KEY: ${TMDB_API_KEY:?TMDB_API_KEY is required}
+      WORKER_COUNT: ${META_WORKERS:-2}
+    depends_on:
+      river-init:
+        condition: service_completed_successfully
+      river-api:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  river-meta-book:
+    build:
+      context: ./river-meta-book
+    restart: unless-stopped
+    environment:
+      RIVER_API_URL: http://river-api:8080
+      RIVER_API_USERNAME: ${ADMIN_USERNAME:-admin}
+      RIVER_API_PASSWORD: ${ADMIN_PASSWORD:?ADMIN_PASSWORD is required}
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-river}:${RABBITMQ_PASSWORD:-river}@rabbitmq:5672/
+      RABBITMQ_EXCHANGE: river.media
+      WORKER_COUNT: ${META_WORKERS:-2}
+    depends_on:
+      river-init:
+        condition: service_completed_successfully
+      river-api:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  river-meta-music:
+    build:
+      context: ./river-meta-music
+    restart: unless-stopped
+    environment:
+      RIVER_API_URL: http://river-api:8080
+      RIVER_API_USERNAME: ${ADMIN_USERNAME:-admin}
+      RIVER_API_PASSWORD: ${ADMIN_PASSWORD:?ADMIN_PASSWORD is required}
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-river}:${RABBITMQ_PASSWORD:-river}@rabbitmq:5672/
+      RABBITMQ_EXCHANGE: river.media
+      WORKER_COUNT: ${META_WORKERS:-2}
+    depends_on:
+      river-init:
+        condition: service_completed_successfully
+      river-api:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  # ---------------------------------------------------------------------------
+  # Frontend
+  # ---------------------------------------------------------------------------
+
+  river-web:
+    build:
+      context: ./river-web
+    restart: unless-stopped
+    depends_on:
+      river-api:
+        condition: service_healthy
+    ports:
+      - "80:80"
+
+volumes:
+  postgres_data:
+  rabbitmq_data:
+  scan_state:

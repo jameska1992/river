@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 320x180 banner used by the Android-TV / Fire-TV launchers. The
+     play glyph is centred-left, and "RIVER" sits beside it. Replace
+     with a proper rasterised banner before shipping. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="320dp"
+    android:height="180dp"
+    android:viewportWidth="320"
+    android:viewportHeight="180">
+    <path
+        android:fillColor="#131313"
+        android:pathData="M0,0h320v180h-320z" />
+    <path
+        android:fillColor="#d0bcff"
+        android:pathData="M60,52 a38,38 0 1,0 0.001,0 z M50,72 v36 l30,-18 z" />
+    <path
+        android:fillColor="#e5e2e1"
+        android:strokeColor="#e5e2e1"
+        android:strokeWidth="0"
+        android:pathData="M124,80 h6 v40 h-6 z M134,80 h14 a8,8 0 0,1 0,16 h-14 z M134,86 h12 a3,3 0 0,1 0,6 h-12 z M148,98 l6,22 h-6 l-6,-20 z M158,80 h6 v40 h-6 z M170,80 h6 l10,30 l10,-30 h6 l-14,40 h-4 z M204,80 h22 v6 h-16 v10 h14 v6 h-14 v12 h16 v6 h-22 z M232,80 h14 a8,8 0 0,1 0,16 h-14 z M232,86 h12 a3,3 0 0,1 0,6 h-12 z M246,98 l6,22 h-6 l-6,-20 z" />
+</vector>

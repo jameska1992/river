@@ -1,0 +1,70 @@
+.overlay {
+  position: absolute;
+  top: 52px;
+  right: 12px;
+  background: rgba(18, 18, 18, 0.92);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: var(--radius-lg);
+  padding: 10px 12px;
+  min-width: 160px;
+  max-width: 220px;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: rgba(255, 255, 255, 0.70);
+}
+
+.count {
+  margin-left: auto;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: var(--radius-full);
+  padding: 1px 6px;
+  color: rgba(255, 255, 255, 0.70);
+}
+
+.memberList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.member {
+  color: #fff;
+  padding: 2px 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.actions {
+  display: flex;
+  gap: 4px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding-top: 8px;
+}
+
+.actionBtn {
+  color: rgba(255, 255, 255, 0.65);
+  background: transparent;
+  flex: 1;
+}
+
+.actionBtn:hover {
+  background: rgba(255, 255, 255, 0.10);
+  color: #fff;
+}
+
+.leaveBtn:hover {
+  color: var(--color-error, #f44336);
+}

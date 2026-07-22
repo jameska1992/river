@@ -1,0 +1,488 @@
+@import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@700;800&family=Cinzel+Decorative:wght@700;900&family=Inter:wght@400;500;600&display=swap');
+
+/* ============================================================
+   DESIGN TOKENS
+   ============================================================ */
+
+:root {
+  /* Colors */
+  --color-background:             #131313;
+  --color-on-background:          #e5e2e1;
+  --color-surface:                #131313;
+  --color-surface-dim:            #131313;
+  --color-surface-bright:         #3a3939;
+  --color-surface-lowest:         #0e0e0e;
+  --color-surface-low:            #1c1b1b;
+  --color-surface:                #201f1f;
+  --color-surface-high:           #2a2a2a;
+  --color-surface-highest:        #353534;
+  --color-on-surface:             #e5e2e1;
+  --color-on-surface-variant:     #cbc3d7;
+  --color-surface-variant:        #353534;
+  --color-inverse-surface:        #e5e2e1;
+  --color-inverse-on-surface:     #313030;
+  --color-outline:                #958ea0;
+  --color-outline-variant:        #494454;
+  --color-surface-tint:           #d0bcff;
+
+  --color-primary:                #d0bcff;
+  --color-on-primary:             #3c0091;
+  --color-primary-container:      #a078ff;
+  --color-on-primary-container:   #340080;
+  --color-inverse-primary:        #6d3bd7;
+
+  --color-secondary:              #4cd7f6;
+  --color-on-secondary:           #003640;
+  --color-secondary-container:    #03b5d3;
+  --color-on-secondary-container: #00424e;
+
+  --color-tertiary:               #ffb869;
+  --color-on-tertiary:            #482900;
+  --color-tertiary-container:     #ca801e;
+  --color-on-tertiary-container:  #3f2300;
+
+  --color-error:                  #ffb4ab;
+  --color-on-error:               #690005;
+  --color-error-container:        #93000a;
+  --color-on-error-container:     #ffdad6;
+
+  /* Typography */
+  --font-display: 'Be Vietnam Pro', system-ui, sans-serif;
+  --font-body:    'Inter', system-ui, sans-serif;
+  --font-logo:    'Cinzel Decorative', 'Cinzel', Georgia, serif;
+
+  /* Border radius */
+  --radius-sm:   0.25rem;
+  --radius:      0.5rem;
+  --radius-md:   0.75rem;
+  --radius-lg:   1rem;
+  --radius-xl:   1.5rem;
+  --radius-full: 9999px;
+
+  /* Spacing (8px base unit) */
+  --space-1:  8px;
+  --space-2:  16px;
+  --space-3:  24px;
+  --space-4:  32px;
+  --space-5:  40px;
+  --space-6:  48px;
+  --space-8:  64px;
+  --space-10: 80px;
+  --space-12: 96px;
+
+  --container-margin: 48px;
+  --gutter:           24px;
+  --section-gap:      64px;
+
+  /* Glassmorphism */
+  --glass-bg:     rgba(18, 18, 18, 0.80);
+  --glass-blur:   blur(20px);
+  --glass-border: rgba(255, 255, 255, 0.08);
+
+  --glass-nav-bg:   rgba(18, 18, 18, 0.70);
+  --glass-nav-blur: blur(24px);
+
+  /* Shadows */
+  --shadow-card:          0 8px 32px rgba(0, 0, 0, 0.60), 0 2px 8px rgba(0, 0, 0, 0.40);
+  --shadow-primary-glow:  0 4px 20px rgba(208, 188, 255, 0.25);
+  --shadow-secondary-glow: 0 4px 16px rgba(76, 215, 246, 0.25);
+}
+
+/* ============================================================
+   RESET & BASE
+   ============================================================ */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 16px;
+  color-scheme: dark;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  margin: 0;
+  background-color: var(--color-background);
+  color: var(--color-on-surface);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+#root {
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+}
+
+img, video {
+  display: block;
+  max-width: 100%;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button, input, select, textarea {
+  font-family: var(--font-body);
+}
+
+button {
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
+}
+
+/* ============================================================
+   SCROLLBAR
+   ============================================================ */
+
+::-webkit-scrollbar       { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--color-surface-lowest); }
+::-webkit-scrollbar-thumb {
+  background: var(--color-outline-variant);
+  border-radius: var(--radius-full);
+}
+::-webkit-scrollbar-thumb:hover { background: var(--color-outline); }
+
+/* ============================================================
+   TYPOGRAPHY SCALE
+   ============================================================ */
+
+.display-lg {
+  font-family: var(--font-display);
+  font-size: 48px;
+  font-weight: 800;
+  line-height: 56px;
+  letter-spacing: -0.02em;
+
+  @media (max-width: 768px) {
+    font-size: 32px;
+    line-height: 40px;
+  }
+}
+
+.headline-lg {
+  font-family: var(--font-display);
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 40px;
+  letter-spacing: -0.01em;
+
+  @media (max-width: 768px) {
+    font-size: 24px;
+    line-height: 32px;
+  }
+}
+
+.headline-md {
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 32px;
+}
+
+.body-lg {
+  font-family: var(--font-body);
+  font-size: 18px;
+  font-weight: 400;
+  line-height: 28px;
+}
+
+.body-md {
+  font-family: var(--font-body);
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 24px;
+}
+
+.label-md {
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 20px;
+}
+
+.label-sm {
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 16px;
+  color: var(--color-on-surface-variant);
+}
+
+/* ============================================================
+   LAYOUT
+   ============================================================ */
+
+.container {
+  width: 100%;
+  padding-inline: var(--container-margin);
+
+  @media (max-width: 768px) {
+    padding-inline: var(--space-2);
+  }
+}
+
+/* 12-column grid, 24px gutters */
+.grid-media {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: var(--gutter);
+
+  @media (max-width: 1024px) {
+    grid-template-columns: repeat(6, 1fr);
+  }
+
+  @media (max-width: 640px) {
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--space-2);
+  }
+}
+
+/* Row separator with 64px vertical rhythm */
+.section + .section {
+  margin-top: var(--section-gap);
+}
+
+.section-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: var(--space-3);
+}
+
+/* ============================================================
+   SURFACES & ELEVATION
+   ============================================================ */
+
+/* Flat surfaces — used for cards, panels */
+.surface-low {
+  background-color: var(--color-surface-low);
+  border-radius: var(--radius-lg);
+}
+
+.surface {
+  background-color: var(--color-surface);
+  border-radius: var(--radius-lg);
+}
+
+.surface-high {
+  background-color: var(--color-surface-high);
+  border-radius: var(--radius-lg);
+}
+
+/* Glassmorphism layer — for overlays, modals, floating elements */
+.glass {
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+}
+
+/* Navigation bar — pinned top, heavier blur */
+.glass-nav {
+  background: var(--glass-nav-bg);
+  backdrop-filter: var(--glass-nav-blur);
+  border-bottom: 1px solid var(--glass-border);
+}
+
+/* ============================================================
+   MEDIA CARDS
+   ============================================================ */
+
+.card {
+  position: relative;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background-color: var(--color-surface-low);
+  box-shadow: var(--shadow-card);
+  /* Simulated light catch */
+  border-top: 1px solid rgba(255, 255, 255, 0.10);
+  transition: transform 0.20s ease, box-shadow 0.20s ease;
+}
+
+.card:hover {
+  transform: translateY(-4px) scale(1.02);
+  box-shadow: var(--shadow-card), var(--shadow-primary-glow);
+}
+
+/* 2:3 — movies, audiobooks */
+.card-portrait  { aspect-ratio: 2 / 3; }
+
+/* 1:1 — music albums */
+.card-square    { aspect-ratio: 1 / 1; }
+
+/* 16:9 — TV shows, video content */
+.card-landscape { aspect-ratio: 16 / 9; }
+
+.card img,
+.card video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Overlay gradient — fades artwork into metadata at bottom */
+.card-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.85) 0%, transparent 50%);
+  pointer-events: none;
+}
+
+/* ============================================================
+   BUTTONS
+   ============================================================ */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  padding: 10px 20px;
+  border-radius: var(--radius);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 20px;
+  cursor: pointer;
+  border: none;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: opacity 0.15s ease, box-shadow 0.15s ease, transform 0.10s ease;
+}
+
+.btn:active  { transform: scale(0.97); }
+.btn:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* Solid purple — primary actions */
+.btn-primary {
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  box-shadow: var(--shadow-primary-glow);
+}
+.btn-primary:hover {
+  opacity: 0.90;
+  box-shadow: 0 6px 28px rgba(208, 188, 255, 0.40);
+}
+
+/* Ghost — secondary actions */
+.btn-secondary {
+  background: rgba(208, 188, 255, 0.08);
+  color: var(--color-primary);
+  border: 1px solid rgba(208, 188, 255, 0.30);
+  backdrop-filter: blur(8px);
+}
+.btn-secondary:hover {
+  background: rgba(208, 188, 255, 0.14);
+  border-color: rgba(208, 188, 255, 0.50);
+}
+
+/* Icon button — toolbar / round actions */
+.btn-icon {
+  padding: 8px;
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--color-on-surface-variant);
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.btn-icon:hover {
+  background: rgba(255, 255, 255, 0.11);
+  color: var(--color-on-surface);
+}
+
+.btn-lg {
+  padding: 14px 28px;
+  font-size: 16px;
+  border-radius: var(--radius-md);
+}
+
+/* ============================================================
+   BADGES / CHIPS
+   ============================================================ */
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 16px;
+}
+
+.badge-primary   { background: rgba(208, 188, 255, 0.15); color: var(--color-primary); }
+.badge-secondary { background: rgba(76, 215, 246, 0.15);  color: var(--color-secondary); }
+.badge-tertiary  { background: rgba(255, 184, 105, 0.15); color: var(--color-tertiary); }
+.badge-error     { background: rgba(255, 180, 171, 0.15); color: var(--color-error); }
+
+a.badge { text-decoration: none; }
+a.badge:hover { filter: brightness(1.2); }
+
+/* ============================================================
+   INPUT FIELDS
+   ============================================================ */
+
+.input {
+  display: block;
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: var(--radius);
+  background: var(--color-surface-lowest);
+  border: 1px solid var(--color-outline-variant);
+  color: var(--color-on-surface);
+  font-size: 16px;
+  line-height: 24px;
+  /* Recessed look */
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.40);
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.input::placeholder { color: var(--color-outline); }
+
+.input:focus {
+  border-color: var(--color-primary);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.40),
+              0 0 0 2px rgba(208, 188, 255, 0.20);
+}
+
+/* ============================================================
+   PROGRESS BAR (playback)
+   ============================================================ */
+
+.progress {
+  width: 100%;
+  height: 4px;
+  background: var(--color-surface-high);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: var(--color-secondary);
+  border-radius: var(--radius-full);
+  box-shadow: 0 0 8px rgba(76, 215, 246, 0.60);
+  transition: width 0.10s linear;
+}
+
+/* ============================================================
+   DIVIDER
+   ============================================================ */
+
+.divider {
+  width: 100%;
+  height: 1px;
+  background: var(--color-outline-variant);
+}

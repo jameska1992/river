@@ -1,0 +1,77 @@
+.root {
+  position: relative;
+}
+
+.trigger {
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.trigger.spinning {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.trigger.success {
+  color: var(--color-secondary);
+}
+
+.trigger.error {
+  color: var(--color-error);
+}
+
+.menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 180px;
+  background: var(--color-surface-highest);
+  border: 1px solid var(--color-outline-variant);
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  z-index: 100;
+  overflow: hidden;
+  animation: popIn 0.1s ease;
+}
+
+@keyframes popIn {
+  from { opacity: 0; transform: scale(0.95) translateY(-4px); }
+  to   { opacity: 1; transform: scale(1)    translateY(0); }
+}
+
+.item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 10px var(--space-2);
+  background: none;
+  border: none;
+  color: var(--color-on-surface);
+  font-family: var(--font-body);
+  font-size: 14px;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.1s ease;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.06);
+  }
+
+  &:active {
+    background: rgba(255, 255, 255, 0.1);
+  }
+}
+
+/* Destructive variant — used for Delete. Tinted text and a slightly more
+   prominent hover so the user can't miss that it's the dangerous option. */
+.itemDanger {
+  color: rgb(255, 110, 110);
+
+  &:hover {
+    background: rgba(255, 90, 90, 0.10);
+  }
+
+  &:active {
+    background: rgba(255, 90, 90, 0.18);
+  }
+}

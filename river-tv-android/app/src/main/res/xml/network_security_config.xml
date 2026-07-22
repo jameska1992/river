@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Cleartext is permitted because most river deployments are LAN-only
+     (http://192.168.x.x) and won't have TLS terminated in front of
+     them. If you put river-tv behind https://, tighten this back to a
+     domain-config block for your origin. -->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />
+            <certificates src="user" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

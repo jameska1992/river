@@ -1,0 +1,253 @@
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-3);
+}
+
+.pageError {
+  margin: 0 0 var(--space-2);
+  padding: 10px 14px;
+  border-radius: var(--radius);
+  background: rgba(255, 180, 171, 0.10);
+  border: 1px solid rgba(255, 180, 171, 0.25);
+  color: var(--color-error);
+  font-size: 14px;
+}
+
+.empty {
+  padding: var(--space-5);
+  text-align: center;
+}
+
+/* ---- Library list ---- */
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 14px var(--space-2);
+}
+
+.typeIcon {
+  font-size: 20px;
+  color: var(--color-on-surface-variant);
+  display: flex;
+  flex-shrink: 0;
+}
+
+.rowMeta {
+  width: 180px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.rowPaths {
+  flex: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.pathChip {
+  font-family: monospace;
+  font-size: 12px;
+  padding: 3px 8px;
+  border-radius: var(--radius);
+  background: var(--color-surface-high);
+  color: var(--color-on-surface-variant);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 300px;
+}
+
+.rowActions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.deleteBtn {
+  color: var(--color-error) !important;
+  opacity: 0.70;
+}
+.deleteBtn:hover {
+  opacity: 1;
+  background: rgba(255, 180, 171, 0.10) !important;
+}
+
+/* ---- Modal overlay ---- */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.60);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  padding: var(--space-4) var(--space-2);
+}
+
+.dialog {
+  width: 100%;
+  max-width: 520px;
+  padding: var(--space-4);
+  max-height: 90svh;
+  overflow-y: auto;
+}
+
+.dialogSm {
+  max-width: 400px;
+}
+
+.dialogHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-3);
+}
+
+/* ---- Form ---- */
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Type selector */
+
+.typeGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.typeOption {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: var(--radius);
+  border: 1px solid var(--color-outline-variant);
+  background: var(--color-surface-low);
+  color: var(--color-on-surface-variant);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color 0.12s, background 0.12s, color 0.12s;
+  text-align: left;
+}
+
+.typeOption:hover {
+  border-color: var(--color-outline);
+  color: var(--color-on-surface);
+}
+
+.typeOptionActive {
+  border-color: var(--color-primary);
+  background: rgba(208, 188, 255, 0.10);
+  color: var(--color-primary);
+}
+
+.typeOptionIcon {
+  font-size: 18px;
+  display: flex;
+}
+
+/* Paths */
+
+.pathList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pathRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pathRow .input {
+  flex: 1;
+}
+
+.removePathBtn {
+  flex-shrink: 0;
+}
+
+.addPathBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-primary);
+  background: none;
+  border: none;
+  cursor: pointer;
+  width: fit-content;
+  opacity: 0.85;
+  transition: opacity 0.12s;
+}
+
+.addPathBtn:hover {
+  opacity: 1;
+}
+
+.formError {
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: var(--radius);
+  background: rgba(255, 180, 171, 0.10);
+  border: 1px solid rgba(255, 180, 171, 0.25);
+  color: var(--color-error);
+  font-size: 14px;
+}
+
+.checkboxRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  cursor: pointer;
+}
+.checkboxHint {
+  display: block;
+  font-size: 13px;
+  color: var(--color-on-surface-variant);
+  margin-top: var(--space-1);
+}
+
+.dialogFooter {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-1);
+}
+
+/* Danger button */
+.btnDanger {
+  background: var(--color-error);
+  color: var(--color-on-error);
+}
+.btnDanger:hover {
+  opacity: 0.90;
+}

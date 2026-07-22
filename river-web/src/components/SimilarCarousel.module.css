@@ -1,0 +1,168 @@
+/* Full-width variant of the horizontal-scroll row used on detail
+ * pages. Distinct from ContinueWatching.module.css (which is designed
+ * to sit inside a container-width parent on the home page) because
+ * the "More like this" row is deliberately NOT constrained by the
+ * detail-page container — the row is the last content on the page and
+ * looks better spanning the full viewport with cards scrolling under
+ * the right edge.
+ *
+ * The heading still aligns to the page's container margin so it reads
+ * as part of the same visual column as everything above it; only the
+ * scroll strip itself extends further. */
+
+.section {
+  padding-block: var(--space-5) var(--space-6);
+}
+
+.heading {
+  margin: 0 0 var(--space-3);
+  padding-inline: var(--container-margin);
+
+  @media (max-width: 768px) {
+    padding-inline: var(--space-2);
+  }
+}
+
+.row {
+  display: flex;
+  gap: var(--space-2);
+  overflow-x: auto;
+  /* Left padding matches the page container so the first card lines
+   * up with the heading above it. Right padding is zero on purpose:
+   * lets the last card scroll cleanly off the viewport edge instead
+   * of ending inside a symmetric gutter, which is what makes the row
+   * feel like a proper carousel rather than a narrow chip strip. */
+  padding: 0 0 var(--space-1) var(--container-margin);
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar { display: none; }
+
+  @media (max-width: 768px) {
+    padding-left: var(--space-2);
+  }
+}
+
+/* ── Carousel shell + scroll arrows ───────────────────────────── */
+
+.carousel {
+  position: relative;
+}
+
+/* Edge fade gradients — only rendered when the track can scroll that way. */
+.fade {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 80px;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.fadeLeft {
+  left: 0;
+  background: linear-gradient(to right, var(--color-background), transparent);
+}
+
+.fadeRight {
+  right: 0;
+  background: linear-gradient(to left, var(--color-background), transparent);
+}
+
+.arrow {
+  position: absolute;
+  top: 50%;
+  /* Center on the thumbnail (aspect 16/9), not the whole card incl. the
+   * title text below, so the arrow sits mid-artwork like the home rails. */
+  margin-top: -14px;
+  transform: translateY(-50%);
+  z-index: 3;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--color-surface-high);
+  border: 1px solid var(--color-outline-variant);
+  color: var(--color-on-surface);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+  transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease;
+
+  &:hover {
+    background: var(--color-surface-highest);
+    color: var(--color-primary);
+    transform: translateY(-50%) scale(1.08);
+  }
+}
+
+.arrowLeft  { left: 12px; }
+.arrowRight { right: 12px; }
+
+/* ── Card ─────────────────────────────────────────────────────── */
+
+.card {
+  flex-shrink: 0;
+  width: 280px;
+  text-decoration: none;
+  color: inherit;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+
+  @media (max-width: 600px) {
+    width: 220px;
+  }
+}
+
+.thumb {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--color-surface-low);
+}
+
+.poster {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.fallback {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-outline-variant);
+}
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(0,0,0,0.6) 0%, transparent 50%);
+}
+
+/* ── Info ─────────────────────────────────────────────────────── */
+
+.info {
+  padding: 0 2px;
+}
+
+.showTitle {
+  margin: 0;
+  color: var(--color-on-surface-variant);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.title {
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

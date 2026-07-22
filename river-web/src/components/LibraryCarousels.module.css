@@ -1,0 +1,174 @@
+/* ── Section spacing ──────────────────────────── */
+
+.carousels {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  padding-bottom: var(--space-8);
+}
+
+.row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* ── Row header ───────────────────────────────── */
+
+.rowHeader {
+  display: flex;
+  align-items: center;
+}
+
+.rowTitleLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  text-decoration: none;
+  color: var(--color-on-surface);
+  border-radius: var(--radius-sm);
+  padding: 4px 0;
+  transition: color 0.15s ease;
+
+  &:hover { color: var(--color-primary); }
+}
+
+.rowTitle {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.rowTitleArrow {
+  color: var(--color-on-surface-variant);
+  flex-shrink: 0;
+  opacity: 0;
+  transform: translateX(-4px);
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.rowTitleLink:hover .rowTitleArrow {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+/* ── Carousel shell ───────────────────────────── */
+
+.carousel {
+  position: relative;
+}
+
+/* ── Scrollable track ─────────────────────────── */
+
+.track {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  scroll-snap-type: x proximity;
+  /* Side padding so first/last items don't hug the edge */
+  padding-inline: 2px;
+  padding-block: 6px; /* room for hover lift */
+
+  &::-webkit-scrollbar { display: none; }
+}
+
+.item {
+  flex-shrink: 0;
+  width: 231px;
+  scroll-snap-align: start;
+
+  @media (max-width: 480px) { width: 192px; }
+}
+
+/* ── Edge fade gradients ──────────────────────── */
+
+.fade {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 80px;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.fadeLeft {
+  left: 0;
+  background: linear-gradient(to right, var(--color-background), transparent);
+}
+
+.fadeRight {
+  right: 0;
+  background: linear-gradient(to left, var(--color-background), transparent);
+}
+
+/* ── Arrow buttons ────────────────────────────── */
+
+.arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 3;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--color-surface-high);
+  border: 1px solid var(--color-outline-variant);
+  color: var(--color-on-surface);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+  transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease;
+
+  &:hover {
+    background: var(--color-surface-highest);
+    color: var(--color-primary);
+    transform: translateY(-50%) scale(1.08);
+  }
+}
+
+.arrowLeft  { left: -16px; }
+.arrowRight { right: -16px; }
+
+/* ── Skeletons ────────────────────────────────── */
+
+.skeletonTitle {
+  height: 24px;
+  width: 180px;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(
+    90deg,
+    var(--color-surface-low) 25%,
+    var(--color-surface-high) 50%,
+    var(--color-surface-low) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
+}
+
+.skeletonTrack {
+  display: flex;
+  gap: 12px;
+  overflow: hidden;
+  padding-block: 6px;
+}
+
+.skeletonCard {
+  flex-shrink: 0;
+  width: 231px;
+  background: linear-gradient(
+    90deg,
+    var(--color-surface-low) 25%,
+    var(--color-surface-high) 50%,
+    var(--color-surface-low) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
+}
+
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}

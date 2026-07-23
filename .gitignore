@@ -48,6 +48,9 @@ todo.md
 # Media files
 media/
 
+# Local test dataset (dummy video copies — never upload)
+test-data/
+
 # Environment files
 .env
 .env.*

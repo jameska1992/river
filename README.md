@@ -1,8 +1,21 @@
 # River
 
-![River](./river-logo-small.png)
+![River](./docs/assets/river-logo-small.png)
 
 Self-hosted media platform. Movies, TV shows, music, and audiobooks — scanned from disk, transcoded to browser-friendly formats, enriched with metadata, streamed to a web browser or a TV app.
+
+## Screenshots
+
+| | |
+|---|---|
+| ![Home page](./docs/assets/homepage01.png) | ![Browse library](./docs/assets/homepage02.png) |
+| Home page — hero banner and content rows | Browse — poster grid across libraries |
+| ![Detail page](./docs/assets/details01.png) | ![Admin overview](./docs/assets/admin01.png) |
+| Detail page — synopsis, cast, and trailer | Admin — library stats and overview |
+
+![Service logs](./docs/assets/logs01.png)
+
+*Service logs — metadata enrichment identifying titles via TMDB.*
 
 ## Architecture at a glance
 

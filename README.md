@@ -4,6 +4,46 @@
 
 Self-hosted media platform. Movies, TV shows, music, and audiobooks — scanned from disk, transcoded to browser-friendly formats, enriched with metadata, streamed to a web browser or a TV app.
 
+## Features
+
+**Media library**
+- Four media types, end to end: **movies**, **TV shows** (seasons + episodes), **music** (artists / albums / tracks), and **audiobooks** (with chapters).
+- Automatic filesystem scanning with incremental rescans — a size + mod-time hash short-circuits unchanged files — and `SxxExx` season/episode parsing.
+- Metadata enrichment from **TMDB** (movies + TV), **Open Library** (audiobooks), and **MusicBrainz** + **Cover Art Archive** + **Wikipedia** (music) — posters, backdrops, descriptions, cast/crew, ratings, and genres.
+- Pre-transcoded libraries can skip the transcode step and stream as-is.
+
+**Playback & streaming**
+- Media is transcoded once at ingestion to browser-friendly **H.264 / AAC / MP4** (video) and **AAC / M4A** (audio), capped at 1080p — playback streams the pre-transcoded files directly, no per-request transcoding.
+- Optional **NVENC GPU acceleration** with automatic fallback to CPU (`libx264`).
+- **HTTP Range** streaming for instant seeking, plus **WebVTT subtitle** extraction and **multiple audio tracks**.
+- **Continue watching**, per-title watch progress, "next up" suggestions, and optional file **downloads**.
+- **Watch party** — real-time synchronized playback across viewers over WebSockets.
+
+**Discovery**
+- Home page with hero banner, continue-watching, and recently-added rows.
+- Browse grids per library, global search, cast/crew credits, and "similar titles".
+- User **collections** and **watchlist**.
+
+**Requests — Radarr & Sonarr integration**
+- Search **Radarr** (movies) and **Sonarr** (TV) for titles you don't own yet, right from the web client.
+- Request a title and River adds it to Radarr/Sonarr for you — root folder and quality profile are auto-selected from each server's defaults, so there's nothing to configure per request.
+- A combined **calendar** merges upcoming and recently-released dates from both Radarr and Sonarr into one upcoming-releases view.
+- Fully optional: point River at your `*arr` instances with URL + API key, or leave it off (request endpoints simply report unavailable when unconfigured).
+
+**Clients**
+- **`river-web`** — full browser client and admin surface.
+- **`river-tv`** — TV-optimized client with D-pad / spatial focus navigation.
+- **`river-tv-android`** — Android TV / Fire TV launcher app wrapping the TV client.
+
+**Accounts & administration**
+- JWT auth with rotating refresh tokens; the first registered user becomes **admin**.
+- Admin dashboard: library stats, library management, media upload, unidentified items, scanner state, users, active sessions, and service logs.
+
+**Platform**
+- Eight independent Go microservices, decoupled via **RabbitMQ**.
+- One-command **Docker Compose** deployment (with an opt-in NVIDIA GPU overlay) and env-based configuration.
+- **Swagger / OpenAPI** docs, paginated list endpoints, and an image proxy for CDN artwork.
+
 ## Screenshots
 
 | | |

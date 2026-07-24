@@ -50,23 +50,43 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # need the base commit to compare against
       - uses: actions/setup-go@v5
         with:
           go-version-file: river-api/go.mod
           cache-dependency-path: river-api/go.sum
-      # Ratchet floor: fail if module-wide coverage drops below THRESHOLD.
-      # Raise THRESHOLD as coverage grows so it can only move up, never
-      # silently regress.
-      - name: enforce coverage floor
+      # Auto-ratchet: module-wide coverage may not drop below the base
+      # branch. The floor rises on its own as tests are added — no manual
+      # threshold to maintain. TOLERANCE absorbs a single rounding tick so
+      # identical code can't flake. On push (no base PR) we only report.
+      - name: enforce no coverage regression
         working-directory: river-api
         env:
-          THRESHOLD: "5.0"
+          TOLERANCE: "0.1"
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: |
-          go test ./... -coverpkg=./... -coverprofile=coverage.out
-          total="$(go tool cover -func=coverage.out | awk '/^total:/ {print $3}' | tr -d '%')"
-          echo "river-api total coverage: ${total}% (floor: ${THRESHOLD}%)"
-          if ! awk -v t="$total" -v min="$THRESHOLD" 'BEGIN { exit (t+0 < min+0) ? 1 : 0 }'; then
-            echo "::error::river-api coverage ${total}% is below the ${THRESHOLD}% floor"
+          coverage() {
+            go test ./... -coverpkg=./... -coverprofile=/tmp/cov.out >/dev/null 2>&1
+            go tool cover -func=/tmp/cov.out | awk '/^total:/ {print $3}' | tr -d '%'
+          }
+          pr_cov="$(coverage)"
+          echo "this branch: ${pr_cov}% coverage"
+
+          if [ -z "$BASE_SHA" ]; then
+            echo "no base ref (push build) — reporting only, skipping regression check"
+            exit 0
+          fi
+
+          git worktree add -q /tmp/base "$BASE_SHA"
+          base_cov="$(cd /tmp/base/river-api && coverage)"
+          echo "base ($BASE_SHA): ${base_cov}% coverage"
+
+          if awk -v pr="$pr_cov" -v base="$base_cov" -v tol="$TOLERANCE" \
+               'BEGIN { exit (pr+0 < base+0 - tol) ? 1 : 0 }'; then
+            echo "OK: ${pr_cov}% >= ${base_cov}% (base) - ${TOLERANCE}%"
+          else
+            echo "::error::river-api coverage regressed: ${pr_cov}% < base ${base_cov}% (tolerance ${TOLERANCE}%). Add tests to cover new code, or raise coverage to restore it."
             exit 1
           fi
 

@@ -176,3 +176,135 @@ func (m *memLibraryRepo) Delete(id string) error {
 	}
 	return apperrors.ErrNotFound
 }
+
+type memProgressRepo struct {
+	rows []*models.WatchProgress
+}
+
+func (m *memProgressRepo) match(r *models.WatchProgress, userID, mediaType, mediaID string) bool {
+	return r.UserID == userID && r.MediaType == mediaType && r.MediaID == mediaID
+}
+
+func (m *memProgressRepo) Upsert(p *models.WatchProgress) error {
+	for i, r := range m.rows {
+		if m.match(r, p.UserID, p.MediaType, p.MediaID) {
+			m.rows[i] = p
+			return nil
+		}
+	}
+	m.rows = append(m.rows, p)
+	return nil
+}
+
+func (m *memProgressRepo) Find(userID, mediaType, mediaID string) (*models.WatchProgress, error) {
+	for _, r := range m.rows {
+		if m.match(r, userID, mediaType, mediaID) {
+			return r, nil
+		}
+	}
+	return nil, apperrors.ErrNotFound
+}
+
+// Delete mirrors the GORM repo: deleting a missing row is a no-op, not an error.
+func (m *memProgressRepo) Delete(userID, mediaType, mediaID string) error {
+	for i, r := range m.rows {
+		if m.match(r, userID, mediaType, mediaID) {
+			m.rows = append(m.rows[:i], m.rows[i+1:]...)
+			return nil
+		}
+	}
+	return nil
+}
+
+func (m *memProgressRepo) FindAllByType(userID, mediaType string) ([]models.WatchProgress, error) {
+	out := make([]models.WatchProgress, 0)
+	for _, r := range m.rows {
+		if r.UserID == userID && r.MediaType == mediaType {
+			out = append(out, *r)
+		}
+	}
+	return out, nil
+}
+
+func (m *memProgressRepo) FindInProgress(userID string, limit int) ([]models.WatchProgress, error) {
+	return nil, nil
+}
+func (m *memProgressRepo) FindAllActive(since time.Time, limit int) ([]models.WatchProgress, error) {
+	return nil, nil
+}
+func (m *memProgressRepo) FindByUser(userID string, limit int) ([]models.WatchProgress, error) {
+	return nil, nil
+}
+func (m *memProgressRepo) FindCompletedEpisodes(userID string) ([]models.WatchProgress, error) {
+	return nil, nil
+}
+
+type memEpisodeRepo struct {
+	episodes []*models.Episode
+}
+
+func (m *memEpisodeRepo) FindByShowID(showID string) ([]models.Episode, error) {
+	out := make([]models.Episode, 0)
+	for _, e := range m.episodes {
+		if e.TVShowID.String() == showID {
+			out = append(out, *e)
+		}
+	}
+	return out, nil
+}
+
+func (m *memEpisodeRepo) FindByID(id string) (*models.Episode, error) {
+	for _, e := range m.episodes {
+		if e.ID.String() == id {
+			return e, nil
+		}
+	}
+	return nil, apperrors.ErrNotFound
+}
+
+func (m *memEpisodeRepo) FindBySeasonID(seasonID string) ([]models.Episode, error) {
+	out := make([]models.Episode, 0)
+	for _, e := range m.episodes {
+		if e.SeasonID.String() == seasonID {
+			out = append(out, *e)
+		}
+	}
+	return out, nil
+}
+
+func (m *memEpisodeRepo) FindBySeasonAndNumber(seasonID string, number int, isSpecial bool) (*models.Episode, error) {
+	for _, e := range m.episodes {
+		if e.SeasonID.String() == seasonID && e.Number == number {
+			return e, nil
+		}
+	}
+	return nil, apperrors.ErrNotFound
+}
+
+func (m *memEpisodeRepo) Create(e *models.Episode) error {
+	if e.ID == uuid.Nil {
+		e.ID = uuid.New()
+	}
+	m.episodes = append(m.episodes, e)
+	return nil
+}
+
+func (m *memEpisodeRepo) Save(e *models.Episode) error {
+	for i, ex := range m.episodes {
+		if ex.ID == e.ID {
+			m.episodes[i] = e
+			return nil
+		}
+	}
+	return apperrors.ErrNotFound
+}
+
+func (m *memEpisodeRepo) Delete(id string) error {
+	for i, e := range m.episodes {
+		if e.ID.String() == id {
+			m.episodes = append(m.episodes[:i], m.episodes[i+1:]...)
+			return nil
+		}
+	}
+	return apperrors.ErrNotFound
+}

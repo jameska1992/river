@@ -114,7 +114,13 @@ func (f *fakeMovieRepo) FindByID(id string) (*models.Movie, error) {
 }
 func (f *fakeMovieRepo) FindAll(string, int, int, string) ([]models.Movie, error) { return nil, nil }
 func (f *fakeMovieRepo) Count(string) (int64, error)                              { return 0, nil }
-func (f *fakeMovieRepo) FindRecent(int) ([]models.Movie, error)                   { return nil, nil }
+func (f *fakeMovieRepo) FindRecent(int) ([]models.Movie, error) {
+	out := make([]models.Movie, 0, len(f.movies))
+	for _, m := range f.movies {
+		out = append(out, *m)
+	}
+	return out, nil
+}
 func (f *fakeMovieRepo) FindUnidentified() ([]models.Movie, error)                { return nil, nil }
 func (f *fakeMovieRepo) Create(m *models.Movie) error {
 	if m.ID == uuid.Nil {
@@ -148,7 +154,13 @@ func (f *fakeShowRepo) FindByID(id string) (*models.TVShow, error) {
 func (f *fakeShowRepo) FindAllUnpaged(string) ([]models.TVShow, error)            { return nil, nil }
 func (f *fakeShowRepo) FindAll(string, int, int, string) ([]models.TVShow, error) { return nil, nil }
 func (f *fakeShowRepo) Count(string) (int64, error)                              { return 0, nil }
-func (f *fakeShowRepo) FindRecent(int) ([]models.TVShow, error)                  { return nil, nil }
+func (f *fakeShowRepo) FindRecent(int) ([]models.TVShow, error) {
+	out := make([]models.TVShow, 0, len(f.shows))
+	for _, s := range f.shows {
+		out = append(out, *s)
+	}
+	return out, nil
+}
 func (f *fakeShowRepo) FindUnidentified() ([]models.TVShow, error)               { return nil, nil }
 func (f *fakeShowRepo) Create(s *models.TVShow) error {
 	if s.ID == uuid.Nil {

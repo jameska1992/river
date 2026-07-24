@@ -221,6 +221,68 @@ func (f *fakeSearchRepo) SearchPeople(q string, l int) ([]models.Person, error) 
 	return f.people, nil
 }
 
+// fakeArtistRepo — stateful ArtistRepository.
+type fakeArtistRepo struct{ artists []*models.Artist }
+
+func (f *fakeArtistRepo) FindByID(id string) (*models.Artist, error) {
+	for _, a := range f.artists {
+		if a.ID.String() == id {
+			return a, nil
+		}
+	}
+	return nil, apperrors.ErrNotFound
+}
+func (f *fakeArtistRepo) FindAll(string, int, int, string) ([]models.Artist, error) { return nil, nil }
+func (f *fakeArtistRepo) Create(a *models.Artist) error {
+	if a.ID == uuid.Nil {
+		a.ID = uuid.New()
+	}
+	f.artists = append(f.artists, a)
+	return nil
+}
+func (f *fakeArtistRepo) Save(*models.Artist) error { return nil }
+func (f *fakeArtistRepo) Delete(id string) error {
+	for i, a := range f.artists {
+		if a.ID.String() == id {
+			f.artists = append(f.artists[:i], f.artists[i+1:]...)
+			return nil
+		}
+	}
+	return apperrors.ErrNotFound
+}
+
+// fakeAlbumRepo — stateful AlbumRepository.
+type fakeAlbumRepo struct{ albums []*models.Album }
+
+func (f *fakeAlbumRepo) FindByID(id string) (*models.Album, error) {
+	for _, a := range f.albums {
+		if a.ID.String() == id {
+			return a, nil
+		}
+	}
+	return nil, apperrors.ErrNotFound
+}
+func (f *fakeAlbumRepo) FindAll(string, int, int, string) ([]models.Album, error) { return nil, nil }
+func (f *fakeAlbumRepo) Count(string) (int64, error)                              { return 0, nil }
+func (f *fakeAlbumRepo) FindByArtistID(string, int, int) ([]models.Album, error)  { return nil, nil }
+func (f *fakeAlbumRepo) Create(a *models.Album) error {
+	if a.ID == uuid.Nil {
+		a.ID = uuid.New()
+	}
+	f.albums = append(f.albums, a)
+	return nil
+}
+func (f *fakeAlbumRepo) Save(*models.Album) error { return nil }
+func (f *fakeAlbumRepo) Delete(id string) error {
+	for i, a := range f.albums {
+		if a.ID.String() == id {
+			f.albums = append(f.albums[:i], f.albums[i+1:]...)
+			return nil
+		}
+	}
+	return apperrors.ErrNotFound
+}
+
 // fakeCleanupRepo — MediaCleanupRepository no-op for handler delete paths.
 type fakeCleanupRepo struct{}
 

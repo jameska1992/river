@@ -1,5 +1,36 @@
 basePath: /api
 definitions:
+  handlers.CalendarItem:
+    properties:
+      date:
+        description: RFC3339 date the event lands on (grid placement)
+        type: string
+      digitalRelease:
+        description: RFC3339 digital release, when known (movies only)
+        type: string
+      episodeNumber:
+        type: integer
+      episodeTitle:
+        description: episode name (episodes only)
+        type: string
+      hasFile:
+        type: boolean
+      overview:
+        type: string
+      poster:
+        type: string
+      releaseType:
+        description: '"digital"|"physical"|"cinema" (movies only)'
+        type: string
+      seasonNumber:
+        type: integer
+      title:
+        description: movie title, or series title for episodes
+        type: string
+      type:
+        description: '"movie" | "episode"'
+        type: string
+    type: object
   handlers.MovieSearchResult:
     properties:
       added:
@@ -223,6 +254,22 @@ definitions:
     required:
     - name
     type: object
+  handlers.completedRequest:
+    properties:
+      completed:
+        type: boolean
+      media_id:
+        type: string
+      media_type:
+        enum:
+        - movie
+        - episode
+        - chapter
+        type: string
+    required:
+    - media_id
+    - media_type
+    type: object
   handlers.createAudioTrackRequest:
     properties:
       file_path:
@@ -311,6 +358,8 @@ definitions:
         type: string
       file_path:
         type: string
+      is_special:
+        type: boolean
       number:
         type: integer
       runtime:
@@ -328,6 +377,12 @@ definitions:
         type: string
       paths:
         type: string
+      pre_transcoded:
+        description: |-
+          PreTranscoded marks the library as already transcoded — scanning
+          and metadata continue, but the video/audio transcoders skip the
+          event. See models.Library for the full semantics.
+        type: boolean
       type:
         allOf:
         - $ref: '#/definitions/models.LibraryType'
@@ -374,6 +429,8 @@ definitions:
         type: string
       title:
         type: string
+      tmdb_id:
+        type: integer
       trailer_url:
         type: string
       year:
@@ -430,6 +487,11 @@ definitions:
       description:
         type: string
       number:
+        description: |-
+          Number is optional in the binding (no `required`) because 0 is a
+          valid season number — it's the "Specials" season under Plex/TMDB
+          convention. The `required` tag on a Go int would treat 0 as missing
+          and reject the request.
         type: integer
       poster_path:
         type: string
@@ -437,8 +499,15 @@ definitions:
         type: string
       year:
         type: integer
+    type: object
+  handlers.showCompletedRequest:
+    properties:
+      completed:
+        type: boolean
+      show_id:
+        type: string
     required:
-    - number
+    - show_id
     type: object
   handlers.tokenRequest:
     properties:
@@ -493,6 +562,8 @@ definitions:
         type: string
       title:
         type: string
+      tmdb_id:
+        type: integer
       trailer_url:
         type: string
       year:
@@ -721,6 +792,15 @@ definitions:
         type: string
       id:
         type: string
+      is_special:
+        description: |-
+          IsSpecial flags episodes whose filename didn't yield a SxxExx / NxNN /
+          Exx number. We still ingest them so they surface in the season's
+          episode list; clients render "SPEC" instead of "E${number}". Number is
+          a 1-based index among specials in the same season, so it can collide
+          with a regular ep's number without ambiguity — (season_id, number,
+          is_special) is what's effectively unique.
+        type: boolean
       number:
         type: integer
       runtime:
@@ -753,6 +833,15 @@ definitions:
       paths:
         description: JSON-encoded []string
         type: string
+      pre_transcoded:
+        description: |-
+          PreTranscoded marks a library whose contents are already in the
+          canonical stream format (H.264/AAC/MP4 for video, AAC/M4A for
+          audio). Scanning and metadata enrichment still run; the video /
+          audio transcoders short-circuit on events for these libraries so
+          no re-encode and no output-tree copy occurs. Existing rows default
+          to false via GORM auto-migrate.
+        type: boolean
       type:
         $ref: '#/definitions/models.LibraryType'
       updated_at:
@@ -807,6 +896,14 @@ definitions:
         type: string
       title:
         type: string
+      tmdb_id:
+        description: |-
+          TMDBID is the movie's TMDB identifier, set once enrichment resolves
+          the movie (whether via title search, IMDb hint, or admin override).
+          Subsequent enrichments use it directly so a rescan or refresh can't
+          re-search by title and revert to a different popular match. 0 means
+          "not yet resolved".
+        type: integer
       trailer_url:
         type: string
       updated_at:
@@ -906,6 +1003,14 @@ definitions:
         type: string
       title:
         type: string
+      tmdb_id:
+        description: |-
+          TMDBID is the show's TMDB identifier, set once enrichment resolves
+          the show (whether via title search, IMDb hint, or admin override).
+          Subsequent enrichments use it directly so a rescan or refresh can't
+          re-search by title and revert to a different popular match. 0 means
+          "not yet resolved".
+        type: integer
       trailer_url:
         type: string
       updated_at:
@@ -1014,6 +1119,31 @@ definitions:
         type: string
       userID:
         type: string
+    type: object
+  services.ShowWatchState:
+    properties:
+      completed:
+        type: integer
+      show_id:
+        type: string
+      total:
+        type: integer
+    type: object
+  services.SimilarItem:
+    properties:
+      backdrop_path:
+        type: string
+      id:
+        type: string
+      poster_path:
+        type: string
+      title:
+        type: string
+      type:
+        description: '"movie" | "tvshow" | "audiobook"'
+        type: string
+      year:
+        type: integer
     type: object
 host: localhost:8080
 info:
@@ -1151,6 +1281,72 @@ paths:
       security:
       - BearerAuth: []
       summary: Trigger library scan
+      tags:
+      - admin
+  /admin/scanner-state:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "502":
+          description: river-scan unreachable
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "503":
+          description: RIVER_SCAN_URL not configured
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Read scanner state
+      tags:
+      - admin
+  /admin/scanner-state/forget:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: '{paths?, prefixes?, shows?}'
+        in: body
+        name: body
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "502":
+          description: Bad Gateway
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "503":
+          description: Service Unavailable
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Forget scanner-state entries
       tags:
       - admin
   /admin/stats:
@@ -2257,6 +2453,38 @@ paths:
       summary: Refresh audiobook metadata
       tags:
       - admin
+  /audiobooks/{id}/similar:
+    get:
+      parameters:
+      - description: Audiobook ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: 1..50, default 16
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/services.SimilarItem'
+            type: array
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Similar audiobooks
+      tags:
+      - audiobooks
   /auth/login:
     post:
       consumes:
@@ -2691,6 +2919,40 @@ paths:
       summary: Remove collection item
       tags:
       - collections
+  /image:
+    get:
+      parameters:
+      - description: Absolute https URL to proxy
+        in: query
+        name: url
+        required: true
+        type: string
+      produces:
+      - image/jpeg
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: missing or invalid url
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: host not on allowlist
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "502":
+          description: upstream fetch failed
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Proxy an external image
+      tags:
+      - image
   /libraries:
     get:
       produces:
@@ -3292,6 +3554,38 @@ paths:
       summary: Refresh movie metadata
       tags:
       - admin
+  /movies/{id}/similar:
+    get:
+      parameters:
+      - description: Movie ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: 1..50, default 16
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/services.SimilarItem'
+            type: array
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Similar movies
+      tags:
+      - movies
   /movies/{id}/source-path:
     patch:
       consumes:
@@ -3519,6 +3813,39 @@ paths:
       summary: List watch progress
       tags:
       - progress
+  /progress/completed:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Completed payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.completedRequest'
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Set watch progress completed flag
+      tags:
+      - progress
   /progress/continue-watching:
     get:
       produces:
@@ -3539,6 +3866,168 @@ paths:
       security:
       - BearerAuth: []
       summary: Continue Watching list
+      tags:
+      - progress
+  /progress/next-up:
+    get:
+      parameters:
+      - description: 1..50, default 16
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              type: object
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Next Up list
+      tags:
+      - progress
+  /progress/next-up/{episode_id}/dismiss:
+    delete:
+      parameters:
+      - description: Episode ID
+        in: path
+        name: episode_id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Undo a Next Up dismissal
+      tags:
+      - progress
+    post:
+      parameters:
+      - description: Episode ID
+        in: path
+        name: episode_id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Dismiss a Next Up entry
+      tags:
+      - progress
+  /progress/show-completed:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.showCompletedRequest'
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Set show watched (cascades to all episodes)
+      tags:
+      - progress
+  /progress/show-state:
+    get:
+      parameters:
+      - description: TV show ID
+        in: query
+        name: show_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/services.ShowWatchState'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Watch state for a single show
+      tags:
+      - progress
+  /progress/show-states:
+    get:
+      parameters:
+      - description: Limit to a single library
+        in: query
+        name: library_id
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/services.ShowWatchState'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Per-show watch states
       tags:
       - progress
   /progress/ws:
@@ -3584,6 +4073,51 @@ paths:
       summary: Recently added
       tags:
       - recently-added
+  /request/calendar:
+    get:
+      parameters:
+      - description: Range start (YYYY-MM-DD)
+        in: query
+        name: start
+        required: true
+        type: string
+      - description: Range end (YYYY-MM-DD)
+        in: query
+        name: end
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/handlers.CalendarItem'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "502":
+          description: Bad Gateway
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "503":
+          description: Neither Radarr nor Sonarr configured
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Combined Radarr + Sonarr calendar
+      tags:
+      - request
   /request/movies:
     get:
       parameters:
@@ -4543,6 +5077,47 @@ paths:
       tags:
       - tvshows
   /tvshows/{id}/seasons/{seasonId}/episodes/{episodeId}:
+    delete:
+      parameters:
+      - description: TV show ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Season ID
+        in: path
+        name: seasonId
+        required: true
+        type: string
+      - description: Episode ID
+        in: path
+        name: episodeId
+        required: true
+        type: string
+      - description: Also remove the episode files on disk
+        in: query
+        name: delete_files
+        type: boolean
+      responses:
+        "204":
+          description: No Content
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete episode
+      tags:
+      - tvshows
     put:
       consumes:
       - application/json
@@ -4796,6 +5371,38 @@ paths:
       summary: List episode subtitles
       tags:
       - subtitles
+  /tvshows/{id}/similar:
+    get:
+      parameters:
+      - description: TV show ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: 1..50, default 16
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/services.SimilarItem'
+            type: array
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Similar TV shows
+      tags:
+      - tvshows
   /watchlist:
     get:
       produces:

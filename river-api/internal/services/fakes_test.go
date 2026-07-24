@@ -327,9 +327,31 @@ func (m *memMovieRepo) FindAll(string, int, int, string) ([]models.Movie, error)
 func (m *memMovieRepo) Count(string) (int64, error)                              { return 0, nil }
 func (m *memMovieRepo) FindRecent(int) ([]models.Movie, error)                   { return nil, nil }
 func (m *memMovieRepo) FindUnidentified() ([]models.Movie, error)                { return nil, nil }
-func (m *memMovieRepo) Create(*models.Movie) error                              { return nil }
-func (m *memMovieRepo) Save(*models.Movie) error                                { return nil }
-func (m *memMovieRepo) Delete(string) error                                     { return nil }
+func (m *memMovieRepo) Create(x *models.Movie) error {
+	if x.ID == uuid.Nil {
+		x.ID = uuid.New()
+	}
+	m.movies = append(m.movies, x)
+	return nil
+}
+func (m *memMovieRepo) Save(x *models.Movie) error {
+	for i, e := range m.movies {
+		if e.ID == x.ID {
+			m.movies[i] = x
+			return nil
+		}
+	}
+	return apperrors.ErrNotFound
+}
+func (m *memMovieRepo) Delete(id string) error {
+	for i, e := range m.movies {
+		if e.ID.String() == id {
+			m.movies = append(m.movies[:i], m.movies[i+1:]...)
+			return nil
+		}
+	}
+	return apperrors.ErrNotFound
+}
 
 type memShowRepo struct{ shows []*models.TVShow }
 
@@ -346,9 +368,63 @@ func (m *memShowRepo) FindAll(string, int, int, string) ([]models.TVShow, error)
 func (m *memShowRepo) Count(string) (int64, error)                              { return 0, nil }
 func (m *memShowRepo) FindRecent(int) ([]models.TVShow, error)                  { return nil, nil }
 func (m *memShowRepo) FindUnidentified() ([]models.TVShow, error)               { return nil, nil }
-func (m *memShowRepo) Create(*models.TVShow) error                             { return nil }
-func (m *memShowRepo) Save(*models.TVShow) error                               { return nil }
-func (m *memShowRepo) Delete(string) error                                     { return nil }
+func (m *memShowRepo) Create(x *models.TVShow) error {
+	if x.ID == uuid.Nil {
+		x.ID = uuid.New()
+	}
+	m.shows = append(m.shows, x)
+	return nil
+}
+func (m *memShowRepo) Save(x *models.TVShow) error {
+	for i, e := range m.shows {
+		if e.ID == x.ID {
+			m.shows[i] = x
+			return nil
+		}
+	}
+	return apperrors.ErrNotFound
+}
+func (m *memShowRepo) Delete(id string) error {
+	for i, e := range m.shows {
+		if e.ID.String() == id {
+			m.shows = append(m.shows[:i], m.shows[i+1:]...)
+			return nil
+		}
+	}
+	return apperrors.ErrNotFound
+}
+
+// memCleanupRepo fakes MediaCleanupRepository. Per-type error hooks let a
+// test drive the "purge fails → row is not deleted" path; purged records
+// the ids that were successfully purged.
+type memCleanupRepo struct {
+	movieErr, showErr, episodeErr error
+	purged                        []string
+}
+
+func (m *memCleanupRepo) PurgeMovie(id string) error {
+	if m.movieErr != nil {
+		return m.movieErr
+	}
+	m.purged = append(m.purged, "movie:"+id)
+	return nil
+}
+func (m *memCleanupRepo) PurgeShow(id string) error {
+	if m.showErr != nil {
+		return m.showErr
+	}
+	m.purged = append(m.purged, "show:"+id)
+	return nil
+}
+func (m *memCleanupRepo) PurgeEpisode(id string) error {
+	if m.episodeErr != nil {
+		return m.episodeErr
+	}
+	m.purged = append(m.purged, "episode:"+id)
+	return nil
+}
+func (m *memCleanupRepo) PurgeAudiobook(id string) error { return nil }
+func (m *memCleanupRepo) PurgeChapter(id string) error   { return nil }
 
 type memAudiobookRepo struct{ books []*models.Audiobook }
 

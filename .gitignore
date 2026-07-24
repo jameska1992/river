@@ -51,6 +51,9 @@ media/
 # Local test dataset (dummy video copies — never upload)
 test-data/
 
+# Local-only helper scripts
+scripts/
+
 # Environment files
 .env
 .env.*

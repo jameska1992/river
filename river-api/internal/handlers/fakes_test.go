@@ -6,6 +6,7 @@ import (
 
 	"river-api/internal/apperrors"
 	"river-api/internal/models"
+	"river-api/internal/repository"
 
 	"github.com/google/uuid"
 )
@@ -354,6 +355,76 @@ func (f *fakeChapterRepo) Create(c *models.AudiobookChapter) error {
 	}
 	f.chapters = append(f.chapters, c)
 	return nil
+}
+
+// fakeSubtitleRepo — in-memory SubtitleRepository.
+type fakeSubtitleRepo struct{ subs []*models.Subtitle }
+
+func (f *fakeSubtitleRepo) Create(in repository.SubtitleInput) (*models.Subtitle, error) {
+	s := &models.Subtitle{Base: models.Base{ID: uuid.New()}, MediaType: in.MediaType, MediaID: in.MediaID, Language: in.Language, Label: in.Label, FilePath: in.FilePath}
+	f.subs = append(f.subs, s)
+	return s, nil
+}
+func (f *fakeSubtitleRepo) ListByMedia(mediaType, mediaID string) ([]models.Subtitle, error) {
+	out := make([]models.Subtitle, 0)
+	for _, s := range f.subs {
+		if s.MediaType == mediaType && s.MediaID == mediaID {
+			out = append(out, *s)
+		}
+	}
+	return out, nil
+}
+func (f *fakeSubtitleRepo) FindByID(id string) (*models.Subtitle, error) {
+	for _, s := range f.subs {
+		if s.ID.String() == id {
+			return s, nil
+		}
+	}
+	return nil, apperrors.ErrNotFound
+}
+func (f *fakeSubtitleRepo) Delete(id string) error {
+	for i, s := range f.subs {
+		if s.ID.String() == id {
+			f.subs = append(f.subs[:i], f.subs[i+1:]...)
+			return nil
+		}
+	}
+	return apperrors.ErrNotFound
+}
+
+// fakeAudioTrackRepo — in-memory AudioTrackRepository.
+type fakeAudioTrackRepo struct{ tracks []*models.AudioTrack }
+
+func (f *fakeAudioTrackRepo) Create(in repository.AudioTrackInput) (*models.AudioTrack, error) {
+	tr := &models.AudioTrack{Base: models.Base{ID: uuid.New()}, MediaType: in.MediaType, MediaID: in.MediaID, Language: in.Language, Label: in.Label, StreamIndex: in.StreamIndex, FilePath: in.FilePath}
+	f.tracks = append(f.tracks, tr)
+	return tr, nil
+}
+func (f *fakeAudioTrackRepo) ListByMedia(mediaType, mediaID string) ([]models.AudioTrack, error) {
+	out := make([]models.AudioTrack, 0)
+	for _, tr := range f.tracks {
+		if tr.MediaType == mediaType && tr.MediaID == mediaID {
+			out = append(out, *tr)
+		}
+	}
+	return out, nil
+}
+func (f *fakeAudioTrackRepo) FindByID(id string) (*models.AudioTrack, error) {
+	for _, tr := range f.tracks {
+		if tr.ID.String() == id {
+			return tr, nil
+		}
+	}
+	return nil, apperrors.ErrNotFound
+}
+func (f *fakeAudioTrackRepo) Delete(id string) error {
+	for i, tr := range f.tracks {
+		if tr.ID.String() == id {
+			f.tracks = append(f.tracks[:i], f.tracks[i+1:]...)
+			return nil
+		}
+	}
+	return apperrors.ErrNotFound
 }
 
 // fakeCleanupRepo — MediaCleanupRepository no-op for handler delete paths.

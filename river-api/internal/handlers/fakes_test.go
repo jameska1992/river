@@ -200,6 +200,27 @@ func (f *fakeWatchlistRepo) List(userID string) ([]models.WatchlistItem, error) 
 	return out, nil
 }
 
+// fakeSearchRepo — SearchRepository returning seeded results (no filtering).
+type fakeSearchRepo struct {
+	movies []models.Movie
+	shows  []models.TVShow
+	books  []models.Audiobook
+	people []models.Person
+}
+
+func (f *fakeSearchRepo) SearchMovies(q, g string, l int) ([]models.Movie, error) {
+	return f.movies, nil
+}
+func (f *fakeSearchRepo) SearchTVShows(q, g string, l int) ([]models.TVShow, error) {
+	return f.shows, nil
+}
+func (f *fakeSearchRepo) SearchAudiobooks(q, g string, l int) ([]models.Audiobook, error) {
+	return f.books, nil
+}
+func (f *fakeSearchRepo) SearchPeople(q string, l int) ([]models.Person, error) {
+	return f.people, nil
+}
+
 // fakeCleanupRepo — MediaCleanupRepository no-op for handler delete paths.
 type fakeCleanupRepo struct{}
 

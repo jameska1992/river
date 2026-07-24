@@ -151,13 +151,9 @@ services:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [gpu]
+    # GPU device reservation is applied only via docker-compose.gpu.yml so the
+    # base stack runs CPU-only (libx264). The transcoder falls back to CPU
+    # automatically when NVENC isn't present.
 
   river-audio-trans:
     build:

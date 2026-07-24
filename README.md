@@ -103,23 +103,75 @@ Filesystem
 | [`river-tv`](./river-tv/) | TV-optimised web app — React + Vite. D-pad focus navigation. |
 | [`river-tv-android`](./river-tv-android/) | Android TV / Fire TV launcher app — WebView-wraps the `river-tv` build. |
 
-## Running it
+## Deployment
 
-The whole backend runs from Docker Compose. GPU (NVENC) is opt-in.
+The entire backend **and** the web client run from Docker Compose. Every service — the Go microservices, RabbitMQ, Postgres, and the nginx-served web app — builds and runs inside containers, so the host only needs Docker itself.
+
+### Prerequisites
+
+| Requirement | Needed for | Notes |
+|---|---|---|
+| **Docker Engine 24+** and the **Compose v2** plugin | Everything | The only hard requirement. Images build in-container — no local Go or Node toolchain needed to run the stack. |
+| **TMDB API key** (free) | Movie & TV metadata | Get one at [themoviedb.org/settings/api](https://www.themoviedb.org/settings/api). Required by `river-meta-movie` / `river-meta-tv`. |
+| **NVIDIA GPU + drivers + [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html)** | *Optional* — NVENC hardware transcoding | Only when using the GPU overlay (below). Video transcoding falls back to CPU `libx264` without it. |
+| **Node.js 20+**, **JDK 17**, **Android SDK** (compileSdk 35) | *Optional* — building the TV / Android clients | Not needed for the server or web UI. See the [`river-tv`](./river-tv/) and [`river-tv-android`](./river-tv-android/) READMEs. |
+
+### 1. Configure
 
 ```bash
 cp .env.example .env
-# Edit .env — set POSTGRES_PASSWORD, JWT_SECRET, ADMIN_PASSWORD, TMDB_API_KEY,
-# MEDIA_PATH (host path with your files), OUTPUT_PATH (transcoder output root).
-
-docker compose up -d                        # CPU-only
-docker compose -f docker-compose.yml \
-               -f docker-compose.gpu.yml up -d   # with NVENC on nvidia GPU
 ```
 
-First boot registers an admin user (username / password from `.env`).
+Edit `.env` and set the **required** values:
 
-**Client apps are built and deployed separately** — see each client's own README.
+| Variable | Description |
+|---|---|
+| `MEDIA_PATH` | Absolute host path to your media library (mounted read-only into the services). |
+| `OUTPUT_PATH` | Absolute host path where transcoded output is written. |
+| `JWT_SECRET` | Long random string used to sign access tokens. |
+| `ADMIN_PASSWORD` | Password for the admin account created on first boot. |
+| `TMDB_API_KEY` | Your TMDB key (see prerequisites). |
+
+Everything else has sensible defaults — Postgres/RabbitMQ credentials, admin username/email, `SCAN_INTERVAL`, ffmpeg worker counts, JWT token lifetimes, and the optional Radarr/Sonarr integration. See [`.env.example`](./.env.example) for the full list.
+
+### 2. Start the stack
+
+```bash
+# CPU-only (default)
+docker compose up -d --build
+
+# With NVENC on an NVIDIA GPU (requires the NVIDIA Container Toolkit)
+docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d --build
+```
+
+On first boot a one-shot `river-init` container registers the admin user from `ADMIN_USERNAME` / `ADMIN_PASSWORD`, then the media services come up and `river-scan` begins indexing `MEDIA_PATH`.
+
+### 3. Access
+
+| Service | URL | Notes |
+|---|---|---|
+| Web client | `http://<host>/` | nginx serves the SPA and proxies `/api` to river-api (incl. WebSocket + media streaming). |
+| REST API | `http://<host>:8080/api` | Exposed directly as well as via the web proxy. |
+| API docs (Swagger) | `http://<host>:8080/swagger/index.html` | Interactive OpenAPI explorer. |
+| RabbitMQ management | `http://<host>:15672` | Login with `RABBITMQ_USER` / `RABBITMQ_PASSWORD`. |
+
+> **Production note:** the compose file publishes Postgres (`5432`) and RabbitMQ (`5672`/`15672`) to the host for convenience — remove those `ports` mappings when deploying to an untrusted network.
+
+### 4. Add media
+
+Drop files under `MEDIA_PATH` using the layout described in [`river-scan`](./river-scan/) (e.g. `Movies/Title (Year)/…`, `Shows/Show/Season 01/Show - S01E01.…`). `river-scan` rescans every `SCAN_INTERVAL`, or trigger a scan immediately from the admin dashboard (**Scan Now**). Transcoded, streamable copies land in `OUTPUT_PATH`.
+
+### Updating & teardown
+
+```bash
+docker compose up -d --build      # rebuild & roll out after pulling changes
+docker compose down               # stop and remove containers (keeps volumes/data)
+docker compose down -v            # also wipe Postgres, RabbitMQ, and scan state
+```
+
+### TV & Android clients
+
+`river-web` ships as part of the compose stack above. The **`river-tv`** (TV-optimised web) and **`river-tv-android`** (Fire TV / Android TV) clients are built and deployed separately — see each client's own README.
 
 ## Documentation
 

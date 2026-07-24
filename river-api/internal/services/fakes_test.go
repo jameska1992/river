@@ -308,3 +308,174 @@ func (m *memEpisodeRepo) Delete(id string) error {
 	}
 	return apperrors.ErrNotFound
 }
+
+// Media repository fakes. Only FindByID carries behaviour (seeded via the
+// slice); the remaining interface methods are stubbed since the services
+// under test here only look media up by ID.
+
+type memMovieRepo struct{ movies []*models.Movie }
+
+func (m *memMovieRepo) FindByID(id string) (*models.Movie, error) {
+	for _, x := range m.movies {
+		if x.ID.String() == id {
+			return x, nil
+		}
+	}
+	return nil, apperrors.ErrNotFound
+}
+func (m *memMovieRepo) FindAll(string, int, int, string) ([]models.Movie, error) { return nil, nil }
+func (m *memMovieRepo) Count(string) (int64, error)                              { return 0, nil }
+func (m *memMovieRepo) FindRecent(int) ([]models.Movie, error)                   { return nil, nil }
+func (m *memMovieRepo) FindUnidentified() ([]models.Movie, error)                { return nil, nil }
+func (m *memMovieRepo) Create(*models.Movie) error                              { return nil }
+func (m *memMovieRepo) Save(*models.Movie) error                                { return nil }
+func (m *memMovieRepo) Delete(string) error                                     { return nil }
+
+type memShowRepo struct{ shows []*models.TVShow }
+
+func (m *memShowRepo) FindByID(id string) (*models.TVShow, error) {
+	for _, x := range m.shows {
+		if x.ID.String() == id {
+			return x, nil
+		}
+	}
+	return nil, apperrors.ErrNotFound
+}
+func (m *memShowRepo) FindAllUnpaged(string) ([]models.TVShow, error)            { return nil, nil }
+func (m *memShowRepo) FindAll(string, int, int, string) ([]models.TVShow, error) { return nil, nil }
+func (m *memShowRepo) Count(string) (int64, error)                              { return 0, nil }
+func (m *memShowRepo) FindRecent(int) ([]models.TVShow, error)                  { return nil, nil }
+func (m *memShowRepo) FindUnidentified() ([]models.TVShow, error)               { return nil, nil }
+func (m *memShowRepo) Create(*models.TVShow) error                             { return nil }
+func (m *memShowRepo) Save(*models.TVShow) error                               { return nil }
+func (m *memShowRepo) Delete(string) error                                     { return nil }
+
+type memAudiobookRepo struct{ books []*models.Audiobook }
+
+func (m *memAudiobookRepo) FindByID(id string) (*models.Audiobook, error) {
+	for _, x := range m.books {
+		if x.ID.String() == id {
+			return x, nil
+		}
+	}
+	return nil, apperrors.ErrNotFound
+}
+func (m *memAudiobookRepo) FindAll(string, int, int, string) ([]models.Audiobook, error) {
+	return nil, nil
+}
+func (m *memAudiobookRepo) Count(string) (int64, error)    { return 0, nil }
+func (m *memAudiobookRepo) Create(*models.Audiobook) error { return nil }
+func (m *memAudiobookRepo) Save(*models.Audiobook) error   { return nil }
+func (m *memAudiobookRepo) Delete(string) error            { return nil }
+
+type memCollectionRepo struct {
+	cols  []*models.Collection
+	items []*models.CollectionItem
+}
+
+func (m *memCollectionRepo) FindAll() ([]models.Collection, error) {
+	out := make([]models.Collection, 0, len(m.cols))
+	for _, c := range m.cols {
+		out = append(out, *c)
+	}
+	return out, nil
+}
+func (m *memCollectionRepo) FindByID(id string) (*models.Collection, error) {
+	for _, c := range m.cols {
+		if c.ID.String() == id {
+			return c, nil
+		}
+	}
+	return nil, apperrors.ErrNotFound
+}
+func (m *memCollectionRepo) Create(c *models.Collection) error {
+	if c.ID == uuid.Nil {
+		c.ID = uuid.New()
+	}
+	m.cols = append(m.cols, c)
+	return nil
+}
+func (m *memCollectionRepo) Save(c *models.Collection) error { return nil }
+func (m *memCollectionRepo) Delete(id string) error {
+	for i, c := range m.cols {
+		if c.ID.String() == id {
+			m.cols = append(m.cols[:i], m.cols[i+1:]...)
+			return nil
+		}
+	}
+	return apperrors.ErrNotFound
+}
+func (m *memCollectionRepo) FindItems(collectionID string) ([]models.CollectionItem, error) {
+	out := make([]models.CollectionItem, 0)
+	for _, it := range m.items {
+		if it.CollectionID == collectionID {
+			out = append(out, *it)
+		}
+	}
+	return out, nil
+}
+func (m *memCollectionRepo) FindItem(id string) (*models.CollectionItem, error) {
+	for _, it := range m.items {
+		if it.ID.String() == id {
+			return it, nil
+		}
+	}
+	return nil, apperrors.ErrNotFound
+}
+func (m *memCollectionRepo) FindItemByMedia(collectionID, mediaType, mediaID string) (*models.CollectionItem, error) {
+	for _, it := range m.items {
+		if it.CollectionID == collectionID && it.MediaType == mediaType && it.MediaID == mediaID {
+			return it, nil
+		}
+	}
+	return nil, apperrors.ErrNotFound
+}
+func (m *memCollectionRepo) AddItem(item *models.CollectionItem) error {
+	if item.ID == uuid.Nil {
+		item.ID = uuid.New()
+	}
+	m.items = append(m.items, item)
+	return nil
+}
+func (m *memCollectionRepo) RemoveItem(id string) error {
+	for i, it := range m.items {
+		if it.ID.String() == id {
+			m.items = append(m.items[:i], m.items[i+1:]...)
+			return nil
+		}
+	}
+	return apperrors.ErrNotFound
+}
+
+type memWatchlistRepo struct {
+	items []*models.WatchlistItem
+}
+
+func (m *memWatchlistRepo) Add(userID, mediaType, mediaID string) (*models.WatchlistItem, error) {
+	for _, it := range m.items {
+		if it.UserID == userID && it.MediaType == mediaType && it.MediaID == mediaID {
+			return it, nil // already present — idempotent, matches the GORM repo
+		}
+	}
+	it := &models.WatchlistItem{Base: models.Base{ID: uuid.New()}, UserID: userID, MediaType: mediaType, MediaID: mediaID}
+	m.items = append(m.items, it)
+	return it, nil
+}
+func (m *memWatchlistRepo) Remove(userID, itemID string) error {
+	for i, it := range m.items {
+		if it.UserID == userID && it.ID.String() == itemID {
+			m.items = append(m.items[:i], m.items[i+1:]...)
+			return nil
+		}
+	}
+	return apperrors.ErrNotFound
+}
+func (m *memWatchlistRepo) List(userID string) ([]models.WatchlistItem, error) {
+	out := make([]models.WatchlistItem, 0)
+	for _, it := range m.items {
+		if it.UserID == userID {
+			out = append(out, *it)
+		}
+	}
+	return out, nil
+}

@@ -427,6 +427,106 @@ func (f *fakeAudioTrackRepo) Delete(id string) error {
 	return apperrors.ErrNotFound
 }
 
+// fakeStatsRepo — StatsRepository returning fixed counts.
+type fakeStatsRepo struct{ movies, tvShows, tracks, audiobooks int64 }
+
+func (f fakeStatsRepo) CountMovies() (int64, error)     { return f.movies, nil }
+func (f fakeStatsRepo) CountTVShows() (int64, error)    { return f.tvShows, nil }
+func (f fakeStatsRepo) CountTracks() (int64, error)     { return f.tracks, nil }
+func (f fakeStatsRepo) CountAudiobooks() (int64, error) { return f.audiobooks, nil }
+
+// fakeSeasonRepo — in-memory SeasonRepository.
+type fakeSeasonRepo struct{ seasons []*models.Season }
+
+func (f *fakeSeasonRepo) FindByShowID(showID string) ([]models.Season, error) {
+	out := make([]models.Season, 0)
+	for _, s := range f.seasons {
+		if s.TVShowID.String() == showID {
+			out = append(out, *s)
+		}
+	}
+	return out, nil
+}
+func (f *fakeSeasonRepo) FindByID(id string) (*models.Season, error) {
+	for _, s := range f.seasons {
+		if s.ID.String() == id {
+			return s, nil
+		}
+	}
+	return nil, apperrors.ErrNotFound
+}
+func (f *fakeSeasonRepo) FindByIDAndShowID(id, showID string) (*models.Season, error) {
+	for _, s := range f.seasons {
+		if s.ID.String() == id && s.TVShowID.String() == showID {
+			return s, nil
+		}
+	}
+	return nil, apperrors.ErrNotFound
+}
+func (f *fakeSeasonRepo) Create(s *models.Season) error {
+	if s.ID == uuid.Nil {
+		s.ID = uuid.New()
+	}
+	f.seasons = append(f.seasons, s)
+	return nil
+}
+func (f *fakeSeasonRepo) Save(*models.Season) error { return nil }
+
+// fakeEpisodeRepo — in-memory EpisodeRepository.
+type fakeEpisodeRepo struct{ episodes []*models.Episode }
+
+func (f *fakeEpisodeRepo) FindBySeasonID(seasonID string) ([]models.Episode, error) {
+	out := make([]models.Episode, 0)
+	for _, e := range f.episodes {
+		if e.SeasonID.String() == seasonID {
+			out = append(out, *e)
+		}
+	}
+	return out, nil
+}
+func (f *fakeEpisodeRepo) FindByShowID(showID string) ([]models.Episode, error) {
+	out := make([]models.Episode, 0)
+	for _, e := range f.episodes {
+		if e.TVShowID.String() == showID {
+			out = append(out, *e)
+		}
+	}
+	return out, nil
+}
+func (f *fakeEpisodeRepo) FindByID(id string) (*models.Episode, error) {
+	for _, e := range f.episodes {
+		if e.ID.String() == id {
+			return e, nil
+		}
+	}
+	return nil, apperrors.ErrNotFound
+}
+func (f *fakeEpisodeRepo) FindBySeasonAndNumber(seasonID string, number int, isSpecial bool) (*models.Episode, error) {
+	for _, e := range f.episodes {
+		if e.SeasonID.String() == seasonID && e.Number == number {
+			return e, nil
+		}
+	}
+	return nil, apperrors.ErrNotFound
+}
+func (f *fakeEpisodeRepo) Create(e *models.Episode) error {
+	if e.ID == uuid.Nil {
+		e.ID = uuid.New()
+	}
+	f.episodes = append(f.episodes, e)
+	return nil
+}
+func (f *fakeEpisodeRepo) Save(*models.Episode) error { return nil }
+func (f *fakeEpisodeRepo) Delete(id string) error {
+	for i, e := range f.episodes {
+		if e.ID.String() == id {
+			f.episodes = append(f.episodes[:i], f.episodes[i+1:]...)
+			return nil
+		}
+	}
+	return apperrors.ErrNotFound
+}
+
 // fakeCleanupRepo — MediaCleanupRepository no-op for handler delete paths.
 type fakeCleanupRepo struct{}
 

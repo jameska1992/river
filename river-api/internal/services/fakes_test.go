@@ -398,8 +398,8 @@ func (m *memShowRepo) Delete(id string) error {
 // test drive the "purge fails → row is not deleted" path; purged records
 // the ids that were successfully purged.
 type memCleanupRepo struct {
-	movieErr, showErr, episodeErr error
-	purged                        []string
+	movieErr, showErr, episodeErr, audiobookErr error
+	purged                                      []string
 }
 
 func (m *memCleanupRepo) PurgeMovie(id string) error {
@@ -423,8 +423,17 @@ func (m *memCleanupRepo) PurgeEpisode(id string) error {
 	m.purged = append(m.purged, "episode:"+id)
 	return nil
 }
-func (m *memCleanupRepo) PurgeAudiobook(id string) error { return nil }
-func (m *memCleanupRepo) PurgeChapter(id string) error   { return nil }
+func (m *memCleanupRepo) PurgeAudiobook(id string) error {
+	if m.audiobookErr != nil {
+		return m.audiobookErr
+	}
+	m.purged = append(m.purged, "audiobook:"+id)
+	return nil
+}
+func (m *memCleanupRepo) PurgeChapter(id string) error {
+	m.purged = append(m.purged, "chapter:"+id)
+	return nil
+}
 
 type memAudiobookRepo struct{ books []*models.Audiobook }
 
@@ -439,10 +448,179 @@ func (m *memAudiobookRepo) FindByID(id string) (*models.Audiobook, error) {
 func (m *memAudiobookRepo) FindAll(string, int, int, string) ([]models.Audiobook, error) {
 	return nil, nil
 }
-func (m *memAudiobookRepo) Count(string) (int64, error)    { return 0, nil }
-func (m *memAudiobookRepo) Create(*models.Audiobook) error { return nil }
-func (m *memAudiobookRepo) Save(*models.Audiobook) error   { return nil }
-func (m *memAudiobookRepo) Delete(string) error            { return nil }
+func (m *memAudiobookRepo) Count(string) (int64, error) { return 0, nil }
+func (m *memAudiobookRepo) Create(x *models.Audiobook) error {
+	if x.ID == uuid.Nil {
+		x.ID = uuid.New()
+	}
+	m.books = append(m.books, x)
+	return nil
+}
+func (m *memAudiobookRepo) Save(x *models.Audiobook) error {
+	for i, e := range m.books {
+		if e.ID == x.ID {
+			m.books[i] = x
+			return nil
+		}
+	}
+	return apperrors.ErrNotFound
+}
+func (m *memAudiobookRepo) Delete(id string) error {
+	for i, e := range m.books {
+		if e.ID.String() == id {
+			m.books = append(m.books[:i], m.books[i+1:]...)
+			return nil
+		}
+	}
+	return apperrors.ErrNotFound
+}
+
+type memChapterRepo struct{ chapters []*models.AudiobookChapter }
+
+func (m *memChapterRepo) FindByAudiobookID(audiobookID string) ([]models.AudiobookChapter, error) {
+	out := make([]models.AudiobookChapter, 0)
+	for _, c := range m.chapters {
+		if c.AudiobookID.String() == audiobookID {
+			out = append(out, *c)
+		}
+	}
+	return out, nil
+}
+func (m *memChapterRepo) FindByID(id string) (*models.AudiobookChapter, error) {
+	for _, c := range m.chapters {
+		if c.ID.String() == id {
+			return c, nil
+		}
+	}
+	return nil, apperrors.ErrNotFound
+}
+func (m *memChapterRepo) Create(c *models.AudiobookChapter) error {
+	if c.ID == uuid.Nil {
+		c.ID = uuid.New()
+	}
+	m.chapters = append(m.chapters, c)
+	return nil
+}
+
+type memArtistRepo struct{ artists []*models.Artist }
+
+func (m *memArtistRepo) FindAll(string, int, int, string) ([]models.Artist, error) { return nil, nil }
+func (m *memArtistRepo) FindByID(id string) (*models.Artist, error) {
+	for _, a := range m.artists {
+		if a.ID.String() == id {
+			return a, nil
+		}
+	}
+	return nil, apperrors.ErrNotFound
+}
+func (m *memArtistRepo) Create(a *models.Artist) error {
+	if a.ID == uuid.Nil {
+		a.ID = uuid.New()
+	}
+	m.artists = append(m.artists, a)
+	return nil
+}
+func (m *memArtistRepo) Save(a *models.Artist) error {
+	for i, e := range m.artists {
+		if e.ID == a.ID {
+			m.artists[i] = a
+			return nil
+		}
+	}
+	return apperrors.ErrNotFound
+}
+func (m *memArtistRepo) Delete(id string) error {
+	for i, a := range m.artists {
+		if a.ID.String() == id {
+			m.artists = append(m.artists[:i], m.artists[i+1:]...)
+			return nil
+		}
+	}
+	return apperrors.ErrNotFound
+}
+
+type memAlbumRepo struct{ albums []*models.Album }
+
+func (m *memAlbumRepo) FindAll(string, int, int, string) ([]models.Album, error) { return nil, nil }
+func (m *memAlbumRepo) Count(string) (int64, error)                              { return 0, nil }
+func (m *memAlbumRepo) FindByArtistID(artistID string, offset, limit int) ([]models.Album, error) {
+	out := make([]models.Album, 0)
+	for _, a := range m.albums {
+		if a.ArtistID.String() == artistID {
+			out = append(out, *a)
+		}
+	}
+	return out, nil
+}
+func (m *memAlbumRepo) FindByID(id string) (*models.Album, error) {
+	for _, a := range m.albums {
+		if a.ID.String() == id {
+			return a, nil
+		}
+	}
+	return nil, apperrors.ErrNotFound
+}
+func (m *memAlbumRepo) Create(a *models.Album) error {
+	if a.ID == uuid.Nil {
+		a.ID = uuid.New()
+	}
+	m.albums = append(m.albums, a)
+	return nil
+}
+func (m *memAlbumRepo) Save(a *models.Album) error {
+	for i, e := range m.albums {
+		if e.ID == a.ID {
+			m.albums[i] = a
+			return nil
+		}
+	}
+	return apperrors.ErrNotFound
+}
+func (m *memAlbumRepo) Delete(id string) error {
+	for i, a := range m.albums {
+		if a.ID.String() == id {
+			m.albums = append(m.albums[:i], m.albums[i+1:]...)
+			return nil
+		}
+	}
+	return apperrors.ErrNotFound
+}
+
+type memTrackRepo struct{ tracks []*models.Track }
+
+func (m *memTrackRepo) FindByAlbumID(albumID string, offset, limit int) ([]models.Track, error) {
+	out := make([]models.Track, 0)
+	for _, tr := range m.tracks {
+		if tr.AlbumID.String() == albumID {
+			out = append(out, *tr)
+		}
+	}
+	return out, nil
+}
+func (m *memTrackRepo) FindByID(id string) (*models.Track, error) {
+	for _, tr := range m.tracks {
+		if tr.ID.String() == id {
+			return tr, nil
+		}
+	}
+	return nil, apperrors.ErrNotFound
+}
+func (m *memTrackRepo) Create(tr *models.Track) error {
+	if tr.ID == uuid.Nil {
+		tr.ID = uuid.New()
+	}
+	m.tracks = append(m.tracks, tr)
+	return nil
+}
+func (m *memTrackRepo) Delete(id string) error {
+	for i, tr := range m.tracks {
+		if tr.ID.String() == id {
+			m.tracks = append(m.tracks[:i], m.tracks[i+1:]...)
+			return nil
+		}
+	}
+	return apperrors.ErrNotFound
+}
 
 type memCollectionRepo struct {
 	cols  []*models.Collection

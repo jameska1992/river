@@ -362,8 +362,11 @@ function PlayerInner({
         onPlay={() => setPaused(false)}
         onPause={() => setPaused(true)}
         onWaiting={() => setBuffering(true)}
-        onPlaying={() => setBuffering(false)}
-        onCanPlay={() => setBuffering(false)}
+        // Clear any latched error once playback actually produces frames —
+        // a transient/benign error event must not pin the failure overlay
+        // over a video that is playing fine.
+        onPlaying={() => { setBuffering(false); setError(null) }}
+        onCanPlay={() => { setBuffering(false); setError(null) }}
         onTimeUpdate={e => setCurrentTime(e.currentTarget.currentTime)}
         onDurationChange={e => setDuration(e.currentTarget.duration)}
         onProgress={e => {
@@ -382,7 +385,17 @@ function PlayerInner({
         // and the last episode/chapter, fall back to exiting the
         // player.
         onEnded={() => (onNext ? onNext() : onExit())}
-        onError={() => setError('Playback failed')}
+        // Only surface a genuine fatal failure: the element must have a
+        // MediaError AND be unable to produce frames. Transient/aborted
+        // events (e.g. a reload when the alt-audio track toggles) and
+        // failures on secondary resources fire here too while playback is
+        // fine — ignoring those prevents the false "Playback failed" overlay.
+        onError={e => {
+          const v = e.currentTarget
+          if (v.error && v.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) {
+            setError('Playback failed')
+          }
+        }}
       >
         {subtitles.map(sub => (
           <track

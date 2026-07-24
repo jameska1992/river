@@ -45,6 +45,35 @@ jobs:
         working-directory: ${{ matrix.service }}
         run: go test ./...
 
+  openapi:
+    name: openapi (river-api)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: river-api/go.mod
+          cache-dependency-path: river-api/go.sum
+      # Regenerate the spec with the same swag version go.mod pins, so the
+      # generator can't be a source of drift. Mirrors `make swagger`.
+      - name: regenerate spec
+        working-directory: river-api
+        run: |
+          swag_version="$(go list -m -f '{{.Version}}' github.com/swaggo/swag)"
+          go run "github.com/swaggo/swag/cmd/swag@${swag_version}" init \
+            --generalInfo main.go \
+            --dir cmd/server,internal/handlers,internal/services,internal/models \
+            --output ./docs \
+            --parseDependency --parseInternal --parseDepth 3
+      - name: fail if committed spec is stale
+        working-directory: river-api
+        run: |
+          if ! git diff --quiet -- docs/; then
+            echo "::error::OpenAPI spec under river-api/docs is out of date. Run 'make swagger' in river-api and commit the result."
+            git diff --stat -- docs/
+            exit 1
+          fi
+
   web:
     name: web (${{ matrix.client }})
     runs-on: ubuntu-latest

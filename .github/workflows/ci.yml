@@ -45,6 +45,31 @@ jobs:
         working-directory: ${{ matrix.service }}
         run: go test ./...
 
+  coverage:
+    name: coverage (river-api)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: river-api/go.mod
+          cache-dependency-path: river-api/go.sum
+      # Ratchet floor: fail if module-wide coverage drops below THRESHOLD.
+      # Raise THRESHOLD as coverage grows so it can only move up, never
+      # silently regress.
+      - name: enforce coverage floor
+        working-directory: river-api
+        env:
+          THRESHOLD: "5.0"
+        run: |
+          go test ./... -coverpkg=./... -coverprofile=coverage.out
+          total="$(go tool cover -func=coverage.out | awk '/^total:/ {print $3}' | tr -d '%')"
+          echo "river-api total coverage: ${total}% (floor: ${THRESHOLD}%)"
+          if ! awk -v t="$total" -v min="$THRESHOLD" 'BEGIN { exit (t+0 < min+0) ? 1 : 0 }'; then
+            echo "::error::river-api coverage ${total}% is below the ${THRESHOLD}% floor"
+            exit 1
+          fi
+
   openapi:
     name: openapi (river-api)
     runs-on: ubuntu-latest

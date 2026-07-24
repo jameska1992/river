@@ -134,6 +134,72 @@ func (f *fakeMovieRepo) Delete(id string) error {
 	return apperrors.ErrNotFound
 }
 
+// fakeShowRepo — stateful TVShowRepository (Create + FindByID meaningful).
+type fakeShowRepo struct{ shows []*models.TVShow }
+
+func (f *fakeShowRepo) FindByID(id string) (*models.TVShow, error) {
+	for _, s := range f.shows {
+		if s.ID.String() == id {
+			return s, nil
+		}
+	}
+	return nil, apperrors.ErrNotFound
+}
+func (f *fakeShowRepo) FindAllUnpaged(string) ([]models.TVShow, error)            { return nil, nil }
+func (f *fakeShowRepo) FindAll(string, int, int, string) ([]models.TVShow, error) { return nil, nil }
+func (f *fakeShowRepo) Count(string) (int64, error)                              { return 0, nil }
+func (f *fakeShowRepo) FindRecent(int) ([]models.TVShow, error)                  { return nil, nil }
+func (f *fakeShowRepo) FindUnidentified() ([]models.TVShow, error)               { return nil, nil }
+func (f *fakeShowRepo) Create(s *models.TVShow) error {
+	if s.ID == uuid.Nil {
+		s.ID = uuid.New()
+	}
+	f.shows = append(f.shows, s)
+	return nil
+}
+func (f *fakeShowRepo) Save(*models.TVShow) error { return nil }
+func (f *fakeShowRepo) Delete(id string) error {
+	for i, s := range f.shows {
+		if s.ID.String() == id {
+			f.shows = append(f.shows[:i], f.shows[i+1:]...)
+			return nil
+		}
+	}
+	return apperrors.ErrNotFound
+}
+
+// fakeWatchlistRepo — in-memory WatchlistRepository.
+type fakeWatchlistRepo struct{ items []*models.WatchlistItem }
+
+func (f *fakeWatchlistRepo) Add(userID, mediaType, mediaID string) (*models.WatchlistItem, error) {
+	for _, it := range f.items {
+		if it.UserID == userID && it.MediaType == mediaType && it.MediaID == mediaID {
+			return it, nil
+		}
+	}
+	it := &models.WatchlistItem{Base: models.Base{ID: uuid.New()}, UserID: userID, MediaType: mediaType, MediaID: mediaID}
+	f.items = append(f.items, it)
+	return it, nil
+}
+func (f *fakeWatchlistRepo) Remove(userID, itemID string) error {
+	for i, it := range f.items {
+		if it.UserID == userID && it.ID.String() == itemID {
+			f.items = append(f.items[:i], f.items[i+1:]...)
+			return nil
+		}
+	}
+	return apperrors.ErrNotFound
+}
+func (f *fakeWatchlistRepo) List(userID string) ([]models.WatchlistItem, error) {
+	out := make([]models.WatchlistItem, 0)
+	for _, it := range f.items {
+		if it.UserID == userID {
+			out = append(out, *it)
+		}
+	}
+	return out, nil
+}
+
 // fakeCleanupRepo — MediaCleanupRepository no-op for handler delete paths.
 type fakeCleanupRepo struct{}
 

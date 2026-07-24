@@ -178,7 +178,8 @@ func (m *memLibraryRepo) Delete(id string) error {
 }
 
 type memProgressRepo struct {
-	rows []*models.WatchProgress
+	rows       []*models.WatchProgress
+	inProgress []models.WatchProgress // returned verbatim by FindInProgress
 }
 
 func (m *memProgressRepo) match(r *models.WatchProgress, userID, mediaType, mediaID string) bool {
@@ -227,7 +228,7 @@ func (m *memProgressRepo) FindAllByType(userID, mediaType string) ([]models.Watc
 }
 
 func (m *memProgressRepo) FindInProgress(userID string, limit int) ([]models.WatchProgress, error) {
-	return nil, nil
+	return m.inProgress, nil
 }
 func (m *memProgressRepo) FindAllActive(since time.Time, limit int) ([]models.WatchProgress, error) {
 	return nil, nil
@@ -308,6 +309,42 @@ func (m *memEpisodeRepo) Delete(id string) error {
 	}
 	return apperrors.ErrNotFound
 }
+
+type memSeasonRepo struct{ seasons []*models.Season }
+
+func (m *memSeasonRepo) FindByID(id string) (*models.Season, error) {
+	for _, s := range m.seasons {
+		if s.ID.String() == id {
+			return s, nil
+		}
+	}
+	return nil, apperrors.ErrNotFound
+}
+func (m *memSeasonRepo) FindByShowID(showID string) ([]models.Season, error) {
+	out := make([]models.Season, 0)
+	for _, s := range m.seasons {
+		if s.TVShowID.String() == showID {
+			out = append(out, *s)
+		}
+	}
+	return out, nil
+}
+func (m *memSeasonRepo) FindByIDAndShowID(id, showID string) (*models.Season, error) {
+	for _, s := range m.seasons {
+		if s.ID.String() == id && s.TVShowID.String() == showID {
+			return s, nil
+		}
+	}
+	return nil, apperrors.ErrNotFound
+}
+func (m *memSeasonRepo) Create(s *models.Season) error {
+	if s.ID == uuid.Nil {
+		s.ID = uuid.New()
+	}
+	m.seasons = append(m.seasons, s)
+	return nil
+}
+func (m *memSeasonRepo) Save(*models.Season) error { return nil }
 
 // Media repository fakes. Only FindByID carries behaviour (seeded via the
 // slice); the remaining interface methods are stubbed since the services

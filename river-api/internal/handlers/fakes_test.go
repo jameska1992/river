@@ -99,3 +99,126 @@ func (f *fakeRefreshRepo) RevokeByToken(token string) error {
 	}
 	return apperrors.ErrNotFound
 }
+
+// fakeMovieRepo — stateful MovieRepository for the movie handler CRUD path
+// and collection media lookups.
+type fakeMovieRepo struct{ movies []*models.Movie }
+
+func (f *fakeMovieRepo) FindByID(id string) (*models.Movie, error) {
+	for _, m := range f.movies {
+		if m.ID.String() == id {
+			return m, nil
+		}
+	}
+	return nil, apperrors.ErrNotFound
+}
+func (f *fakeMovieRepo) FindAll(string, int, int, string) ([]models.Movie, error) { return nil, nil }
+func (f *fakeMovieRepo) Count(string) (int64, error)                              { return 0, nil }
+func (f *fakeMovieRepo) FindRecent(int) ([]models.Movie, error)                   { return nil, nil }
+func (f *fakeMovieRepo) FindUnidentified() ([]models.Movie, error)                { return nil, nil }
+func (f *fakeMovieRepo) Create(m *models.Movie) error {
+	if m.ID == uuid.Nil {
+		m.ID = uuid.New()
+	}
+	f.movies = append(f.movies, m)
+	return nil
+}
+func (f *fakeMovieRepo) Save(m *models.Movie) error { return nil }
+func (f *fakeMovieRepo) Delete(id string) error {
+	for i, m := range f.movies {
+		if m.ID.String() == id {
+			f.movies = append(f.movies[:i], f.movies[i+1:]...)
+			return nil
+		}
+	}
+	return apperrors.ErrNotFound
+}
+
+// fakeCleanupRepo — MediaCleanupRepository no-op for handler delete paths.
+type fakeCleanupRepo struct{}
+
+func (fakeCleanupRepo) PurgeMovie(string) error     { return nil }
+func (fakeCleanupRepo) PurgeShow(string) error      { return nil }
+func (fakeCleanupRepo) PurgeEpisode(string) error   { return nil }
+func (fakeCleanupRepo) PurgeAudiobook(string) error { return nil }
+func (fakeCleanupRepo) PurgeChapter(string) error   { return nil }
+
+// fakeCollectionRepo — in-memory CollectionRepository.
+type fakeCollectionRepo struct {
+	cols  []*models.Collection
+	items []*models.CollectionItem
+}
+
+func (f *fakeCollectionRepo) FindAll() ([]models.Collection, error) {
+	out := make([]models.Collection, 0, len(f.cols))
+	for _, c := range f.cols {
+		out = append(out, *c)
+	}
+	return out, nil
+}
+func (f *fakeCollectionRepo) FindByID(id string) (*models.Collection, error) {
+	for _, c := range f.cols {
+		if c.ID.String() == id {
+			return c, nil
+		}
+	}
+	return nil, apperrors.ErrNotFound
+}
+func (f *fakeCollectionRepo) Create(c *models.Collection) error {
+	if c.ID == uuid.Nil {
+		c.ID = uuid.New()
+	}
+	f.cols = append(f.cols, c)
+	return nil
+}
+func (f *fakeCollectionRepo) Save(c *models.Collection) error { return nil }
+func (f *fakeCollectionRepo) Delete(id string) error {
+	for i, c := range f.cols {
+		if c.ID.String() == id {
+			f.cols = append(f.cols[:i], f.cols[i+1:]...)
+			return nil
+		}
+	}
+	return apperrors.ErrNotFound
+}
+func (f *fakeCollectionRepo) FindItems(collectionID string) ([]models.CollectionItem, error) {
+	out := make([]models.CollectionItem, 0)
+	for _, it := range f.items {
+		if it.CollectionID == collectionID {
+			out = append(out, *it)
+		}
+	}
+	return out, nil
+}
+func (f *fakeCollectionRepo) FindItem(id string) (*models.CollectionItem, error) {
+	for _, it := range f.items {
+		if it.ID.String() == id {
+			return it, nil
+		}
+	}
+	return nil, apperrors.ErrNotFound
+}
+func (f *fakeCollectionRepo) FindItemByMedia(collectionID, mediaType, mediaID string) (*models.CollectionItem, error) {
+	for _, it := range f.items {
+		if it.CollectionID == collectionID && it.MediaType == mediaType && it.MediaID == mediaID {
+			return it, nil
+		}
+	}
+	return nil, apperrors.ErrNotFound
+}
+func (f *fakeCollectionRepo) AddItem(item *models.CollectionItem) error {
+	if item.ID == uuid.Nil {
+		item.ID = uuid.New()
+	}
+	f.items = append(f.items, item)
+	return nil
+}
+func (f *fakeCollectionRepo) RemoveItem(id string) error {
+	for i, it := range f.items {
+		if it.ID.String() == id {
+			f.items = append(f.items[:i], f.items[i+1:]...)
+			return nil
+		}
+	}
+	return apperrors.ErrNotFound
+}

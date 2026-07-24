@@ -213,6 +213,111 @@ const docTemplate = `{
                 }
             }
         },
+        "/admin/scanner-state": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "Read scanner state",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "502": {
+                        "description": "river-scan unreachable",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "503": {
+                        "description": "RIVER_SCAN_URL not configured",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/scanner-state/forget": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "Forget scanner-state entries",
+                "parameters": [
+                    {
+                        "description": "{paths?, prefixes?, shows?}",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "502": {
+                        "description": "Bad Gateway",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/admin/stats": {
             "get": {
                 "security": [
@@ -1967,6 +2072,57 @@ const docTemplate = `{
                 }
             }
         },
+        "/audiobooks/{id}/similar": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "audiobooks"
+                ],
+                "summary": "Similar audiobooks",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Audiobook ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "1..50, default 16",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/services.SimilarItem"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/auth/login": {
             "post": {
                 "consumes": [
@@ -2642,6 +2798,58 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/image": {
+            "get": {
+                "produces": [
+                    "image/jpeg"
+                ],
+                "tags": [
+                    "image"
+                ],
+                "summary": "Proxy an external image",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Absolute https URL to proxy",
+                        "name": "url",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "400": {
+                        "description": "missing or invalid url",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "host not on allowlist",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "502": {
+                        "description": "upstream fetch failed",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -3606,6 +3814,57 @@ const docTemplate = `{
                 }
             }
         },
+        "/movies/{id}/similar": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "movies"
+                ],
+                "summary": "Similar movies",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Movie ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "1..50, default 16",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/services.SimilarItem"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/movies/{id}/source-path": {
             "patch": {
                 "security": [
@@ -3966,6 +4225,59 @@ const docTemplate = `{
                 }
             }
         },
+        "/progress/completed": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "progress"
+                ],
+                "summary": "Set watch progress completed flag",
+                "parameters": [
+                    {
+                        "description": "Completed payload",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.completedRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/progress/continue-watching": {
             "get": {
                 "security": [
@@ -3987,6 +4299,268 @@ const docTemplate = `{
                             "type": "array",
                             "items": {
                                 "type": "object"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/progress/next-up": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "progress"
+                ],
+                "summary": "Next Up list",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "1..50, default 16",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "type": "object"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/progress/next-up/{episode_id}/dismiss": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "progress"
+                ],
+                "summary": "Dismiss a Next Up entry",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Episode ID",
+                        "name": "episode_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "progress"
+                ],
+                "summary": "Undo a Next Up dismissal",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Episode ID",
+                        "name": "episode_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/progress/show-completed": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "progress"
+                ],
+                "summary": "Set show watched (cascades to all episodes)",
+                "parameters": [
+                    {
+                        "description": "Payload",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.showCompletedRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/progress/show-state": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "progress"
+                ],
+                "summary": "Watch state for a single show",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "TV show ID",
+                        "name": "show_id",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/services.ShowWatchState"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/progress/show-states": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "progress"
+                ],
+                "summary": "Per-show watch states",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Limit to a single library",
+                        "name": "library_id",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/services.ShowWatchState"
                             }
                         }
                     },
@@ -4063,6 +4637,76 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/request/calendar": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "request"
+                ],
+                "summary": "Combined Radarr + Sonarr calendar",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Range start (YYYY-MM-DD)",
+                        "name": "start",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Range end (YYYY-MM-DD)",
+                        "name": "end",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/handlers.CalendarItem"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "502": {
+                        "description": "Bad Gateway",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "503": {
+                        "description": "Neither Radarr nor Sonarr configured",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -5666,6 +6310,69 @@ const docTemplate = `{
                         }
                     }
                 }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "tvshows"
+                ],
+                "summary": "Delete episode",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "TV show ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Season ID",
+                        "name": "seasonId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Episode ID",
+                        "name": "episodeId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Also remove the episode files on disk",
+                        "name": "delete_files",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
             }
         },
         "/tvshows/{id}/seasons/{seasonId}/episodes/{episodeId}/audio-tracks": {
@@ -5969,6 +6676,57 @@ const docTemplate = `{
                             "type": "array",
                             "items": {
                                 "$ref": "#/definitions/models.Subtitle"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/tvshows/{id}/similar": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "tvshows"
+                ],
+                "summary": "Similar TV shows",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "TV show ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "1..50, default 16",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/services.SimilarItem"
                             }
                         }
                     },
@@ -6295,6 +7053,50 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "handlers.CalendarItem": {
+            "type": "object",
+            "properties": {
+                "date": {
+                    "description": "RFC3339 date the event lands on (grid placement)",
+                    "type": "string"
+                },
+                "digitalRelease": {
+                    "description": "RFC3339 digital release, when known (movies only)",
+                    "type": "string"
+                },
+                "episodeNumber": {
+                    "type": "integer"
+                },
+                "episodeTitle": {
+                    "description": "episode name (episodes only)",
+                    "type": "string"
+                },
+                "hasFile": {
+                    "type": "boolean"
+                },
+                "overview": {
+                    "type": "string"
+                },
+                "poster": {
+                    "type": "string"
+                },
+                "releaseType": {
+                    "description": "\"digital\"|\"physical\"|\"cinema\" (movies only)",
+                    "type": "string"
+                },
+                "seasonNumber": {
+                    "type": "integer"
+                },
+                "title": {
+                    "description": "movie title, or series title for episodes",
+                    "type": "string"
+                },
+                "type": {
+                    "description": "\"movie\" | \"episode\"",
+                    "type": "string"
+                }
+            }
+        },
         "handlers.MovieSearchResult": {
             "type": "object",
             "properties": {
@@ -6625,6 +7427,29 @@ const docTemplate = `{
                 }
             }
         },
+        "handlers.completedRequest": {
+            "type": "object",
+            "required": [
+                "media_id",
+                "media_type"
+            ],
+            "properties": {
+                "completed": {
+                    "type": "boolean"
+                },
+                "media_id": {
+                    "type": "string"
+                },
+                "media_type": {
+                    "type": "string",
+                    "enum": [
+                        "movie",
+                        "episode",
+                        "chapter"
+                    ]
+                }
+            }
+        },
         "handlers.createAudioTrackRequest": {
             "type": "object",
             "required": [
@@ -6758,6 +7583,9 @@ const docTemplate = `{
                 "file_path": {
                     "type": "string"
                 },
+                "is_special": {
+                    "type": "boolean"
+                },
                 "number": {
                     "type": "integer"
                 },
@@ -6784,6 +7612,10 @@ const docTemplate = `{
                 },
                 "paths": {
                     "type": "string"
+                },
+                "pre_transcoded": {
+                    "description": "PreTranscoded marks the library as already transcoded — scanning\nand metadata continue, but the video/audio transcoders skip the\nevent. See models.Library for the full semantics.",
+                    "type": "boolean"
                 },
                 "type": {
                     "enum": [
@@ -6854,6 +7686,9 @@ const docTemplate = `{
                 },
                 "title": {
                     "type": "string"
+                },
+                "tmdb_id": {
+                    "type": "integer"
                 },
                 "trailer_url": {
                     "type": "string"
@@ -6927,14 +7762,12 @@ const docTemplate = `{
         },
         "handlers.seasonRequest": {
             "type": "object",
-            "required": [
-                "number"
-            ],
             "properties": {
                 "description": {
                     "type": "string"
                 },
                 "number": {
+                    "description": "Number is optional in the binding (no ` + "`" + `required` + "`" + `) because 0 is a\nvalid season number — it's the \"Specials\" season under Plex/TMDB\nconvention. The ` + "`" + `required` + "`" + ` tag on a Go int would treat 0 as missing\nand reject the request.",
                     "type": "integer"
                 },
                 "poster_path": {
@@ -6945,6 +7778,20 @@ const docTemplate = `{
                 },
                 "year": {
                     "type": "integer"
+                }
+            }
+        },
+        "handlers.showCompletedRequest": {
+            "type": "object",
+            "required": [
+                "show_id"
+            ],
+            "properties": {
+                "completed": {
+                    "type": "boolean"
+                },
+                "show_id": {
+                    "type": "string"
                 }
             }
         },
@@ -7030,6 +7877,9 @@ const docTemplate = `{
                 },
                 "title": {
                     "type": "string"
+                },
+                "tmdb_id": {
+                    "type": "integer"
                 },
                 "trailer_url": {
                     "type": "string"
@@ -7368,6 +8218,10 @@ const docTemplate = `{
                 "id": {
                     "type": "string"
                 },
+                "is_special": {
+                    "description": "IsSpecial flags episodes whose filename didn't yield a SxxExx / NxNN /\nExx number. We still ingest them so they surface in the season's\nepisode list; clients render \"SPEC\" instead of \"E${number}\". Number is\na 1-based index among specials in the same season, so it can collide\nwith a regular ep's number without ambiguity — (season_id, number,\nis_special) is what's effectively unique.",
+                    "type": "boolean"
+                },
                 "number": {
                     "type": "integer"
                 },
@@ -7408,6 +8262,10 @@ const docTemplate = `{
                 "paths": {
                     "description": "JSON-encoded []string",
                     "type": "string"
+                },
+                "pre_transcoded": {
+                    "description": "PreTranscoded marks a library whose contents are already in the\ncanonical stream format (H.264/AAC/MP4 for video, AAC/M4A for\naudio). Scanning and metadata enrichment still run; the video /\naudio transcoders short-circuit on events for these libraries so\nno re-encode and no output-tree copy occurs. Existing rows default\nto false via GORM auto-migrate.",
+                    "type": "boolean"
                 },
                 "type": {
                     "$ref": "#/definitions/models.LibraryType"
@@ -7476,6 +8334,10 @@ const docTemplate = `{
                 },
                 "title": {
                     "type": "string"
+                },
+                "tmdb_id": {
+                    "description": "TMDBID is the movie's TMDB identifier, set once enrichment resolves\nthe movie (whether via title search, IMDb hint, or admin override).\nSubsequent enrichments use it directly so a rescan or refresh can't\nre-search by title and revert to a different popular match. 0 means\n\"not yet resolved\".",
+                    "type": "integer"
                 },
                 "trailer_url": {
                     "type": "string"
@@ -7616,6 +8478,10 @@ const docTemplate = `{
                 },
                 "title": {
                     "type": "string"
+                },
+                "tmdb_id": {
+                    "description": "TMDBID is the show's TMDB identifier, set once enrichment resolves\nthe show (whether via title search, IMDb hint, or admin override).\nSubsequent enrichments use it directly so a rescan or refresh can't\nre-search by title and revert to a different popular match. 0 means\n\"not yet resolved\".",
+                    "type": "integer"
                 },
                 "trailer_url": {
                     "type": "string"
@@ -7777,6 +8643,44 @@ const docTemplate = `{
                 },
                 "userID": {
                     "type": "string"
+                }
+            }
+        },
+        "services.ShowWatchState": {
+            "type": "object",
+            "properties": {
+                "completed": {
+                    "type": "integer"
+                },
+                "show_id": {
+                    "type": "string"
+                },
+                "total": {
+                    "type": "integer"
+                }
+            }
+        },
+        "services.SimilarItem": {
+            "type": "object",
+            "properties": {
+                "backdrop_path": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "poster_path": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "type": {
+                    "description": "\"movie\" | \"tvshow\" | \"audiobook\"",
+                    "type": "string"
+                },
+                "year": {
+                    "type": "integer"
                 }
             }
         }

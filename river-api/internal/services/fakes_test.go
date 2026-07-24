@@ -178,8 +178,9 @@ func (m *memLibraryRepo) Delete(id string) error {
 }
 
 type memProgressRepo struct {
-	rows       []*models.WatchProgress
-	inProgress []models.WatchProgress // returned verbatim by FindInProgress
+	rows              []*models.WatchProgress
+	inProgress        []models.WatchProgress // returned verbatim by FindInProgress
+	completedEpisodes []models.WatchProgress // returned verbatim by FindCompletedEpisodes
 }
 
 func (m *memProgressRepo) match(r *models.WatchProgress, userID, mediaType, mediaID string) bool {
@@ -237,7 +238,18 @@ func (m *memProgressRepo) FindByUser(userID string, limit int) ([]models.WatchPr
 	return nil, nil
 }
 func (m *memProgressRepo) FindCompletedEpisodes(userID string) ([]models.WatchProgress, error) {
-	return nil, nil
+	return m.completedEpisodes, nil
+}
+
+type memDismissedRepo struct{ episodeIDs []string }
+
+func (m *memDismissedRepo) Create(userID, episodeID string) error {
+	m.episodeIDs = append(m.episodeIDs, episodeID)
+	return nil
+}
+func (m *memDismissedRepo) Delete(userID, episodeID string) error { return nil }
+func (m *memDismissedRepo) ListEpisodeIDs(userID string) ([]string, error) {
+	return m.episodeIDs, nil
 }
 
 type memEpisodeRepo struct {

@@ -283,6 +283,67 @@ func (f *fakeAlbumRepo) Delete(id string) error {
 	return apperrors.ErrNotFound
 }
 
+// fakeAudiobookRepo — stateful AudiobookRepository.
+type fakeAudiobookRepo struct{ books []*models.Audiobook }
+
+func (f *fakeAudiobookRepo) FindByID(id string) (*models.Audiobook, error) {
+	for _, b := range f.books {
+		if b.ID.String() == id {
+			return b, nil
+		}
+	}
+	return nil, apperrors.ErrNotFound
+}
+func (f *fakeAudiobookRepo) FindAll(string, int, int, string) ([]models.Audiobook, error) {
+	return nil, nil
+}
+func (f *fakeAudiobookRepo) Count(string) (int64, error) { return 0, nil }
+func (f *fakeAudiobookRepo) Create(b *models.Audiobook) error {
+	if b.ID == uuid.Nil {
+		b.ID = uuid.New()
+	}
+	f.books = append(f.books, b)
+	return nil
+}
+func (f *fakeAudiobookRepo) Save(*models.Audiobook) error { return nil }
+func (f *fakeAudiobookRepo) Delete(id string) error {
+	for i, b := range f.books {
+		if b.ID.String() == id {
+			f.books = append(f.books[:i], f.books[i+1:]...)
+			return nil
+		}
+	}
+	return apperrors.ErrNotFound
+}
+
+// fakeChapterRepo — in-memory ChapterRepository.
+type fakeChapterRepo struct{ chapters []*models.AudiobookChapter }
+
+func (f *fakeChapterRepo) FindByAudiobookID(audiobookID string) ([]models.AudiobookChapter, error) {
+	out := make([]models.AudiobookChapter, 0)
+	for _, c := range f.chapters {
+		if c.AudiobookID.String() == audiobookID {
+			out = append(out, *c)
+		}
+	}
+	return out, nil
+}
+func (f *fakeChapterRepo) FindByID(id string) (*models.AudiobookChapter, error) {
+	for _, c := range f.chapters {
+		if c.ID.String() == id {
+			return c, nil
+		}
+	}
+	return nil, apperrors.ErrNotFound
+}
+func (f *fakeChapterRepo) Create(c *models.AudiobookChapter) error {
+	if c.ID == uuid.Nil {
+		c.ID = uuid.New()
+	}
+	f.chapters = append(f.chapters, c)
+	return nil
+}
+
 // fakeCleanupRepo — MediaCleanupRepository no-op for handler delete paths.
 type fakeCleanupRepo struct{}
 

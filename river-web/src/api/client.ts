@@ -271,6 +271,14 @@ export class RiverClient {
     return this.request('POST', '/admin/settings/integrations/test', { service })
   }
 
+  async getMetadataSettings(): Promise<import('./types').MetadataSettings> {
+    return this.request('GET', '/admin/settings/metadata')
+  }
+
+  async updateMetadataSettings(tmdbApiKey: string): Promise<import('./types').MetadataSettings> {
+    return this.request('PUT', '/admin/settings/metadata', { tmdb_api_key: tmdbApiKey })
+  }
+
   async getScannerState(): Promise<{
     directories: Record<string, { library_id: string; content_hash: string; last_scanned: string }>
     shows:       Record<string, string>

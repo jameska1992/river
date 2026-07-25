@@ -12,7 +12,6 @@ type Config struct {
 	RiverAPIURL      string
 	RiverAPIUsername string
 	RiverAPIPassword string
-	TMDBAPIKey       string
 	TMDBImageBase    string
 	WorkerCount      int
 	Port             string
@@ -25,7 +24,6 @@ func Load() (*Config, error) {
 		RiverAPIURL:      getEnv("RIVER_API_URL", "http://localhost:8080"),
 		RiverAPIUsername: os.Getenv("RIVER_API_USERNAME"),
 		RiverAPIPassword: os.Getenv("RIVER_API_PASSWORD"),
-		TMDBAPIKey:       os.Getenv("TMDB_API_KEY"),
 		TMDBImageBase:    getEnv("TMDB_IMAGE_BASE", "https://image.tmdb.org/t/p/original"),
 		WorkerCount:      getEnvInt("WORKER_COUNT", 2),
 		Port:             getEnv("PORT", "8082"),
@@ -33,9 +31,8 @@ func Load() (*Config, error) {
 	if cfg.RiverAPIUsername == "" || cfg.RiverAPIPassword == "" {
 		return nil, fmt.Errorf("RIVER_API_USERNAME and RIVER_API_PASSWORD are required")
 	}
-	if cfg.TMDBAPIKey == "" {
-		return nil, fmt.Errorf("TMDB_API_KEY is required")
-	}
+	// TMDB key is no longer read from the environment — it's fetched from
+	// river-api's settings store (seeded from TMDB_API_KEY on first boot).
 	return cfg, nil
 }
 

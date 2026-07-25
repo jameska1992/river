@@ -35,7 +35,7 @@ Both river-trans and river-meta-movie receive every movie event independently. B
 - `internal/config` — loads and validates environment variables
 - `internal/apiclient` — HTTP client for river-api; handles JWT auth, auto re-login on 401, and paginated `ListMovies`
 - `internal/consumer` — wraps amqp091-go; declares the exchange/queue/binding, sets QoS prefetch=1, ACKs on success and NACKs (no requeue) on error
-- `internal/tmdb` — TMDB API v3 client; searches by title+year, falls back to title-only if no results, fetches full details
+- `internal/tmdb` — TMDB API v3 client; searches by title+year, falls back to title-only if no results, fetches full details. The API key is supplied by a provider function (`keyFn`) rather than a static value — `main.go` wires a cached fetch of the key from river-api's settings store (see `cachedTMDBKey`), so the key lives in the DB, not the environment.
 - `internal/processor` — ties everything together: parses `"Title (YYYY)"` from `DirectoryName`, matches the API record by title, fetches TMDB metadata, marshals genres as a JSON string, and calls `UpdateMovie`
 
 ### Key conventions (shared with river-trans/river-scan)
@@ -51,7 +51,6 @@ Both river-trans and river-meta-movie receive every movie event independently. B
 |---|---|---|
 | `RIVER_API_USERNAME` | — | yes |
 | `RIVER_API_PASSWORD` | — | yes |
-| `TMDB_API_KEY` | — | yes |
 | `RIVER_API_URL` | `http://localhost:8080` | no |
 | `RABBITMQ_URL` | `amqp://guest:guest@localhost:5672/` | no |
 | `RABBITMQ_EXCHANGE` | `river.media` | no |

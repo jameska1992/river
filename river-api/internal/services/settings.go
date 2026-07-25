@@ -12,6 +12,7 @@ const (
 	keyRadarrKey = "radarr.api_key"
 	keySonarrURL = "sonarr.url"
 	keySonarrKey = "sonarr.api_key"
+	keyTMDBKey   = "tmdb.api_key"
 )
 
 type SettingsService struct {
@@ -45,6 +46,33 @@ func (s *SettingsService) SonarrConfig() (url, key string, enabled bool) {
 	url = strings.TrimRight(strings.TrimSpace(s.get(keySonarrURL)), "/")
 	key = s.get(keySonarrKey)
 	return url, key, url != ""
+}
+
+// TMDBKey returns the raw TMDB API key (empty when unset). Unlike the
+// integration views this is not masked — it's consumed by the metadata
+// services (river-meta-movie / river-meta-tv), which authenticate as
+// admin and need the actual key to call TMDB.
+func (s *SettingsService) TMDBKey() string {
+	return s.get(keyTMDBKey)
+}
+
+// MetadataSettings is the admin-facing (masked) view of metadata config.
+type MetadataSettings struct {
+	TMDBHasKey bool `json:"tmdb_has_key"`
+}
+
+func (s *SettingsService) Metadata() MetadataSettings {
+	return MetadataSettings{TMDBHasKey: s.get(keyTMDBKey) != ""}
+}
+
+// UpdateMetadata sets the TMDB key when a non-empty value is supplied;
+// an empty value leaves the stored key untouched (same convention as the
+// integration API keys).
+func (s *SettingsService) UpdateMetadata(tmdbKey string) error {
+	if tmdbKey == "" {
+		return nil
+	}
+	return s.repo.Set(keyTMDBKey, tmdbKey)
 }
 
 // IntegrationSettings is the admin-facing view. Secrets are never
@@ -95,12 +123,13 @@ func (s *SettingsService) UpdateIntegrations(radarrURL, radarrKey, sonarrURL, so
 // is not already set in the DB. Used by the deployment init step to
 // bootstrap from environment variables without ever overwriting values
 // an admin has changed via the UI.
-func (s *SettingsService) SeedIntegrations(radarrURL, radarrKey, sonarrURL, sonarrKey string) error {
+func (s *SettingsService) SeedIntegrations(radarrURL, radarrKey, sonarrURL, sonarrKey, tmdbKey string) error {
 	seeds := []struct{ key, value string }{
 		{keyRadarrURL, strings.TrimSpace(radarrURL)},
 		{keyRadarrKey, radarrKey},
 		{keySonarrURL, strings.TrimSpace(sonarrURL)},
 		{keySonarrKey, sonarrKey},
+		{keyTMDBKey, tmdbKey},
 	}
 	for _, sd := range seeds {
 		if sd.value == "" {

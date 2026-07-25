@@ -84,7 +84,7 @@ func TestSettingsService_Seed_DoesNotOverwriteExisting(t *testing.T) {
 	repo := &memSettingRepo{m: map[string]string{keyRadarrURL: "http://existing"}}
 	svc := NewSettingsService(repo)
 
-	require.NoError(t, svc.SeedIntegrations("http://from-env", "envkey", "http://sonarr", "sonarrkey"))
+	require.NoError(t, svc.SeedIntegrations("http://from-env", "envkey", "http://sonarr", "sonarrkey", "tmdbkey"))
 
 	ru, rk, _ := svc.RadarrConfig()
 	assert.Equal(t, "http://existing", ru, "an already-set value is never overwritten by seed")
@@ -99,9 +99,36 @@ func TestSettingsService_Seed_SkipsEmptyValues(t *testing.T) {
 	repo := &memSettingRepo{m: map[string]string{}}
 	svc := NewSettingsService(repo)
 
-	require.NoError(t, svc.SeedIntegrations("", "", "", ""))
+	require.NoError(t, svc.SeedIntegrations("", "", "", "", ""))
 	_, _, radarrEnabled := svc.RadarrConfig()
 	_, _, sonarrEnabled := svc.SonarrConfig()
 	assert.False(t, radarrEnabled)
 	assert.False(t, sonarrEnabled)
+}
+
+func TestSettingsService_Metadata_MasksTMDBKey(t *testing.T) {
+	repo := &memSettingRepo{m: map[string]string{keyTMDBKey: "secret-tmdb"}}
+	svc := NewSettingsService(repo)
+
+	assert.Equal(t, "secret-tmdb", svc.TMDBKey(), "raw key available for service use")
+	m := svc.Metadata()
+	assert.True(t, m.TMDBHasKey, "masked view reports the key is set")
+}
+
+func TestSettingsService_UpdateMetadata_EmptyPreserves(t *testing.T) {
+	repo := &memSettingRepo{m: map[string]string{keyTMDBKey: "old"}}
+	svc := NewSettingsService(repo)
+
+	require.NoError(t, svc.UpdateMetadata(""))
+	assert.Equal(t, "old", svc.TMDBKey(), "empty update preserves the stored key")
+
+	require.NoError(t, svc.UpdateMetadata("new"))
+	assert.Equal(t, "new", svc.TMDBKey())
+}
+
+func TestSettingsService_Seed_IncludesTMDB(t *testing.T) {
+	repo := &memSettingRepo{m: map[string]string{}}
+	svc := NewSettingsService(repo)
+	require.NoError(t, svc.SeedIntegrations("", "", "", "", "seeded-tmdb"))
+	assert.Equal(t, "seeded-tmdb", svc.TMDBKey())
 }

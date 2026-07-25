@@ -11,7 +11,7 @@ import (
 var ErrNotFound = errors.New("tmdb: not found")
 
 type Client struct {
-	apiKey    string
+	keyFn     func() string
 	imageBase string
 	http      *http.Client
 }
@@ -50,9 +50,12 @@ type Metadata struct {
 	Crew          []CrewCredit
 }
 
-func New(apiKey, imageBase string) *Client {
+// New builds a TMDB client. keyFn supplies the current API key on each
+// call, so the key can be sourced dynamically (e.g. from river-api's
+// settings) and changed without recreating the client.
+func New(keyFn func() string, imageBase string) *Client {
 	return &Client{
-		apiKey:    apiKey,
+		keyFn:     keyFn,
 		imageBase: imageBase,
 		http:      &http.Client{},
 	}
@@ -84,7 +87,7 @@ func (c *Client) FetchByIMDBID(imdbID string) (*Metadata, error) {
 
 func (c *Client) findByExternalID(externalID, source string) (int, error) {
 	params := url.Values{}
-	params.Set("api_key", c.apiKey)
+	params.Set("api_key", c.keyFn())
 	params.Set("external_source", source)
 
 	resp, err := c.http.Get(fmt.Sprintf("https://api.themoviedb.org/3/find/%s?%s", url.PathEscape(externalID), params.Encode()))
@@ -138,7 +141,7 @@ func (c *Client) searchMovie(title string, year int) (int, error) {
 
 func (c *Client) searchCandidates(title string, year int) ([]searchCandidate, error) {
 	params := url.Values{}
-	params.Set("api_key", c.apiKey)
+	params.Set("api_key", c.keyFn())
 	params.Set("query", title)
 	if year > 0 {
 		params.Set("year", fmt.Sprintf("%d", year))
@@ -192,7 +195,7 @@ func yearFromReleaseDate(s string) int {
 
 func (c *Client) getMovieDetails(id int) (*Metadata, error) {
 	params := url.Values{}
-	params.Set("api_key", c.apiKey)
+	params.Set("api_key", c.keyFn())
 
 	resp, err := c.http.Get(fmt.Sprintf("https://api.themoviedb.org/3/movie/%d?%s", id, params.Encode()))
 	if err != nil {
@@ -261,7 +264,7 @@ func (c *Client) getMovieDetails(id int) (*Metadata, error) {
 
 func (c *Client) fetchTrailerKey(id int) string {
 	params := url.Values{}
-	params.Set("api_key", c.apiKey)
+	params.Set("api_key", c.keyFn())
 	resp, err := c.http.Get(fmt.Sprintf("https://api.themoviedb.org/3/movie/%d/videos?%s", id, params.Encode()))
 	if err != nil {
 		return ""
@@ -294,7 +297,7 @@ func (c *Client) fetchTrailerKey(id int) string {
 
 func (c *Client) fetchCredits(id int, m *Metadata) error {
 	params := url.Values{}
-	params.Set("api_key", c.apiKey)
+	params.Set("api_key", c.keyFn())
 
 	resp, err := c.http.Get(fmt.Sprintf("https://api.themoviedb.org/3/movie/%d/credits?%s", id, params.Encode()))
 	if err != nil {
@@ -355,7 +358,7 @@ func (c *Client) fetchCredits(id int, m *Metadata) error {
 
 func (c *Client) fetchPersonBio(id int) string {
 	params := url.Values{}
-	params.Set("api_key", c.apiKey)
+	params.Set("api_key", c.keyFn())
 	resp, err := c.http.Get(fmt.Sprintf("https://api.themoviedb.org/3/person/%d?%s", id, params.Encode()))
 	if err != nil {
 		return ""

@@ -4976,6 +4976,33 @@ const docTemplate = `{
                 }
             }
         },
+        "/request/availability": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "request"
+                ],
+                "summary": "Requests feature availability",
+                "responses": {
+                    "200": {
+                        "description": "{radarr, sonarr, enabled}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "boolean"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/request/calendar": {
             "get": {
                 "security": [

@@ -277,6 +277,7 @@ func Register(r *gin.Engine, secret string,
 		// Requests (Radarr / Sonarr)
 		req := protected.Group("/request")
 		{
+			req.GET("/availability", request.Availability)
 			req.GET("/movies", request.SearchMovies)
 			req.POST("/movies", request.AddMovie)
 			req.GET("/shows", request.SearchShows)

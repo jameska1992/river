@@ -409,6 +409,26 @@ func (h *RequestHandler) Calendar(c *gin.Context) {
 	c.JSON(http.StatusOK, items)
 }
 
+// Availability reports whether Radarr/Sonarr are configured, so any
+// authenticated user's client can show or hide the Requests / Calendar
+// features. Returns only booleans — no URLs or keys.
+//
+// @Summary      Requests feature availability
+// @Tags         request
+// @Produce      json
+// @Success      200  {object}  map[string]bool  "{radarr, sonarr, enabled}"
+// @Security     BearerAuth
+// @Router       /request/availability [get]
+func (h *RequestHandler) Availability(c *gin.Context) {
+	_, _, radarr := h.settings.RadarrConfig()
+	_, _, sonarr := h.settings.SonarrConfig()
+	c.JSON(http.StatusOK, gin.H{
+		"radarr":  radarr,
+		"sonarr":  sonarr,
+		"enabled": radarr || sonarr,
+	})
+}
+
 type testConnectionRequest struct {
 	Service string `json:"service" binding:"required,oneof=radarr sonarr"`
 }

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"strconv"
-	"time"
 )
 
 type Config struct {
@@ -13,7 +12,6 @@ type Config struct {
 	APIPassword         string
 	RabbitMQURL         string
 	RabbitMQExchange    string
-	ScanInterval        time.Duration
 	StatePath           string
 	HTTPPort            string
 	DisableTranscoding  bool
@@ -30,14 +28,9 @@ func Load() (*Config, error) {
 		return nil, fmt.Errorf("RIVER_API_PASSWORD is required")
 	}
 
-	var interval time.Duration
-	if s := os.Getenv("SCAN_INTERVAL"); s != "" {
-		var err error
-		interval, err = time.ParseDuration(s)
-		if err != nil {
-			return nil, fmt.Errorf("invalid SCAN_INTERVAL %q: %w", s, err)
-		}
-	}
+	// SCAN_INTERVAL is no longer read here — it lives in river-api's
+	// settings store (seeded from the env var on first boot) and is
+	// fetched at runtime so it can change without a restart.
 
 	maxDepth := 0 // 0 means "use scanner default"
 	if s := os.Getenv("MAX_SCAN_DEPTH"); s != "" {
@@ -54,7 +47,6 @@ func Load() (*Config, error) {
 		APIPassword:        password,
 		RabbitMQURL:        getEnv("RABBITMQ_URL", "amqp://guest:guest@localhost:5672/"),
 		RabbitMQExchange:   getEnv("RABBITMQ_EXCHANGE", "river.media"),
-		ScanInterval:       interval,
 		StatePath:          getEnv("STATE_PATH", "scanner-state.json"),
 		HTTPPort:           getEnv("HTTP_PORT", "8081"),
 		DisableTranscoding: os.Getenv("DISABLE_TRANSCODING") != "",

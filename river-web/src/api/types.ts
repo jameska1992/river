@@ -666,3 +666,7 @@ export interface IntegrationUpdate {
 export interface MetadataSettings {
   tmdb_has_key: boolean
 }
+
+export interface ScanningSettings {
+  scan_interval: string
+}

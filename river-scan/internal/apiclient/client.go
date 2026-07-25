@@ -285,6 +285,26 @@ func (c *Client) Libraries() ([]Library, error) {
 	return libs, c.do("GET", "/api/libraries", nil, &libs)
 }
 
+// ScanInterval fetches the configured scan interval from river-api's
+// settings store. Returns 0 (with no error) when unset — the caller
+// treats that as "single scan and exit".
+func (c *Client) ScanInterval() (time.Duration, error) {
+	var result struct {
+		ScanInterval string `json:"scan_interval"`
+	}
+	if err := c.do("GET", "/api/admin/settings/scanning", nil, &result); err != nil {
+		return 0, err
+	}
+	if result.ScanInterval == "" {
+		return 0, nil
+	}
+	d, err := time.ParseDuration(result.ScanInterval)
+	if err != nil {
+		return 0, fmt.Errorf("parse scan_interval %q: %w", result.ScanInterval, err)
+	}
+	return d, nil
+}
+
 // --- Movies ---
 
 func (c *Client) ListMovies(libraryID string) ([]Movie, error) {

@@ -12,7 +12,8 @@ const (
 	keyRadarrKey = "radarr.api_key"
 	keySonarrURL = "sonarr.url"
 	keySonarrKey = "sonarr.api_key"
-	keyTMDBKey   = "tmdb.api_key"
+	keyTMDBKey      = "tmdb.api_key"
+	keyScanInterval = "scan.interval"
 )
 
 type SettingsService struct {
@@ -75,6 +76,29 @@ func (s *SettingsService) UpdateMetadata(tmdbKey string) error {
 	return s.repo.Set(keyTMDBKey, tmdbKey)
 }
 
+// ScanningSettings is the admin-facing view of scan config. The interval
+// is a Go duration string (e.g. "1h", "30m", "3600s"); not a secret, so
+// it's returned as-is.
+type ScanningSettings struct {
+	ScanInterval string `json:"scan_interval"`
+}
+
+func (s *SettingsService) Scanning() ScanningSettings {
+	return ScanningSettings{ScanInterval: s.get(keyScanInterval)}
+}
+
+// ScanInterval returns the raw scan-interval duration string (empty when
+// unset).
+func (s *SettingsService) ScanInterval() string {
+	return s.get(keyScanInterval)
+}
+
+// UpdateScanning stores the scan interval. Callers (handler) are expected
+// to have validated it as a parseable duration.
+func (s *SettingsService) UpdateScanning(scanInterval string) error {
+	return s.repo.Set(keyScanInterval, strings.TrimSpace(scanInterval))
+}
+
 // IntegrationSettings is the admin-facing view. Secrets are never
 // returned — only whether a key is set.
 type IntegrationSettings struct {
@@ -123,13 +147,14 @@ func (s *SettingsService) UpdateIntegrations(radarrURL, radarrKey, sonarrURL, so
 // is not already set in the DB. Used by the deployment init step to
 // bootstrap from environment variables without ever overwriting values
 // an admin has changed via the UI.
-func (s *SettingsService) SeedIntegrations(radarrURL, radarrKey, sonarrURL, sonarrKey, tmdbKey string) error {
+func (s *SettingsService) SeedIntegrations(radarrURL, radarrKey, sonarrURL, sonarrKey, tmdbKey, scanInterval string) error {
 	seeds := []struct{ key, value string }{
 		{keyRadarrURL, strings.TrimSpace(radarrURL)},
 		{keyRadarrKey, radarrKey},
 		{keySonarrURL, strings.TrimSpace(sonarrURL)},
 		{keySonarrKey, sonarrKey},
 		{keyTMDBKey, tmdbKey},
+		{keyScanInterval, strings.TrimSpace(scanInterval)},
 	}
 	for _, sd := range seeds {
 		if sd.value == "" {

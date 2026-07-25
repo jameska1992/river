@@ -56,7 +56,6 @@ The walker skips:
 | `RIVER_API_URL` | `http://localhost:8080` | no |
 | `RABBITMQ_URL` | `amqp://guest:guest@localhost:5672/` | no |
 | `RABBITMQ_EXCHANGE` | `river.media` | no |
-| `SCAN_INTERVAL` | *(none — run once and exit)* | no |
 | `STATE_PATH` | `scanner-state.json` | no |
 | `DISABLE_TRANSCODING` | *(unset)* | no |
 | `MAX_SCAN_DEPTH` | `6` | no |
@@ -64,3 +63,5 @@ The walker skips:
 When `DISABLE_TRANSCODING` is set (any non-empty value), the scanner skips RabbitMQ entirely and registers media records directly in river-api with original file paths. Movies update one record per video file; TV episodes are parsed from filenames; music files are grouped by subdirectory into albums; audiobook files become chapters sorted by filename.
 
 `MAX_SCAN_DEPTH` caps how deep the recursive movie walker descends below the library root. Defaults to 6, which comfortably covers `Movies/Genre/Sub/Title/file.mkv` layouts.
+
+**Scan interval** is no longer an env var — it's stored in river-api's settings store (`scan.interval`, seeded from `SCAN_INTERVAL` on first boot) and fetched via `apiclient.ScanInterval()`. `main.go` reads it at startup (an unset/empty value → single scan and exit) and re-reads it each loop cycle, so an admin's change in the settings UI applies on the next tick without a restart.

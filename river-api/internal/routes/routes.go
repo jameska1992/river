@@ -79,6 +79,8 @@ func Register(r *gin.Engine, secret string,
 		protected.GET("/admin/settings/metadata", middleware.AdminOnly(), settings.GetMetadata)
 		protected.PUT("/admin/settings/metadata", middleware.AdminOnly(), settings.UpdateMetadata)
 		protected.GET("/admin/settings/tmdb", middleware.AdminOnly(), settings.GetTMDBKey)
+		protected.GET("/admin/settings/scanning", middleware.AdminOnly(), settings.GetScanning)
+		protected.PUT("/admin/settings/scanning", middleware.AdminOnly(), settings.UpdateScanning)
 		protected.GET("/admin/active-sessions", middleware.AdminOnly(), progress.ActiveSessions)
 		protected.POST("/admin/scan", middleware.AdminOnly(), admin.TriggerScan)
 		protected.POST("/admin/requeue-untranscoded", middleware.AdminOnly(), admin.RequeueUntranscoded)

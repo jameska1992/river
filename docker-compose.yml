@@ -96,6 +96,7 @@ services:
       SONARR_URL: ${SONARR_URL:-}
       SONARR_API_KEY: ${SONARR_API_KEY:-}
       TMDB_API_KEY: ${TMDB_API_KEY:-}
+      SCAN_INTERVAL: ${SCAN_INTERVAL:-3600s}
     command:
       - sh
       - -c
@@ -118,7 +119,7 @@ services:
         wget -qO/dev/null \
           --header="Content-Type: application/json" \
           --header="Authorization: Bearer $$TOKEN" \
-          --post-data="{\"radarr_url\":\"$$RADARR_URL\",\"radarr_api_key\":\"$$RADARR_API_KEY\",\"sonarr_url\":\"$$SONARR_URL\",\"sonarr_api_key\":\"$$SONARR_API_KEY\",\"tmdb_api_key\":\"$$TMDB_API_KEY\"}" \
+          --post-data="{\"radarr_url\":\"$$RADARR_URL\",\"radarr_api_key\":\"$$RADARR_API_KEY\",\"sonarr_url\":\"$$SONARR_URL\",\"sonarr_api_key\":\"$$SONARR_API_KEY\",\"tmdb_api_key\":\"$$TMDB_API_KEY\",\"scan_interval\":\"$$SCAN_INTERVAL\"}" \
           http://river-api:8080/api/admin/settings/integrations/seed || true
 
         echo "river-init complete"
@@ -137,7 +138,8 @@ services:
       RIVER_API_PASSWORD: ${ADMIN_PASSWORD:?ADMIN_PASSWORD is required}
       RABBITMQ_URL: amqp://${RABBITMQ_USER:-river}:${RABBITMQ_PASSWORD:-river}@rabbitmq:5672/
       RABBITMQ_EXCHANGE: river.media
-      SCAN_INTERVAL: ${SCAN_INTERVAL:-3600}
+      # SCAN_INTERVAL now lives in river-api's settings store (seeded by
+      # river-init on first boot); fetched at runtime, changeable via the UI.
       STATE_PATH: /state/scanner-state.json
     volumes:
       - ${MEDIA_PATH:?MEDIA_PATH is required}:/media:ro

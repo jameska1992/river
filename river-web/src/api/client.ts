@@ -279,6 +279,14 @@ export class RiverClient {
     return this.request('PUT', '/admin/settings/metadata', { tmdb_api_key: tmdbApiKey })
   }
 
+  async getScanningSettings(): Promise<import('./types').ScanningSettings> {
+    return this.request('GET', '/admin/settings/scanning')
+  }
+
+  async updateScanningSettings(scanInterval: string): Promise<import('./types').ScanningSettings> {
+    return this.request('PUT', '/admin/settings/scanning', { scan_interval: scanInterval })
+  }
+
   async getScannerState(): Promise<{
     directories: Record<string, { library_id: string; content_hash: string; last_scanned: string }>
     shows:       Record<string, string>

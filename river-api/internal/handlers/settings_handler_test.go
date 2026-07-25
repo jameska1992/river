@@ -127,3 +127,30 @@ func TestSettingsHandler_Metadata(t *testing.T) {
 	require.Equal(t, http.StatusOK, w.Code)
 	assert.Equal(t, "k-abc", repo.m["tmdb.api_key"])
 }
+
+func TestSettingsHandler_Scanning(t *testing.T) {
+	repo := &fakeSettingRepo{m: map[string]string{}}
+	gin.SetMode(gin.TestMode)
+	h := NewSettingsHandler(services.NewSettingsService(repo))
+	r := gin.New()
+	r.GET("/admin/settings/scanning", h.GetScanning)
+	r.PUT("/admin/settings/scanning", h.UpdateScanning)
+
+	// invalid duration -> 400
+	w := doJSON(r, http.MethodPut, "/admin/settings/scanning", `{"scan_interval":"soon"}`)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+
+	// missing -> 400 (binding required)
+	w = doJSON(r, http.MethodPut, "/admin/settings/scanning", `{}`)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+
+	// valid -> 200 + persisted
+	w = doJSON(r, http.MethodPut, "/admin/settings/scanning", `{"scan_interval":"45m"}`)
+	require.Equal(t, http.StatusOK, w.Code)
+	assert.Contains(t, w.Body.String(), "45m")
+	assert.Equal(t, "45m", repo.m["scan.interval"])
+
+	w = doJSON(r, http.MethodGet, "/admin/settings/scanning", "")
+	require.Equal(t, http.StatusOK, w.Code)
+	assert.Contains(t, w.Body.String(), "45m")
+}

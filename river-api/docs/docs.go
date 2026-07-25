@@ -551,6 +551,75 @@ const docTemplate = `{
                 }
             }
         },
+        "/admin/settings/scanning": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "settings"
+                ],
+                "summary": "Get scan settings",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/services.ScanningSettings"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "settings"
+                ],
+                "summary": "Update scan settings",
+                "parameters": [
+                    {
+                        "description": "Scan settings",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.scanningRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/services.ScanningSettings"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/admin/settings/tmdb": {
             "get": {
                 "security": [
@@ -7869,6 +7938,9 @@ const docTemplate = `{
                 "radarr_url": {
                     "type": "string"
                 },
+                "scan_interval": {
+                    "type": "string"
+                },
                 "sonarr_api_key": {
                     "type": "string"
                 },
@@ -8045,6 +8117,17 @@ const docTemplate = `{
                     "type": "string",
                     "maxLength": 32,
                     "minLength": 3
+                }
+            }
+        },
+        "handlers.scanningRequest": {
+            "type": "object",
+            "required": [
+                "scan_interval"
+            ],
+            "properties": {
+                "scan_interval": {
+                    "type": "string"
                 }
             }
         },
@@ -8971,6 +9054,14 @@ const docTemplate = `{
             "properties": {
                 "tmdb_has_key": {
                     "type": "boolean"
+                }
+            }
+        },
+        "services.ScanningSettings": {
+            "type": "object",
+            "properties": {
+                "scan_interval": {
+                    "type": "string"
                 }
             }
         },

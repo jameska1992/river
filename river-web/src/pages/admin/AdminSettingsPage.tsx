@@ -1,14 +1,15 @@
 import { type FormEvent, useEffect, useState } from 'react'
-import { RiCheckLine, RiCloseLine, RiExchangeFundsLine } from 'react-icons/ri'
+import { RiCheckLine, RiCloseLine, RiExchangeFundsLine, RiTimeLine } from 'react-icons/ri'
 import { api, ApiError } from '../../api'
 import type { IntegrationSettings } from '../../api'
 import styles from './AdminSettingsPage.module.css'
 
-type Tab = 'integrations' | 'metadata'
+type Tab = 'integrations' | 'metadata' | 'scanning'
 
 const TABS: { id: Tab; label: string }[] = [
   { id: 'integrations', label: 'Integrations' },
   { id: 'metadata', label: 'Metadata' },
+  { id: 'scanning', label: 'Scanning' },
 ]
 
 export function AdminSettingsPage() {
@@ -34,7 +35,82 @@ export function AdminSettingsPage() {
 
       {tab === 'integrations' && <IntegrationsTab />}
       {tab === 'metadata' && <MetadataTab />}
+      {tab === 'scanning' && <ScanningTab />}
     </div>
+  )
+}
+
+// ── Scanning tab ──────────────────────────────────────────
+
+function ScanningTab() {
+  const [loading, setLoading] = useState(true)
+  const [interval, setInterval] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    api.getScanningSettings()
+      .then(s => setInterval(s.scan_interval))
+      .catch(err => setError(err instanceof Error ? err.message : 'Failed to load settings'))
+      .finally(() => setLoading(false))
+  }, [])
+
+  async function handleSave(e: FormEvent) {
+    e.preventDefault()
+    setSaving(true); setSaved(false); setError('')
+    try {
+      const s = await api.updateScanningSettings(interval.trim())
+      setInterval(s.scan_interval)
+      setSaved(true)
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Failed to save settings')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  if (loading) {
+    return <div className={`${styles.skeletonCard} skeleton`} style={{ maxWidth: 400 }} />
+  }
+
+  return (
+    <form onSubmit={handleSave}>
+      <p className={`body-md ${styles.blurb}`}>
+        How often river-scan rescans your libraries for new media. Use a duration like
+        {' '}<code>1h</code>, <code>30m</code>, or <code>3600s</code>. Changes take effect on the
+        next scan cycle — no restart needed.
+      </p>
+
+      <div className={`card ${styles.card}`} style={{ maxWidth: 400 }}>
+        <div className={styles.cardHead}>
+          <span className={styles.cardIcon} aria-hidden><RiTimeLine size={18} /></span>
+          <div>
+            <h2 className={`label-lg ${styles.cardTitle}`}>Scan interval</h2>
+            <p className={`label-sm ${styles.cardSubtitle}`}>Library rescan frequency</p>
+          </div>
+        </div>
+
+        <label className={styles.field}>
+          <span className="label-sm">Interval</span>
+          <input
+            className="input"
+            value={interval}
+            onChange={e => setInterval(e.target.value)}
+            placeholder="1h"
+          />
+        </label>
+      </div>
+
+      {error && <p className={styles.formError}>{error}</p>}
+
+      <div className={styles.footer}>
+        {saved && <span className={styles.savedNote}><RiCheckLine size={15} /> Saved</span>}
+        <button type="submit" className="btn btn-primary" disabled={saving}>
+          {saving ? 'Saving…' : 'Save changes'}
+        </button>
+      </div>
+    </form>
   )
 }
 

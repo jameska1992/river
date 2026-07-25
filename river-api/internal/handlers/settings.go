@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"net/http"
+	"time"
 
 	"river-api/internal/services"
 
@@ -26,11 +27,17 @@ type integrationsRequest struct {
 	SonarrURL    string `json:"sonarr_url"`
 	SonarrAPIKey string `json:"sonarr_api_key"`
 	TMDBAPIKey   string `json:"tmdb_api_key"`
+	ScanInterval string `json:"scan_interval"`
 }
 
 // metadataRequest is the write shape for metadata settings.
 type metadataRequest struct {
 	TMDBAPIKey string `json:"tmdb_api_key"`
+}
+
+// scanningRequest is the write shape for scan settings.
+type scanningRequest struct {
+	ScanInterval string `json:"scan_interval" binding:"required"`
 }
 
 // GetIntegrations returns the Radarr/Sonarr integration settings. Secrets
@@ -91,7 +98,7 @@ func (h *SettingsHandler) SeedIntegrations(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	if err := h.svc.SeedIntegrations(req.RadarrURL, req.RadarrAPIKey, req.SonarrURL, req.SonarrAPIKey, req.TMDBAPIKey); err != nil {
+	if err := h.svc.SeedIntegrations(req.RadarrURL, req.RadarrAPIKey, req.SonarrURL, req.SonarrAPIKey, req.TMDBAPIKey, req.ScanInterval); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to seed settings"})
 		return
 	}
@@ -147,4 +154,45 @@ func (h *SettingsHandler) UpdateMetadata(c *gin.Context) {
 // @Router       /admin/settings/tmdb [get]
 func (h *SettingsHandler) GetTMDBKey(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"api_key": h.svc.TMDBKey()})
+}
+
+// GetScanning returns the scan settings.
+//
+// @Summary      Get scan settings
+// @Tags         settings
+// @Produce      json
+// @Success      200  {object}  services.ScanningSettings
+// @Security     BearerAuth
+// @Router       /admin/settings/scanning [get]
+func (h *SettingsHandler) GetScanning(c *gin.Context) {
+	c.JSON(http.StatusOK, h.svc.Scanning())
+}
+
+// UpdateScanning sets the scan interval. The value must be a parseable Go
+// duration (e.g. "1h", "30m", "3600s").
+//
+// @Summary      Update scan settings
+// @Tags         settings
+// @Accept       json
+// @Produce      json
+// @Param        body  body      scanningRequest  true  "Scan settings"
+// @Success      200   {object}  services.ScanningSettings
+// @Failure      400   {object}  map[string]string
+// @Security     BearerAuth
+// @Router       /admin/settings/scanning [put]
+func (h *SettingsHandler) UpdateScanning(c *gin.Context) {
+	var req scanningRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if _, err := time.ParseDuration(req.ScanInterval); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "scan_interval must be a duration like 1h, 30m or 3600s"})
+		return
+	}
+	if err := h.svc.UpdateScanning(req.ScanInterval); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to save settings"})
+		return
+	}
+	c.JSON(http.StatusOK, h.svc.Scanning())
 }

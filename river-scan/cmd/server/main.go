@@ -158,7 +158,15 @@ func main() {
 		_ = srv.Shutdown(shutCtx)
 	}()
 
-	if cfg.ScanInterval == 0 {
+	// The scan interval lives in river-api's settings store. An unset
+	// interval means "single scan and exit" (matches the historical
+	// SCAN_INTERVAL-unset behaviour); a set interval runs the scan loop.
+	interval, err := api.ScanInterval()
+	if err != nil {
+		log.Printf("WARN could not fetch scan interval, defaulting to %s: %v", defaultScanInterval, err)
+		interval = defaultScanInterval
+	}
+	if interval == 0 {
 		if err := s.Run(ctx); err != nil {
 			log.Fatalf("scan: %v", err)
 		}
@@ -166,11 +174,17 @@ func main() {
 	}
 
 	api.Log("info", "started")
-	log.Printf("starting scanner (interval: %s)", cfg.ScanInterval)
+	log.Printf("starting scanner (interval: %s)", interval)
 	for {
 		if err := s.Run(ctx); err != nil {
 			api.Log("error", "scan error: "+err.Error())
 			log.Printf("scan error: %v", err)
+		}
+		// Re-read the interval each cycle so an admin's change (via the
+		// settings UI) takes effect on the next tick without a restart.
+		// Keep the last-known value if the lookup fails or is cleared.
+		if d, err := api.ScanInterval(); err == nil && d > 0 {
+			interval = d
 		}
 		select {
 		case <-ctx.Done():
@@ -178,7 +192,9 @@ func main() {
 			return
 		case <-triggerCh:
 			log.Println("manual scan triggered")
-		case <-time.After(cfg.ScanInterval):
+		case <-time.After(interval):
 		}
 	}
 }
+
+const defaultScanInterval = time.Hour

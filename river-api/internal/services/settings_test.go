@@ -84,7 +84,7 @@ func TestSettingsService_Seed_DoesNotOverwriteExisting(t *testing.T) {
 	repo := &memSettingRepo{m: map[string]string{keyRadarrURL: "http://existing"}}
 	svc := NewSettingsService(repo)
 
-	require.NoError(t, svc.SeedIntegrations("http://from-env", "envkey", "http://sonarr", "sonarrkey", "tmdbkey"))
+	require.NoError(t, svc.SeedIntegrations("http://from-env", "envkey", "http://sonarr", "sonarrkey", "tmdbkey", "1h"))
 
 	ru, rk, _ := svc.RadarrConfig()
 	assert.Equal(t, "http://existing", ru, "an already-set value is never overwritten by seed")
@@ -99,7 +99,7 @@ func TestSettingsService_Seed_SkipsEmptyValues(t *testing.T) {
 	repo := &memSettingRepo{m: map[string]string{}}
 	svc := NewSettingsService(repo)
 
-	require.NoError(t, svc.SeedIntegrations("", "", "", "", ""))
+	require.NoError(t, svc.SeedIntegrations("", "", "", "", "", ""))
 	_, _, radarrEnabled := svc.RadarrConfig()
 	_, _, sonarrEnabled := svc.SonarrConfig()
 	assert.False(t, radarrEnabled)
@@ -129,6 +129,23 @@ func TestSettingsService_UpdateMetadata_EmptyPreserves(t *testing.T) {
 func TestSettingsService_Seed_IncludesTMDB(t *testing.T) {
 	repo := &memSettingRepo{m: map[string]string{}}
 	svc := NewSettingsService(repo)
-	require.NoError(t, svc.SeedIntegrations("", "", "", "", "seeded-tmdb"))
+	require.NoError(t, svc.SeedIntegrations("", "", "", "", "seeded-tmdb", ""))
 	assert.Equal(t, "seeded-tmdb", svc.TMDBKey())
+}
+
+func TestSettingsService_Scanning(t *testing.T) {
+	repo := &memSettingRepo{m: map[string]string{}}
+	svc := NewSettingsService(repo)
+
+	assert.Equal(t, "", svc.Scanning().ScanInterval)
+	require.NoError(t, svc.UpdateScanning("30m"))
+	assert.Equal(t, "30m", svc.Scanning().ScanInterval)
+	assert.Equal(t, "30m", svc.ScanInterval())
+}
+
+func TestSettingsService_Seed_IncludesScanInterval(t *testing.T) {
+	repo := &memSettingRepo{m: map[string]string{}}
+	svc := NewSettingsService(repo)
+	require.NoError(t, svc.SeedIntegrations("", "", "", "", "", "1h"))
+	assert.Equal(t, "1h", svc.ScanInterval())
 }

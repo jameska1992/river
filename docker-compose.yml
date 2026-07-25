@@ -95,6 +95,7 @@ services:
       RADARR_API_KEY: ${RADARR_API_KEY:-}
       SONARR_URL: ${SONARR_URL:-}
       SONARR_API_KEY: ${SONARR_API_KEY:-}
+      TMDB_API_KEY: ${TMDB_API_KEY:-}
     command:
       - sh
       - -c
@@ -117,7 +118,7 @@ services:
         wget -qO/dev/null \
           --header="Content-Type: application/json" \
           --header="Authorization: Bearer $$TOKEN" \
-          --post-data="{\"radarr_url\":\"$$RADARR_URL\",\"radarr_api_key\":\"$$RADARR_API_KEY\",\"sonarr_url\":\"$$SONARR_URL\",\"sonarr_api_key\":\"$$SONARR_API_KEY\"}" \
+          --post-data="{\"radarr_url\":\"$$RADARR_URL\",\"radarr_api_key\":\"$$RADARR_API_KEY\",\"sonarr_url\":\"$$SONARR_URL\",\"sonarr_api_key\":\"$$SONARR_API_KEY\",\"tmdb_api_key\":\"$$TMDB_API_KEY\"}" \
           http://river-api:8080/api/admin/settings/integrations/seed || true
 
         echo "river-init complete"
@@ -210,7 +211,8 @@ services:
       RIVER_API_PASSWORD: ${ADMIN_PASSWORD:?ADMIN_PASSWORD is required}
       RABBITMQ_URL: amqp://${RABBITMQ_USER:-river}:${RABBITMQ_PASSWORD:-river}@rabbitmq:5672/
       RABBITMQ_EXCHANGE: river.media
-      TMDB_API_KEY: ${TMDB_API_KEY:?TMDB_API_KEY is required}
+      # TMDB key is fetched from river-api's settings store (seeded by the
+      # river-init step from TMDB_API_KEY on first boot).
       WORKER_COUNT: ${META_WORKERS:-2}
     depends_on:
       river-init:
@@ -230,7 +232,8 @@ services:
       RIVER_API_PASSWORD: ${ADMIN_PASSWORD:?ADMIN_PASSWORD is required}
       RABBITMQ_URL: amqp://${RABBITMQ_USER:-river}:${RABBITMQ_PASSWORD:-river}@rabbitmq:5672/
       RABBITMQ_EXCHANGE: river.media
-      TMDB_API_KEY: ${TMDB_API_KEY:?TMDB_API_KEY is required}
+      # TMDB key is fetched from river-api's settings store (seeded by the
+      # river-init step from TMDB_API_KEY on first boot).
       WORKER_COUNT: ${META_WORKERS:-2}
     depends_on:
       river-init:

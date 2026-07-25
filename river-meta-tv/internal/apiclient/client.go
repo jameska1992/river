@@ -219,6 +219,18 @@ func (c *Client) GetShow(id string) (*TVShow, error) {
 	return &result, c.do("GET", "/api/tvshows/"+id, nil, &result)
 }
 
+// GetTMDBKey fetches the TMDB API key from river-api's settings store.
+// The client authenticates as admin, so it can read the raw key.
+func (c *Client) GetTMDBKey() (string, error) {
+	var result struct {
+		APIKey string `json:"api_key"`
+	}
+	if err := c.do("GET", "/api/admin/settings/tmdb", nil, &result); err != nil {
+		return "", err
+	}
+	return result.APIKey, nil
+}
+
 func (c *Client) ListShows(libraryID string) ([]TVShow, error) {
 	return paginateAll(func(page, limit int) ([]TVShow, error) {
 		var result []TVShow

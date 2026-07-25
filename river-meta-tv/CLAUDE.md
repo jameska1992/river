@@ -15,8 +15,11 @@ Required environment variables to run:
 ```
 RIVER_API_USERNAME=...
 RIVER_API_PASSWORD=...
-TMDB_API_KEY=...
 ```
+
+The TMDB API key is no longer an env var — it's fetched from river-api's
+settings store (a cached provider in `main.go`, `cachedTMDBKey`), seeded
+from `TMDB_API_KEY` on first boot.
 
 Optional (defaults shown):
 ```

@@ -662,3 +662,7 @@ export interface IntegrationUpdate {
   sonarr_url: string
   sonarr_api_key: string
 }
+
+export interface MetadataSettings {
+  tmdb_has_key: boolean
+}

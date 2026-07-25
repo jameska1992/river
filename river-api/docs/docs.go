@@ -482,6 +482,102 @@ const docTemplate = `{
                 }
             }
         },
+        "/admin/settings/metadata": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "settings"
+                ],
+                "summary": "Get metadata settings",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/services.MetadataSettings"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "settings"
+                ],
+                "summary": "Update metadata settings",
+                "parameters": [
+                    {
+                        "description": "Metadata settings",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.metadataRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/services.MetadataSettings"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/settings/tmdb": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "settings"
+                ],
+                "summary": "Get the raw TMDB API key (service use)",
+                "responses": {
+                    "200": {
+                        "description": "{api_key}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/admin/stats": {
             "get": {
                 "security": [
@@ -7778,6 +7874,9 @@ const docTemplate = `{
                 },
                 "sonarr_url": {
                     "type": "string"
+                },
+                "tmdb_api_key": {
+                    "type": "string"
                 }
             }
         },
@@ -7824,6 +7923,14 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "handlers.metadataRequest": {
+            "type": "object",
+            "properties": {
+                "tmdb_api_key": {
                     "type": "string"
                 }
             }
@@ -8856,6 +8963,14 @@ const docTemplate = `{
                 },
                 "sonarr_url": {
                     "type": "string"
+                }
+            }
+        },
+        "services.MetadataSettings": {
+            "type": "object",
+            "properties": {
+                "tmdb_has_key": {
+                    "type": "boolean"
                 }
             }
         },

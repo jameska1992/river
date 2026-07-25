@@ -95,3 +95,35 @@ func TestSettingsHandler_Seed_SetsIfAbsent(t *testing.T) {
 	assert.Equal(t, "envkey", repo.m["radarr.api_key"], "seed fills an absent value")
 	assert.Equal(t, "http://sonarr", repo.m["sonarr.url"])
 }
+
+func TestSettingsHandler_Metadata(t *testing.T) {
+	repo := &fakeSettingRepo{m: map[string]string{}}
+	gin.SetMode(gin.TestMode)
+	h := NewSettingsHandler(services.NewSettingsService(repo))
+	r := gin.New()
+	r.GET("/admin/settings/metadata", h.GetMetadata)
+	r.PUT("/admin/settings/metadata", h.UpdateMetadata)
+	r.GET("/admin/settings/tmdb", h.GetTMDBKey)
+
+	// Initially unset.
+	w := doJSON(r, http.MethodGet, "/admin/settings/metadata", "")
+	require.Equal(t, http.StatusOK, w.Code)
+	assert.Contains(t, w.Body.String(), `"tmdb_has_key":false`)
+
+	// Set the key.
+	w = doJSON(r, http.MethodPut, "/admin/settings/metadata", `{"tmdb_api_key":"k-abc"}`)
+	require.Equal(t, http.StatusOK, w.Code)
+	assert.Contains(t, w.Body.String(), `"tmdb_has_key":true`)
+	assert.NotContains(t, w.Body.String(), "k-abc", "masked view must not leak the key")
+	assert.Equal(t, "k-abc", repo.m["tmdb.api_key"])
+
+	// The raw service endpoint returns the actual key.
+	w = doJSON(r, http.MethodGet, "/admin/settings/tmdb", "")
+	require.Equal(t, http.StatusOK, w.Code)
+	assert.Contains(t, w.Body.String(), "k-abc")
+
+	// Empty update preserves.
+	w = doJSON(r, http.MethodPut, "/admin/settings/metadata", `{"tmdb_api_key":""}`)
+	require.Equal(t, http.StatusOK, w.Code)
+	assert.Equal(t, "k-abc", repo.m["tmdb.api_key"])
+}

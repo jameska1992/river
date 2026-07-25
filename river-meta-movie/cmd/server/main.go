@@ -8,7 +8,9 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
+	"time"
 
 	"river-meta-movie/internal/apiclient"
 	"river-meta-movie/internal/config"
@@ -16,6 +18,31 @@ import (
 	"river-meta-movie/internal/processor"
 	"river-meta-movie/internal/tmdb"
 )
+
+// cachedTMDBKey returns a provider that fetches the TMDB API key from
+// river-api, caching it for ttl. This keeps the key out of the service's
+// environment and lets an admin change it (via the settings UI) without
+// restarting — the new value is picked up on the next refresh — while
+// avoiding a river-api lookup on every TMDB call.
+func cachedTMDBKey(fetch func() (string, error), ttl time.Duration) func() string {
+	var (
+		mu        sync.Mutex
+		key       string
+		fetchedAt time.Time
+	)
+	return func() string {
+		mu.Lock()
+		defer mu.Unlock()
+		if key == "" || time.Since(fetchedAt) > ttl {
+			if v, err := fetch(); err == nil && v != "" {
+				key, fetchedAt = v, time.Now()
+			} else if err != nil {
+				log.Printf("WARN fetch TMDB key from river-api: %v", err)
+			}
+		}
+		return key
+	}
+}
 
 func main() {
 	cfg, err := config.Load()
@@ -30,7 +57,7 @@ func main() {
 	log.Printf("INFO authenticated with river-api at %s", cfg.RiverAPIURL)
 	api.Log("info", "started")
 
-	tmdbClient := tmdb.New(cfg.TMDBAPIKey, cfg.TMDBImageBase)
+	tmdbClient := tmdb.New(cachedTMDBKey(api.GetTMDBKey, 5*time.Minute), cfg.TMDBImageBase)
 
 	// Use one connection for initial exchange/queue setup, then close it.
 	setupCons, err := consumer.New(cfg.RabbitMQURL, cfg.RabbitMQExchange)

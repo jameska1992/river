@@ -4,10 +4,11 @@ import { api, ApiError } from '../../api'
 import type { IntegrationSettings } from '../../api'
 import styles from './AdminSettingsPage.module.css'
 
-type Tab = 'integrations'
+type Tab = 'integrations' | 'metadata'
 
 const TABS: { id: Tab; label: string }[] = [
   { id: 'integrations', label: 'Integrations' },
+  { id: 'metadata', label: 'Metadata' },
 ]
 
 export function AdminSettingsPage() {
@@ -32,7 +33,86 @@ export function AdminSettingsPage() {
       </div>
 
       {tab === 'integrations' && <IntegrationsTab />}
+      {tab === 'metadata' && <MetadataTab />}
     </div>
+  )
+}
+
+// ── Metadata tab ──────────────────────────────────────────
+
+function MetadataTab() {
+  const [loading, setLoading] = useState(true)
+  const [hasKey, setHasKey] = useState(false)
+  const [tmdbKey, setTmdbKey] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    api.getMetadataSettings()
+      .then(s => setHasKey(s.tmdb_has_key))
+      .catch(err => setError(err instanceof Error ? err.message : 'Failed to load settings'))
+      .finally(() => setLoading(false))
+  }, [])
+
+  async function handleSave(e: FormEvent) {
+    e.preventDefault()
+    setSaving(true); setSaved(false); setError('')
+    try {
+      const s = await api.updateMetadataSettings(tmdbKey)
+      setHasKey(s.tmdb_has_key)
+      setTmdbKey('')
+      setSaved(true)
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Failed to save settings')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  if (loading) {
+    return <div className={`${styles.skeletonCard} skeleton`} style={{ maxWidth: 400 }} />
+  }
+
+  return (
+    <form onSubmit={handleSave}>
+      <p className={`body-md ${styles.blurb}`}>
+        The TMDB API key powers movie and TV metadata enrichment. Get one free at{' '}
+        <a href="https://www.themoviedb.org/settings/api" target="_blank" rel="noreferrer">themoviedb.org</a>.
+        Changes are picked up by the metadata services within a few minutes — no restart needed.
+      </p>
+
+      <div className={`card ${styles.card}`} style={{ maxWidth: 400 }}>
+        <div className={styles.cardHead}>
+          <span className={styles.cardIcon} aria-hidden><RiExchangeFundsLine size={18} /></span>
+          <div>
+            <h2 className={`label-lg ${styles.cardTitle}`}>TMDB</h2>
+            <p className={`label-sm ${styles.cardSubtitle}`}>The Movie Database</p>
+          </div>
+        </div>
+
+        <label className={styles.field}>
+          <span className="label-sm">API key</span>
+          <input
+            className="input"
+            type="password"
+            autoComplete="off"
+            value={tmdbKey}
+            onChange={e => setTmdbKey(e.target.value)}
+            placeholder={hasKey ? '•••••••••••• (leave blank to keep)' : 'Enter TMDB API key'}
+          />
+        </label>
+      </div>
+
+      {error && <p className={styles.formError}>{error}</p>}
+
+      <div className={styles.footer}>
+        {saved && <span className={styles.savedNote}><RiCheckLine size={15} /> Saved</span>}
+        <button type="submit" className="btn btn-primary" disabled={saving}>
+          {saving ? 'Saving…' : 'Save changes'}
+        </button>
+      </div>
+    </form>
   )
 }
 

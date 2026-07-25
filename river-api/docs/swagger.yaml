@@ -4332,6 +4332,22 @@ paths:
       summary: Recently added
       tags:
       - recently-added
+  /request/availability:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{radarr, sonarr, enabled}'
+          schema:
+            additionalProperties:
+              type: boolean
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Requests feature availability
+      tags:
+      - request
   /request/calendar:
     get:
       parameters:

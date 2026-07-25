@@ -283,6 +283,12 @@ export class RiverClient {
     return this.request('GET', '/admin/settings/scanning')
   }
 
+  // Whether the Radarr/Sonarr-backed Requests feature is available. Any
+  // authenticated user can call this (booleans only, no secrets).
+  async getRequestAvailability(): Promise<{ radarr: boolean; sonarr: boolean; enabled: boolean }> {
+    return this.request('GET', '/request/availability')
+  }
+
   async updateScanningSettings(scanInterval: string): Promise<import('./types').ScanningSettings> {
     return this.request('PUT', '/admin/settings/scanning', { scan_interval: scanInterval })
   }

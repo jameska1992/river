@@ -171,3 +171,29 @@ func TestRequestHandler_Calendar_CombinesSources(t *testing.T) {
 	assert.Contains(t, w.Body.String(), "The Matrix") // radarr movie
 	assert.Contains(t, w.Body.String(), "Dragnet")    // sonarr episode's series
 }
+
+func TestRequestHandler_Availability(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	router := func(repo *fakeSettingRepo) *gin.Engine {
+		h := NewRequestHandler(services.NewSettingsService(repo))
+		r := gin.New()
+		r.GET("/request/availability", h.Availability)
+		return r
+	}
+
+	t.Run("neither configured -> disabled", func(t *testing.T) {
+		w := doJSON(router(&fakeSettingRepo{m: map[string]string{}}), http.MethodGet, "/request/availability", "")
+		require.Equal(t, http.StatusOK, w.Code)
+		assert.Contains(t, w.Body.String(), `"enabled":false`)
+		assert.Contains(t, w.Body.String(), `"radarr":false`)
+	})
+
+	t.Run("radarr configured -> enabled", func(t *testing.T) {
+		repo := &fakeSettingRepo{m: map[string]string{"radarr.url": "http://radarr"}}
+		w := doJSON(router(repo), http.MethodGet, "/request/availability", "")
+		require.Equal(t, http.StatusOK, w.Code)
+		assert.Contains(t, w.Body.String(), `"enabled":true`)
+		assert.Contains(t, w.Body.String(), `"radarr":true`)
+		assert.Contains(t, w.Body.String(), `"sonarr":false`)
+	})
+}

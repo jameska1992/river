@@ -19,7 +19,7 @@ import {
 } from 'react-icons/ri'
 import { useAuth } from '../context/AuthContext'
 import { useLibraries } from '../context/LibrariesContext'
-import type { LibraryType } from '../api'
+import { api, type LibraryType } from '../api'
 import styles from './NavBar.module.css'
 
 const libraryIcons: Record<LibraryType, React.ReactNode> = {
@@ -38,11 +38,20 @@ export function NavBar() {
   const [query, setQuery] = useState('')
   const [menuOpen, setMenuOpen] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [requestsEnabled, setRequestsEnabled] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     void fetchLibraries()
   }, [fetchLibraries])
+
+  // Show the Request / Calendar links only when Radarr or Sonarr is
+  // configured. Defaults to hidden until confirmed available.
+  useEffect(() => {
+    api.getRequestAvailability()
+      .then(a => setRequestsEnabled(a.enabled))
+      .catch(() => setRequestsEnabled(false))
+  }, [])
 
   // Keep the search input in sync when navigating to /search directly or via back/forward.
   useEffect(() => {
@@ -124,24 +133,28 @@ export function NavBar() {
         <span className={styles.libraryIcon} aria-hidden><RiBookmarkLine /></span>
         Watchlist
       </NavLink>
-      <NavLink
-        to="/request"
-        className={({ isActive }) =>
-          `${styles.libraryLink} ${isActive ? styles.libraryLinkActive : ''}`
-        }
-      >
-        <span className={styles.libraryIcon} aria-hidden><RiAddCircleLine /></span>
-        Request
-      </NavLink>
-      <NavLink
-        to="/calendar"
-        className={({ isActive }) =>
-          `${styles.libraryLink} ${isActive ? styles.libraryLinkActive : ''}`
-        }
-      >
-        <span className={styles.libraryIcon} aria-hidden><RiCalendarEventLine /></span>
-        Calendar
-      </NavLink>
+      {requestsEnabled && (
+        <>
+          <NavLink
+            to="/request"
+            className={({ isActive }) =>
+              `${styles.libraryLink} ${isActive ? styles.libraryLinkActive : ''}`
+            }
+          >
+            <span className={styles.libraryIcon} aria-hidden><RiAddCircleLine /></span>
+            Request
+          </NavLink>
+          <NavLink
+            to="/calendar"
+            className={({ isActive }) =>
+              `${styles.libraryLink} ${isActive ? styles.libraryLinkActive : ''}`
+            }
+          >
+            <span className={styles.libraryIcon} aria-hidden><RiCalendarEventLine /></span>
+            Calendar
+          </NavLink>
+        </>
+      )}
     </>
   )
 

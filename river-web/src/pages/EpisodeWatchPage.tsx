@@ -17,6 +17,7 @@ import { useTVShows } from '../context/TVShowsContext'
 import { useAuth } from '../context/AuthContext'
 import { useWatchParty } from '../hooks/useWatchParty'
 import { useCast } from '../hooks/useCast'
+import { useVideoRecovery } from '../hooks/useVideoRecovery'
 import { useAspectRatio, MIN_ZOOM, MAX_ZOOM } from '../hooks/useAspectRatio'
 import { WatchPartyOverlay } from '../components/WatchPartyOverlay'
 import { CastButton } from '../components/CastButton'
@@ -90,6 +91,14 @@ export function EpisodeWatchPage() {
   const wsRef = useRef<ReturnType<typeof api.openProgressSocket> | null>(null)
   const [videoSrc, setVideoSrc] = useState<string | undefined>(
     () => showId && seasonId && episodeId ? episodeStreamUrl(showId, seasonId, episodeId) : undefined
+  )
+
+  const buildStreamSrc = useCallback(
+    () => showId && seasonId && episodeId ? episodeStreamUrl(showId, seasonId, episodeId) : undefined,
+    [showId, seasonId, episodeId, episodeStreamUrl],
+  )
+  const { recover, onError: onVideoError } = useVideoRecovery(
+    videoRef, buildStreamSrc, setVideoSrc, pendingSeekRef, pendingPlayRef,
   )
 
   const [playing, setPlaying] = useState(false)
@@ -352,8 +361,18 @@ export function EpisodeWatchPage() {
   const togglePlay = () => {
     const v = videoRef.current
     if (!v || (partyId && !isHost)) return
-    if (v.paused) void v.play()
-    else v.pause()
+    if (v.paused) {
+      const before = v.currentTime
+      void v.play().catch(() => { void recover() })
+      // If the resume doesn't actually advance the timeline shortly after,
+      // the stream connection died while paused — reload to recover.
+      window.setTimeout(() => {
+        const el = videoRef.current
+        if (el && !el.paused && el.currentTime === before) void recover()
+      }, 1500)
+    } else {
+      v.pause()
+    }
   }
 
   const toggleMute = () => {
@@ -525,6 +544,7 @@ export function EpisodeWatchPage() {
         onTimeUpdate={onTimeUpdate}
         onLoadedMetadata={onLoadedMetadata}
         onVolumeChange={onVolumeChange}
+        onError={onVideoError}
         autoPlay
       />
 

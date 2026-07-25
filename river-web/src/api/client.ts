@@ -213,6 +213,13 @@ export class RiverClient {
     return this.request<User>('POST', '/auth/register', { username, email, password })
   }
 
+  // refreshStreamToken force-refreshes the auth + stream tokens. Used to
+  // recover a stalled <video> whose embedded stream token may have expired
+  // after a long pause / device sleep (the stream token lives ~8h).
+  async refreshStreamToken(): Promise<void> {
+    return this.doRefresh()
+  }
+
   private async doRefresh(): Promise<void> {
     const token = this.refreshToken
     if (!token) {

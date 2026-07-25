@@ -520,6 +520,16 @@ definitions:
     required:
     - show_id
     type: object
+  handlers.testConnectionRequest:
+    properties:
+      service:
+        enum:
+        - radarr
+        - sonarr
+        type: string
+    required:
+    - service
+    type: object
   handlers.tokenRequest:
     properties:
       refresh_token:
@@ -1440,6 +1450,36 @@ paths:
       security:
       - BearerAuth: []
       summary: Seed integration settings (set-if-absent)
+      tags:
+      - settings
+  /admin/settings/integrations/test:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: '{service}'
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.testConnectionRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{ok, message}'
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Test a Radarr/Sonarr connection
       tags:
       - settings
   /admin/stats:

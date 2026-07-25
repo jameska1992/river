@@ -409,6 +409,55 @@ func (h *RequestHandler) Calendar(c *gin.Context) {
 	c.JSON(http.StatusOK, items)
 }
 
+type testConnectionRequest struct {
+	Service string `json:"service" binding:"required,oneof=radarr sonarr"`
+}
+
+// TestConnection pings the saved Radarr/Sonarr instance's system/status
+// endpoint and reports whether it is reachable with the current settings.
+// Always returns 200 with {ok, message} so the admin UI can render the
+// outcome uniformly; ok=false covers "not configured" and upstream errors.
+//
+// @Summary      Test a Radarr/Sonarr connection
+// @Tags         settings
+// @Accept       json
+// @Produce      json
+// @Param        body  body      testConnectionRequest  true  "{service}"
+// @Success      200  {object}  map[string]interface{}  "{ok, message}"
+// @Failure      400  {object}  map[string]string
+// @Security     BearerAuth
+// @Router       /admin/settings/integrations/test [post]
+func (h *RequestHandler) TestConnection(c *gin.Context) {
+	var req testConnectionRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	var arrURL, arrKey string
+	switch req.Service {
+	case "radarr":
+		arrURL, arrKey, _ = h.settings.RadarrConfig()
+	case "sonarr":
+		arrURL, arrKey, _ = h.settings.SonarrConfig()
+	}
+	if arrURL == "" {
+		c.JSON(http.StatusOK, gin.H{"ok": false, "message": req.Service + " is not configured"})
+		return
+	}
+	var status struct {
+		Version string `json:"version"`
+	}
+	if err := h.arrGet(arrURL+"/api/v3/system/status", arrKey, &status); err != nil {
+		c.JSON(http.StatusOK, gin.H{"ok": false, "message": err.Error()})
+		return
+	}
+	msg := "Connected"
+	if status.Version != "" {
+		msg = "Connected — version " + status.Version
+	}
+	c.JSON(http.StatusOK, gin.H{"ok": true, "message": msg})
+}
+
 // posterURL returns the best poster URL from an image set, preferring the
 // remote (absolute) URL over the local one.
 func posterURL(images []arrImage) string {

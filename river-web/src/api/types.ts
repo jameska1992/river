@@ -648,3 +648,17 @@ export interface AudioTrack extends BaseModel {
   label: string
   stream_index: number
 }
+
+export interface IntegrationSettings {
+  radarr_url: string
+  radarr_has_key: boolean
+  sonarr_url: string
+  sonarr_has_key: boolean
+}
+
+export interface IntegrationUpdate {
+  radarr_url: string
+  radarr_api_key: string
+  sonarr_url: string
+  sonarr_api_key: string
+}

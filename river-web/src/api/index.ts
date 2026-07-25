@@ -28,6 +28,7 @@ export type {
   UploadResult,
   SearchResult, LibrarySearchResult, SearchResultItem, PersonSearchResult,
   MovieSearchResult, ShowSearchResult, CalendarItem,
+  IntegrationSettings, IntegrationUpdate,
 } from './types'
 
 export const api = new RiverClient()

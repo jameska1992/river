@@ -318,6 +318,122 @@ const docTemplate = `{
                 }
             }
         },
+        "/admin/settings/integrations": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "settings"
+                ],
+                "summary": "Get integration settings",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/services.IntegrationSettings"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "settings"
+                ],
+                "summary": "Update integration settings",
+                "parameters": [
+                    {
+                        "description": "Integration settings",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.integrationsRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/services.IntegrationSettings"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/settings/integrations/seed": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "settings"
+                ],
+                "summary": "Seed integration settings (set-if-absent)",
+                "parameters": [
+                    {
+                        "description": "Integration settings",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.integrationsRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/services.IntegrationSettings"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/admin/stats": {
             "get": {
                 "security": [
@@ -7600,6 +7716,23 @@ const docTemplate = `{
                 }
             }
         },
+        "handlers.integrationsRequest": {
+            "type": "object",
+            "properties": {
+                "radarr_api_key": {
+                    "type": "string"
+                },
+                "radarr_url": {
+                    "type": "string"
+                },
+                "sonarr_api_key": {
+                    "type": "string"
+                },
+                "sonarr_url": {
+                    "type": "string"
+                }
+            }
+        },
         "handlers.libraryRequest": {
             "type": "object",
             "required": [
@@ -8642,6 +8775,23 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "userID": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.IntegrationSettings": {
+            "type": "object",
+            "properties": {
+                "radarr_has_key": {
+                    "type": "boolean"
+                },
+                "radarr_url": {
+                    "type": "string"
+                },
+                "sonarr_has_key": {
+                    "type": "boolean"
+                },
+                "sonarr_url": {
                     "type": "string"
                 }
             }

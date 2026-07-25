@@ -46,5 +46,6 @@ func Migrate(db *gorm.DB) error {
 		&models.WatchParty{},
 		&models.DismissedNextUp{},
 		&models.ServiceLog{},
+		&models.Setting{},
 	)
 }

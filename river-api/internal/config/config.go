@@ -25,10 +25,6 @@ type Config struct {
 	RiverMetaTVURL    string
 	RiverMetaBookURL  string
 	RiverMetaMusicURL string
-	RadarrURL         string
-	RadarrAPIKey      string
-	SonarrURL         string
-	SonarrAPIKey      string
 	// Comma-separated origin list parsed from CORS_ALLOWED_ORIGINS.
 	// The single literal "*" (the default) is treated specially as
 	// allow-all — convenient for dev where the river-tv WebView and
@@ -51,10 +47,6 @@ func Load() *Config {
 		RiverMetaTVURL:    getEnv("RIVER_META_TV_URL", ""),
 		RiverMetaBookURL:  getEnv("RIVER_META_BOOK_URL", ""),
 		RiverMetaMusicURL: getEnv("RIVER_META_MUSIC_URL", ""),
-		RadarrURL:         getEnv("RADARR_URL", ""),
-		RadarrAPIKey:      getEnv("RADARR_API_KEY", ""),
-		SonarrURL:         getEnv("SONARR_URL", ""),
-		SonarrAPIKey:      getEnv("SONARR_API_KEY", ""),
 		CORSAllowedOrigins: parseCSV(getEnv("CORS_ALLOWED_ORIGINS", "*")),
 	}
 }

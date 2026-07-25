@@ -371,6 +371,17 @@ definitions:
     required:
     - number
     type: object
+  handlers.integrationsRequest:
+    properties:
+      radarr_api_key:
+        type: string
+      radarr_url:
+        type: string
+      sonarr_api_key:
+        type: string
+      sonarr_url:
+        type: string
+    type: object
   handlers.libraryRequest:
     properties:
       name:
@@ -1120,6 +1131,17 @@ definitions:
       userID:
         type: string
     type: object
+  services.IntegrationSettings:
+    properties:
+      radarr_has_key:
+        type: boolean
+      radarr_url:
+        type: string
+      sonarr_has_key:
+        type: boolean
+      sonarr_url:
+        type: string
+    type: object
   services.ShowWatchState:
     properties:
       completed:
@@ -1349,6 +1371,77 @@ paths:
       summary: Forget scanner-state entries
       tags:
       - admin
+  /admin/settings/integrations:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/services.IntegrationSettings'
+      security:
+      - BearerAuth: []
+      summary: Get integration settings
+      tags:
+      - settings
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Integration settings
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.integrationsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/services.IntegrationSettings'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update integration settings
+      tags:
+      - settings
+  /admin/settings/integrations/seed:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Integration settings
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.integrationsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/services.IntegrationSettings'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Seed integration settings (set-if-absent)
+      tags:
+      - settings
   /admin/stats:
     get:
       produces:

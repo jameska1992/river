@@ -31,6 +31,7 @@ func Register(r *gin.Engine, secret string,
 	watchParty *handlers.WatchPartyHandler,
 	serviceLog *handlers.ServiceLogHandler,
 	request    *handlers.RequestHandler,
+	settings   *handlers.SettingsHandler,
 	imageProxy *handlers.ImageProxyHandler,
 ) {
 	r.GET("/health", func(c *gin.Context) { c.JSON(200, gin.H{"status": "ok"}) })
@@ -71,6 +72,9 @@ func Register(r *gin.Engine, secret string,
 
 		// Admin
 		protected.GET("/admin/stats", middleware.AdminOnly(), admin.GetStats)
+		protected.GET("/admin/settings/integrations", middleware.AdminOnly(), settings.GetIntegrations)
+		protected.PUT("/admin/settings/integrations", middleware.AdminOnly(), settings.UpdateIntegrations)
+		protected.POST("/admin/settings/integrations/seed", middleware.AdminOnly(), settings.SeedIntegrations)
 		protected.GET("/admin/active-sessions", middleware.AdminOnly(), progress.ActiveSessions)
 		protected.POST("/admin/scan", middleware.AdminOnly(), admin.TriggerScan)
 		protected.POST("/admin/requeue-untranscoded", middleware.AdminOnly(), admin.RequeueUntranscoded)

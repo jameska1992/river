@@ -10,25 +10,21 @@ import (
 	"sort"
 	"strings"
 
+	"river-api/internal/services"
+
 	"github.com/gin-gonic/gin"
 )
 
+// RequestHandler proxies to Radarr/Sonarr. Configuration lives in the DB
+// (via SettingsService) and is read per-request, so an admin can point
+// River at a different *arr instance without a restart.
 type RequestHandler struct {
-	radarrURL string
-	radarrKey string
-	sonarrURL string
-	sonarrKey string
-	http      *http.Client
+	settings *services.SettingsService
+	http     *http.Client
 }
 
-func NewRequestHandler(radarrURL, radarrKey, sonarrURL, sonarrKey string) *RequestHandler {
-	return &RequestHandler{
-		radarrURL: strings.TrimRight(radarrURL, "/"),
-		radarrKey: radarrKey,
-		sonarrURL: strings.TrimRight(sonarrURL, "/"),
-		sonarrKey: sonarrKey,
-		http:      &http.Client{},
-	}
+func NewRequestHandler(settings *services.SettingsService) *RequestHandler {
+	return &RequestHandler{settings: settings, http: &http.Client{}}
 }
 
 type MovieSearchResult struct {
@@ -86,7 +82,8 @@ type CalendarItem struct {
 // @Security     BearerAuth
 // @Router       /request/movies [get]
 func (h *RequestHandler) SearchMovies(c *gin.Context) {
-	if h.radarrURL == "" {
+	radarrURL, radarrKey, radarrEnabled := h.settings.RadarrConfig()
+	if !radarrEnabled {
 		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Radarr not configured"})
 		return
 	}
@@ -104,8 +101,8 @@ func (h *RequestHandler) SearchMovies(c *gin.Context) {
 		Overview     string `json:"overview"`
 		RemotePoster string `json:"remotePoster"`
 	}
-	endpoint := fmt.Sprintf("%s/api/v3/movie/lookup?term=%s", h.radarrURL, url.QueryEscape(q))
-	if err := h.arrGet(endpoint, h.radarrKey, &raw); err != nil {
+	endpoint := fmt.Sprintf("%s/api/v3/movie/lookup?term=%s", radarrURL, url.QueryEscape(q))
+	if err := h.arrGet(endpoint, radarrKey, &raw); err != nil {
 		c.JSON(http.StatusBadGateway, gin.H{"error": err.Error()})
 		return
 	}
@@ -137,7 +134,8 @@ func (h *RequestHandler) SearchMovies(c *gin.Context) {
 // @Security     BearerAuth
 // @Router       /request/shows [get]
 func (h *RequestHandler) SearchShows(c *gin.Context) {
-	if h.sonarrURL == "" {
+	sonarrURL, sonarrKey, sonarrEnabled := h.settings.SonarrConfig()
+	if !sonarrEnabled {
 		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Sonarr not configured"})
 		return
 	}
@@ -155,8 +153,8 @@ func (h *RequestHandler) SearchShows(c *gin.Context) {
 		Overview     string `json:"overview"`
 		RemotePoster string `json:"remotePoster"`
 	}
-	endpoint := fmt.Sprintf("%s/api/v3/series/lookup?term=%s", h.sonarrURL, url.QueryEscape(q))
-	if err := h.arrGet(endpoint, h.sonarrKey, &raw); err != nil {
+	endpoint := fmt.Sprintf("%s/api/v3/series/lookup?term=%s", sonarrURL, url.QueryEscape(q))
+	if err := h.arrGet(endpoint, sonarrKey, &raw); err != nil {
 		c.JSON(http.StatusBadGateway, gin.H{"error": err.Error()})
 		return
 	}
@@ -195,7 +193,8 @@ type addMovieReq struct {
 // @Security     BearerAuth
 // @Router       /request/movies [post]
 func (h *RequestHandler) AddMovie(c *gin.Context) {
-	if h.radarrURL == "" {
+	radarrURL, radarrKey, radarrEnabled := h.settings.RadarrConfig()
+	if !radarrEnabled {
 		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Radarr not configured"})
 		return
 	}
@@ -205,7 +204,7 @@ func (h *RequestHandler) AddMovie(c *gin.Context) {
 		return
 	}
 
-	rootFolder, qualityID, err := h.fetchDefaults(h.radarrURL, h.radarrKey)
+	rootFolder, qualityID, err := h.fetchDefaults(radarrURL, radarrKey)
 	if err != nil {
 		c.JSON(http.StatusBadGateway, gin.H{"error": err.Error()})
 		return
@@ -220,7 +219,7 @@ func (h *RequestHandler) AddMovie(c *gin.Context) {
 		"monitored":        true,
 		"addOptions":       map[string]any{"searchForMovie": true},
 	}
-	if err := h.arrPost(h.radarrURL+"/api/v3/movie", h.radarrKey, payload); err != nil {
+	if err := h.arrPost(radarrURL+"/api/v3/movie", radarrKey, payload); err != nil {
 		c.JSON(http.StatusBadGateway, gin.H{"error": err.Error()})
 		return
 	}
@@ -247,7 +246,8 @@ type addShowReq struct {
 // @Security     BearerAuth
 // @Router       /request/shows [post]
 func (h *RequestHandler) AddShow(c *gin.Context) {
-	if h.sonarrURL == "" {
+	sonarrURL, sonarrKey, sonarrEnabled := h.settings.SonarrConfig()
+	if !sonarrEnabled {
 		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Sonarr not configured"})
 		return
 	}
@@ -257,7 +257,7 @@ func (h *RequestHandler) AddShow(c *gin.Context) {
 		return
 	}
 
-	rootFolder, qualityID, err := h.fetchDefaults(h.sonarrURL, h.sonarrKey)
+	rootFolder, qualityID, err := h.fetchDefaults(sonarrURL, sonarrKey)
 	if err != nil {
 		c.JSON(http.StatusBadGateway, gin.H{"error": err.Error()})
 		return
@@ -268,7 +268,7 @@ func (h *RequestHandler) AddShow(c *gin.Context) {
 	var langProfiles []struct {
 		ID int `json:"id"`
 	}
-	_ = h.arrGet(h.sonarrURL+"/api/v3/languageprofile", h.sonarrKey, &langProfiles)
+	_ = h.arrGet(sonarrURL+"/api/v3/languageprofile", sonarrKey, &langProfiles)
 
 	payload := map[string]any{
 		"title":            req.Title,
@@ -287,7 +287,7 @@ func (h *RequestHandler) AddShow(c *gin.Context) {
 		payload["languageProfileId"] = langProfiles[0].ID
 	}
 
-	if err := h.arrPost(h.sonarrURL+"/api/v3/series", h.sonarrKey, payload); err != nil {
+	if err := h.arrPost(sonarrURL+"/api/v3/series", sonarrKey, payload); err != nil {
 		c.JSON(http.StatusBadGateway, gin.H{"error": err.Error()})
 		return
 	}
@@ -312,7 +312,9 @@ func (h *RequestHandler) AddShow(c *gin.Context) {
 // @Security     BearerAuth
 // @Router       /request/calendar [get]
 func (h *RequestHandler) Calendar(c *gin.Context) {
-	if h.radarrURL == "" && h.sonarrURL == "" {
+	radarrURL, radarrKey, radarrEnabled := h.settings.RadarrConfig()
+	sonarrURL, sonarrKey, sonarrEnabled := h.settings.SonarrConfig()
+	if !radarrEnabled && !sonarrEnabled {
 		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Neither Radarr nor Sonarr is configured"})
 		return
 	}
@@ -326,7 +328,7 @@ func (h *RequestHandler) Calendar(c *gin.Context) {
 	items := make([]CalendarItem, 0)
 	var firstErr error
 
-	if h.radarrURL != "" {
+	if radarrEnabled {
 		var raw []struct {
 			Title           string     `json:"title"`
 			Overview        string     `json:"overview"`
@@ -336,8 +338,8 @@ func (h *RequestHandler) Calendar(c *gin.Context) {
 			HasFile         bool       `json:"hasFile"`
 			Images          []arrImage `json:"images"`
 		}
-		endpoint := fmt.Sprintf("%s/api/v3/calendar?start=%s&end=%s", h.radarrURL, url.QueryEscape(start), url.QueryEscape(end))
-		if err := h.arrGet(endpoint, h.radarrKey, &raw); err != nil {
+		endpoint := fmt.Sprintf("%s/api/v3/calendar?start=%s&end=%s", radarrURL, url.QueryEscape(start), url.QueryEscape(end))
+		if err := h.arrGet(endpoint, radarrKey, &raw); err != nil {
 			firstErr = fmt.Errorf("radarr: %w", err)
 		} else {
 			for _, m := range raw {
@@ -359,7 +361,7 @@ func (h *RequestHandler) Calendar(c *gin.Context) {
 		}
 	}
 
-	if h.sonarrURL != "" {
+	if sonarrEnabled {
 		var raw []struct {
 			Title         string `json:"title"`
 			Overview      string `json:"overview"`
@@ -372,8 +374,8 @@ func (h *RequestHandler) Calendar(c *gin.Context) {
 				Images []arrImage `json:"images"`
 			} `json:"series"`
 		}
-		endpoint := fmt.Sprintf("%s/api/v3/calendar?start=%s&end=%s&includeSeries=true", h.sonarrURL, url.QueryEscape(start), url.QueryEscape(end))
-		if err := h.arrGet(endpoint, h.sonarrKey, &raw); err != nil {
+		endpoint := fmt.Sprintf("%s/api/v3/calendar?start=%s&end=%s&includeSeries=true", sonarrURL, url.QueryEscape(start), url.QueryEscape(end))
+		if err := h.arrGet(endpoint, sonarrKey, &raw); err != nil {
 			if firstErr == nil {
 				firstErr = fmt.Errorf("sonarr: %w", err)
 			}

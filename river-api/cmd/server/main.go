@@ -71,6 +71,7 @@ func main() {
 	dismissedNextRepo := repository.NewDismissedNextUpRepository(db)
 	serviceLogRepo    := repository.NewServiceLogRepository(db)
 	mediaCleanupRepo  := repository.NewMediaCleanupRepository(db)
+	settingRepo       := repository.NewSettingRepository(db)
 
 	// Services
 	authSvc      := services.NewAuthService(userRepo, refreshTokenRepo, cfg.JWTSecret, cfg.JWTAccessExpiry, cfg.JWTRefreshExpiry, cfg.JWTStreamExpiry)
@@ -87,6 +88,7 @@ func main() {
 	watchlistSvc     := services.NewWatchlistService(watchlistRepo, movieRepo, tvShowRepo, audiobookRepo)
 	watchPartySvc    := services.NewWatchPartyService(watchPartyRepo)
 	serviceLogSvc    := services.NewServiceLogService(serviceLogRepo)
+	settingsSvc      := services.NewSettingsService(settingRepo)
 	searchRepo   := repository.NewSearchRepository(db)
 	searchSvc    := services.NewSearchService(searchRepo)
 	statsRepo    := repository.NewStatsRepository(db)
@@ -138,7 +140,8 @@ func main() {
 		handlers.NewWatchlistHandler(watchlistSvc),
 		handlers.NewWatchPartyHandler(watchPartySvc, watchPartyHub),
 		handlers.NewServiceLogHandler(serviceLogSvc),
-		handlers.NewRequestHandler(cfg.RadarrURL, cfg.RadarrAPIKey, cfg.SonarrURL, cfg.SonarrAPIKey),
+		handlers.NewRequestHandler(settingsSvc),
+		handlers.NewSettingsHandler(settingsSvc),
 		handlers.NewImageProxyHandler(),
 	)
 

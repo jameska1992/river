@@ -14,6 +14,7 @@ import { useMovies } from '../context/MoviesContext'
 import { useAuth } from '../context/AuthContext'
 import { useWatchParty } from '../hooks/useWatchParty'
 import { useCast } from '../hooks/useCast'
+import { useMediaRecovery } from '../hooks/useMediaRecovery'
 import { useAspectRatio, MIN_ZOOM, MAX_ZOOM } from '../hooks/useAspectRatio'
 import { WatchPartyOverlay } from '../components/WatchPartyOverlay'
 import { CastButton } from '../components/CastButton'
@@ -74,6 +75,9 @@ export function MovieWatchPage() {
   const subtitleCuesRef = useRef<VTTCue[]>([])
   const wsRef = useRef<ReturnType<typeof api.openProgressSocket> | null>(null)
   const [videoSrc, setVideoSrc] = useState<string | undefined>(() => id ? streamUrl(id) : undefined)
+
+  const buildStreamSrc = useCallback(() => (id ? streamUrl(id) : undefined), [id, streamUrl])
+  const { recover, onError: onVideoError } = useMediaRecovery(videoRef, buildStreamSrc, setVideoSrc)
 
   const [playing, setPlaying] = useState(false)
   const [muted, setMuted] = useState(false)
@@ -249,8 +253,18 @@ export function MovieWatchPage() {
   const togglePlay = () => {
     const v = videoRef.current
     if (!v || (partyId && !isHost)) return
-    if (v.paused) void v.play()
-    else v.pause()
+    if (v.paused) {
+      const before = v.currentTime
+      void v.play().catch(() => { void recover() })
+      // If the resume doesn't actually advance the timeline shortly after,
+      // the stream connection died while paused — reload to recover.
+      window.setTimeout(() => {
+        const el = videoRef.current
+        if (el && !el.paused && el.currentTime === before) void recover()
+      }, 1500)
+    } else {
+      v.pause()
+    }
   }
 
   const toggleMute = () => {
@@ -398,6 +412,7 @@ export function MovieWatchPage() {
         onTimeUpdate={onTimeUpdate}
         onLoadedMetadata={onLoadedMetadata}
         onVolumeChange={onVolumeChange}
+        onError={onVideoError}
         autoPlay
       />
 

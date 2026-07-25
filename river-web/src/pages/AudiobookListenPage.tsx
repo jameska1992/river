@@ -12,6 +12,7 @@ import { useAudiobooks } from '../context/AudiobooksContext'
 import type { Audiobook, AudiobookChapter } from '../api'
 import { api } from '../api'
 import { useCast } from '../hooks/useCast'
+import { useMediaRecovery } from '../hooks/useMediaRecovery'
 import { CastButton } from '../components/CastButton'
 import { imageUrl } from '../util/imageUrl'
 import styles from './AudiobookListenPage.module.css'
@@ -83,6 +84,12 @@ export function AudiobookListenPage() {
   // here would silently undo that. onLoadedMetadata consumes the ref.
   const pendingPlayRef = useRef(false)
   const [audioSrc, setAudioSrc] = useState<string | undefined>()
+
+  const buildStreamSrc = useCallback(
+    () => audiobookId && currentChapter ? chapterStreamUrl(audiobookId, currentChapter.id) : undefined,
+    [audiobookId, currentChapter, chapterStreamUrl],
+  )
+  const { recover, onError: onAudioError } = useMediaRecovery(audioRef, buildStreamSrc, setAudioSrc)
 
   useEffect(() => {
     if (!audiobookId || !currentChapter) return
@@ -219,9 +226,19 @@ export function AudiobookListenPage() {
   const togglePlay = useCallback(() => {
     const a = audioRef.current
     if (!a) return
-    if (a.paused) void a.play()
-    else a.pause()
-  }, [])
+    if (a.paused) {
+      const before = a.currentTime
+      void a.play().catch(() => { void recover() })
+      // If the resume doesn't actually advance the timeline shortly after,
+      // the stream connection died while paused — reload to recover.
+      window.setTimeout(() => {
+        const el = audioRef.current
+        if (el && !el.paused && el.currentTime === before) void recover()
+      }, 1500)
+    } else {
+      a.pause()
+    }
+  }, [recover])
 
   const toggleMute = useCallback(() => {
     const a = audioRef.current
@@ -312,6 +329,7 @@ export function AudiobookListenPage() {
         onPlay={onPlay}
         onPause={onPause}
         onVolumeChange={onVolumeChange}
+        onError={onAudioError}
       />
 
       {/* Top bar */}

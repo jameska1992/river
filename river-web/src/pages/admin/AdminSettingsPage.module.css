@@ -1,0 +1,151 @@
+.title {
+  margin-bottom: var(--space-3);
+}
+
+/* ── tabs ── */
+
+.tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--color-outline-variant);
+  margin-bottom: var(--space-3);
+}
+
+.tab {
+  padding: 10px 16px;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  color: var(--color-on-surface-variant);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: color 0.12s, border-color 0.12s;
+}
+
+.tab:hover {
+  color: var(--color-on-surface);
+}
+
+.tabActive {
+  color: var(--color-primary);
+  border-bottom-color: var(--color-primary);
+}
+
+/* ── integrations ── */
+
+.blurb {
+  margin: 0 0 var(--space-3);
+  color: var(--color-on-surface-variant);
+  max-width: 60ch;
+}
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: var(--space-2);
+}
+
+.card {
+  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.cardHead {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: 2px;
+}
+
+.cardIcon {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius);
+  background: rgba(208, 188, 255, 0.15);
+  color: var(--color-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.cardTitle {
+  font-weight: 600;
+}
+
+.cardSubtitle {
+  color: var(--color-on-surface-variant);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.cardFooter {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+
+.testResult {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  min-width: 0;
+}
+
+.testOk {
+  color: var(--color-primary);
+}
+
+.testFail {
+  color: var(--color-error);
+}
+
+/* ── footer / save ── */
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.hint {
+  margin-right: auto;
+  color: var(--color-on-surface-variant);
+}
+
+.savedNote {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--color-primary);
+  font-size: 14px;
+}
+
+.formError {
+  margin: var(--space-2) 0 0;
+  padding: 10px 14px;
+  border-radius: var(--radius);
+  background: rgba(255, 180, 171, 0.10);
+  border: 1px solid rgba(255, 180, 171, 0.25);
+  color: var(--color-error);
+  font-size: 14px;
+}
+
+.skeletonCard {
+  height: 220px;
+  border-radius: var(--radius);
+}

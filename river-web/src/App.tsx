@@ -34,6 +34,7 @@ import { UsersPage } from './pages/admin/UsersPage'
 import { LogsPage } from './pages/admin/LogsPage'
 import { ScannerStatePage } from './pages/admin/ScannerStatePage'
 import { UnidentifiedPage } from './pages/admin/UnidentifiedPage'
+import { AdminSettingsPage } from './pages/admin/AdminSettingsPage'
 import { RequestPage } from './pages/RequestPage'
 import { CalendarPage } from './pages/CalendarPage'
 import { SettingsPage } from './pages/SettingsPage'
@@ -121,6 +122,7 @@ export default function App() {
                 <Route path="users" element={<UsersPage />} />
                 <Route path="logs" element={<LogsPage />} />
                 <Route path="scanner-state" element={<ScannerStatePage />} />
+                <Route path="settings" element={<AdminSettingsPage />} />
               </Route>
             </Route>
 

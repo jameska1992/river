@@ -255,6 +255,22 @@ export class RiverClient {
     await this.request('POST', '/admin/scan')
   }
 
+  // --- Admin: settings / integrations ---
+
+  async getIntegrationSettings(): Promise<import('./types').IntegrationSettings> {
+    return this.request('GET', '/admin/settings/integrations')
+  }
+
+  async updateIntegrationSettings(
+    body: import('./types').IntegrationUpdate,
+  ): Promise<import('./types').IntegrationSettings> {
+    return this.request('PUT', '/admin/settings/integrations', body)
+  }
+
+  async testIntegration(service: 'radarr' | 'sonarr'): Promise<{ ok: boolean; message: string }> {
+    return this.request('POST', '/admin/settings/integrations/test', { service })
+  }
+
   async getScannerState(): Promise<{
     directories: Record<string, { library_id: string; content_hash: string; last_scanned: string }>
     shows:       Record<string, string>

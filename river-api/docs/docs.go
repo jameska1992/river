@@ -434,6 +434,54 @@ const docTemplate = `{
                 }
             }
         },
+        "/admin/settings/integrations/test": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "settings"
+                ],
+                "summary": "Test a Radarr/Sonarr connection",
+                "parameters": [
+                    {
+                        "description": "{service}",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.testConnectionRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{ok, message}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/admin/stats": {
             "get": {
                 "security": [
@@ -7925,6 +7973,21 @@ const docTemplate = `{
                 },
                 "show_id": {
                     "type": "string"
+                }
+            }
+        },
+        "handlers.testConnectionRequest": {
+            "type": "object",
+            "required": [
+                "service"
+            ],
+            "properties": {
+                "service": {
+                    "type": "string",
+                    "enum": [
+                        "radarr",
+                        "sonarr"
+                    ]
                 }
             }
         },

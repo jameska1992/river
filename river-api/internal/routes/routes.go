@@ -75,6 +75,7 @@ func Register(r *gin.Engine, secret string,
 		protected.GET("/admin/settings/integrations", middleware.AdminOnly(), settings.GetIntegrations)
 		protected.PUT("/admin/settings/integrations", middleware.AdminOnly(), settings.UpdateIntegrations)
 		protected.POST("/admin/settings/integrations/seed", middleware.AdminOnly(), settings.SeedIntegrations)
+		protected.POST("/admin/settings/integrations/test", middleware.AdminOnly(), request.TestConnection)
 		protected.GET("/admin/active-sessions", middleware.AdminOnly(), progress.ActiveSessions)
 		protected.POST("/admin/scan", middleware.AdminOnly(), admin.TriggerScan)
 		protected.POST("/admin/requeue-untranscoded", middleware.AdminOnly(), admin.RequeueUntranscoded)

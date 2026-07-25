@@ -17,7 +17,7 @@ import { useTVShows } from '../context/TVShowsContext'
 import { useAuth } from '../context/AuthContext'
 import { useWatchParty } from '../hooks/useWatchParty'
 import { useCast } from '../hooks/useCast'
-import { useVideoRecovery } from '../hooks/useVideoRecovery'
+import { useMediaRecovery } from '../hooks/useMediaRecovery'
 import { useAspectRatio, MIN_ZOOM, MAX_ZOOM } from '../hooks/useAspectRatio'
 import { WatchPartyOverlay } from '../components/WatchPartyOverlay'
 import { CastButton } from '../components/CastButton'
@@ -97,9 +97,7 @@ export function EpisodeWatchPage() {
     () => showId && seasonId && episodeId ? episodeStreamUrl(showId, seasonId, episodeId) : undefined,
     [showId, seasonId, episodeId, episodeStreamUrl],
   )
-  const { recover, onError: onVideoError } = useVideoRecovery(
-    videoRef, buildStreamSrc, setVideoSrc, pendingSeekRef, pendingPlayRef,
-  )
+  const { recover, onError: onVideoError } = useMediaRecovery(videoRef, buildStreamSrc, setVideoSrc)
 
   const [playing, setPlaying] = useState(false)
   const [muted, setMuted] = useState(false)

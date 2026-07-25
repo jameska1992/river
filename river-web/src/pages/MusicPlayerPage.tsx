@@ -12,6 +12,7 @@ import { useMusic } from '../context/MusicContext'
 import type { Album, Artist, Track } from '../api'
 import { api } from '../api'
 import { useCast } from '../hooks/useCast'
+import { useMediaRecovery } from '../hooks/useMediaRecovery'
 import { CastButton } from '../components/CastButton'
 import { imageUrl } from '../util/imageUrl'
 import styles from './MusicPlayerPage.module.css'
@@ -67,6 +68,12 @@ export function MusicPlayerPage() {
 
   const pendingPlayRef = useRef(false)
   const [audioSrc, setAudioSrc] = useState<string | undefined>()
+
+  const buildStreamSrc = useCallback(
+    () => (currentTrack ? trackStreamUrl(currentTrack.id) : undefined),
+    [currentTrack, trackStreamUrl],
+  )
+  const { recover, onError: onAudioError } = useMediaRecovery(audioRef, buildStreamSrc, setAudioSrc)
 
   useEffect(() => {
     if (!currentTrack) return
@@ -141,9 +148,19 @@ export function MusicPlayerPage() {
   const togglePlay = useCallback(() => {
     const a = audioRef.current
     if (!a) return
-    if (a.paused) void a.play()
-    else a.pause()
-  }, [])
+    if (a.paused) {
+      const before = a.currentTime
+      void a.play().catch(() => { void recover() })
+      // If the resume doesn't actually advance the timeline shortly after,
+      // the stream connection died while paused — reload to recover.
+      window.setTimeout(() => {
+        const el = audioRef.current
+        if (el && !el.paused && el.currentTime === before) void recover()
+      }, 1500)
+    } else {
+      a.pause()
+    }
+  }, [recover])
 
   const toggleMute = useCallback(() => {
     const a = audioRef.current
@@ -225,6 +242,7 @@ export function MusicPlayerPage() {
         onPlay={onPlay}
         onPause={onPause}
         onVolumeChange={onVolumeChange}
+        onError={onAudioError}
       />
 
       {/* Top bar */}

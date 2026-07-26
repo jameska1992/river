@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import {
   api,
@@ -76,6 +76,11 @@ export default function AudiobookPlayerPage() {
   const onNext = nextUrl ? () => navigate(nextUrl, { state: { fresh: true } }) : undefined
   const onPrev = prevUrl ? () => navigate(prevUrl, { state: { fresh: true } }) : undefined
 
+  const buildStreamUrl = useCallback(
+    () => api.chapterStreamUrl(audiobookId, chapterId),
+    [audiobookId, chapterId],
+  )
+
   if (!audiobookId || !chapterId) return null
 
   const chapterLabel = current ? `Chapter ${current.number}${current.title ? ` · ${current.title}` : ''}` : ''
@@ -83,6 +88,7 @@ export default function AudiobookPlayerPage() {
   return (
     <PlayerScreen
       streamUrl={api.chapterStreamUrl(audiobookId, chapterId)}
+      buildStreamUrl={buildStreamUrl}
       title={book?.title ?? ''}
       subtitle={chapterLabel || undefined}
       progressKind="chapter"

@@ -17,12 +17,14 @@ export default function MoviePlayerPage() {
 
   const fetchSubtitles = useCallback(() => api.getMovieSubtitles(id), [id])
   const fetchAudioTracks = useCallback(() => api.getMovieAudioTracks(id), [id])
+  const buildStreamUrl = useCallback(() => api.movieStreamUrl(id), [id])
 
   if (!id) return null
 
   return (
     <PlayerScreen
       streamUrl={api.movieStreamUrl(id)}
+      buildStreamUrl={buildStreamUrl}
       title={movie?.title ?? ''}
       progressKind="movie"
       progressId={id}

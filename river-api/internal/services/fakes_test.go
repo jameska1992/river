@@ -16,6 +16,7 @@ import (
 type memUserRepo struct {
 	users     []*models.User
 	createErr error
+	updateErr error // when set, Update fails even for an existing user
 }
 
 func (m *memUserRepo) Count() (int64, error) { return int64(len(m.users)), nil }
@@ -58,6 +59,9 @@ func (m *memUserRepo) List() ([]models.User, error) {
 }
 
 func (m *memUserRepo) Update(u *models.User) error {
+	if m.updateErr != nil {
+		return m.updateErr
+	}
 	for i, e := range m.users {
 		if e.ID == u.ID {
 			m.users[i] = u

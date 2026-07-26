@@ -57,11 +57,13 @@ export function UploadPage() {
     form.set('type', mediaType)
     form.set('library_id', libraryId)
     form.set('title', title.trim())
-    form.set('file', file)
     if (mediaType === 'episode') {
       form.set('season', season)
       form.set('episode', episode)
     }
+    // The file must be appended LAST: the server streams the multipart body
+    // and needs every text field resolved before the file bytes arrive.
+    form.set('file', file)
 
     setUploading(true)
     setProgress(0)

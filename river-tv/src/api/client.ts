@@ -299,6 +299,19 @@ export class RiverClient {
     }
   }
 
+  // refreshStreamToken force-refreshes the auth + stream tokens. Used to
+  // recover a stalled <video> whose embedded stream token may have expired
+  // after a long pause / device sleep (the stream token lives ~8h). Reuses
+  // the in-flight refresh if one is already running.
+  async refreshStreamToken(): Promise<void> {
+    if (!this.refreshPromise) {
+      this.refreshPromise = this.doRefresh().finally(() => {
+        this.refreshPromise = null
+      })
+    }
+    return this.refreshPromise
+  }
+
   async logout(): Promise<void> {
     const token = this.refreshToken
     this.clearAuth()

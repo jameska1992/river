@@ -113,6 +113,10 @@ export default function EpisodePlayerPage() {
     () => api.getEpisodeAudioTracks(showId, seasonId, episodeId),
     [showId, seasonId, episodeId],
   )
+  const buildStreamUrl = useCallback(
+    () => api.episodeStreamUrl(showId, seasonId, episodeId),
+    [showId, seasonId, episodeId],
+  )
 
   if (!showId || !seasonId || !episodeId) return null
 
@@ -128,6 +132,7 @@ export default function EpisodePlayerPage() {
   return (
     <PlayerScreen
       streamUrl={api.episodeStreamUrl(showId, seasonId, episodeId)}
+      buildStreamUrl={buildStreamUrl}
       title={show?.title ?? ''}
       subtitle={subtitleLine}
       progressKind="episode"

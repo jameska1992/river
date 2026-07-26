@@ -13,6 +13,7 @@ import {
   useAspectRatio,
   type FitMode,
 } from '../hooks/useAspectRatio'
+import { useMediaRecovery } from '../hooks/useMediaRecovery'
 import { imageUrl } from '../util/imageUrl'
 
 /*
@@ -55,6 +56,11 @@ export interface UpNext {
 
 interface Props {
   streamUrl: string
+  // Rebuilds the stream URL on demand with the current (possibly just
+  // refreshed) stream token. Used by stall recovery to reload the source
+  // after a long pause / device sleep — see useMediaRecovery. Falls back to
+  // the static streamUrl when omitted.
+  buildStreamUrl?: () => string
   title: string
   subtitle?: string
   progressKind: 'movie' | 'episode' | 'chapter'
@@ -94,7 +100,7 @@ export function PlayerScreen(props: Props) {
 }
 
 function PlayerInner({
-  streamUrl, title, subtitle,
+  streamUrl, buildStreamUrl, title, subtitle,
   progressKind, progressId,
   fetchSubtitles, fetchAudioTracks,
   upNext, onPrev, onNext, startFromBeginning,
@@ -102,6 +108,23 @@ function PlayerInner({
 }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const audioRef = useRef<HTMLAudioElement>(null)
+
+  // The <video> plays from local state seeded by the streamUrl prop, so
+  // stall recovery can reload the source in place. Keep it in sync when the
+  // prop changes (e.g. skip-next reuses this component with a new URL) using
+  // React's adjust-state-during-render pattern — no effect needed.
+  const [src, setSrc] = useState(streamUrl)
+  const [lastStreamUrl, setLastStreamUrl] = useState(streamUrl)
+  if (streamUrl !== lastStreamUrl) {
+    setLastStreamUrl(streamUrl)
+    setSrc(streamUrl)
+  }
+
+  const buildSrc = useCallback(
+    () => (buildStreamUrl ? buildStreamUrl() : streamUrl),
+    [buildStreamUrl, streamUrl],
+  )
+  const { recover, onError: onMediaError, freezeGraceMs } = useMediaRecovery(videoRef, buildSrc, setSrc)
 
   const [paused, setPaused] = useState(true)
   const [currentTime, setCurrentTime] = useState(0)
@@ -265,10 +288,20 @@ function PlayerInner({
   const togglePlay = useCallback(() => {
     const v = videoRef.current
     if (!v) return
-    if (v.paused) void v.play()
-    else v.pause()
+    if (v.paused) {
+      const before = v.currentTime
+      void v.play()
+      // If resuming doesn't advance the timeline shortly, the stream stalled
+      // while paused (dead connection / expired token) — reload it in place.
+      window.setTimeout(() => {
+        const m = videoRef.current
+        if (m && !m.paused && m.currentTime === before) void recover()
+      }, freezeGraceMs)
+    } else {
+      v.pause()
+    }
     bumpControls()
-  }, [bumpControls])
+  }, [bumpControls, recover, freezeGraceMs])
 
   // Skip-back: near the start of the file → previous item (if any),
   // otherwise restart at zero. Works for movies too — they just don't
@@ -348,7 +381,7 @@ function PlayerInner({
     <div style={styles.page}>
       <video
         ref={videoRef}
-        src={streamUrl}
+        src={src}
         autoPlay
         playsInline
         muted={altAudio}
@@ -393,7 +426,12 @@ function PlayerInner({
         onError={e => {
           const v = e.currentTarget
           if (v.error && v.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) {
+            // A fatal error with no decodable frames is the stalled / expired-
+            // token case — attempt an in-place reload. The overlay shows in
+            // the meantime and is cleared by onCanPlay/onPlaying if recovery
+            // succeeds; if recovery is on cooldown (genuinely dead), it stays.
             setError('Playback failed')
+            onMediaError()
           }
         }}
       >

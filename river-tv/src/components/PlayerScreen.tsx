@@ -142,6 +142,24 @@ function PlayerInner({
   // null = use the video's built-in audio; otherwise id of an alt track.
   const [activeAudioId, setActiveAudioId] = useState<string | null>(null)
 
+  // The alt-audio <audio> element gets the same in-place stall recovery as
+  // the video: its connection dies during the same pause, so on resume it
+  // would sit silent (play() "succeeds" but the timeline is frozen) while the
+  // video plays. It streams from its own local `src` state, kept in sync with
+  // the selected track via the adjust-state-during-render pattern.
+  const altAudioUrl = activeAudioId ? api.audioTrackStreamUrl(activeAudioId) : undefined
+  const [audioSrc, setAudioSrc] = useState(altAudioUrl)
+  const [lastAudioUrl, setLastAudioUrl] = useState(altAudioUrl)
+  if (altAudioUrl !== lastAudioUrl) {
+    setLastAudioUrl(altAudioUrl)
+    setAudioSrc(altAudioUrl)
+  }
+  const buildAudioSrc = useCallback(
+    () => (activeAudioId ? api.audioTrackStreamUrl(activeAudioId) : undefined),
+    [activeAudioId],
+  )
+  const { recover: recoverAudio, onError: onAudioError } = useMediaRecovery(audioRef, buildAudioSrc, setAudioSrc)
+
   const [showSubsPicker, setShowSubsPicker] = useState(false)
   const [showAudioPicker, setShowAudioPicker] = useState(false)
   const [showAspectPicker, setShowAspectPicker] = useState(false)
@@ -290,18 +308,24 @@ function PlayerInner({
     if (!v) return
     if (v.paused) {
       const before = v.currentTime
+      const a = audioRef.current
+      const audioBefore = a?.currentTime
       void v.play()
       // If resuming doesn't advance the timeline shortly, the stream stalled
       // while paused (dead connection / expired token) — reload it in place.
+      // Check the alt-audio element independently: it can be the frozen one
+      // (the video plays but the sound is silent) since it has its own socket.
       window.setTimeout(() => {
         const m = videoRef.current
         if (m && !m.paused && m.currentTime === before) void recover()
+        const am = audioRef.current
+        if (am && !am.paused && am.currentTime === audioBefore) void recoverAudio()
       }, freezeGraceMs)
     } else {
       v.pause()
     }
     bumpControls()
-  }, [bumpControls, recover, freezeGraceMs])
+  }, [bumpControls, recover, recoverAudio, freezeGraceMs])
 
   // Skip-back: near the start of the file → previous item (if any),
   // otherwise restart at zero. Works for movies too — they just don't
@@ -449,10 +473,11 @@ function PlayerInner({
       {altTrack && (
         <audio
           ref={audioRef}
-          src={api.audioTrackStreamUrl(altTrack.id)}
+          src={audioSrc}
           autoPlay
           preload="auto"
           style={{ display: 'none' }}
+          onError={onAudioError}
         />
       )}
 

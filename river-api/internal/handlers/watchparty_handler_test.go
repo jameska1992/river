@@ -20,6 +20,10 @@ import (
 type fakeWatchPartyRepo struct {
 	parties   []*models.WatchParty
 	createErr error
+	// deleted, when non-nil, receives the id passed to Delete — lets a
+	// WebSocket test synchronise on the host-disconnect cleanup that runs
+	// in the server goroutine.
+	deleted chan string
 }
 
 func (f *fakeWatchPartyRepo) Create(p *models.WatchParty) error {
@@ -44,6 +48,9 @@ func (f *fakeWatchPartyRepo) Delete(id string) error {
 	for i, p := range f.parties {
 		if p.ID.String() == id {
 			f.parties = append(f.parties[:i], f.parties[i+1:]...)
+			if f.deleted != nil {
+				f.deleted <- id
+			}
 			return nil
 		}
 	}

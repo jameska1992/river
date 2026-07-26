@@ -26,6 +26,69 @@ func NewUploadHandler(libraries *services.LibraryService, scannerURL string) *Up
 	return &UploadHandler{libraries: libraries, scannerURL: scannerURL}
 }
 
+// resolvedUpload is the destination + metadata computed from the form
+// fields, ready for the file bytes to be streamed to destPath.
+type resolvedUpload struct {
+	destPath    string
+	scanDirPath string
+	showPath    string
+	showName    string
+	libType     string
+	libraryID   string
+}
+
+// resolveUpload validates the collected text fields against the uploaded
+// file name and computes the destination + scan paths. A non-zero status
+// signals a validation failure (with an error message).
+func (h *UploadHandler) resolveUpload(fields map[string]string, fileName string) (*resolvedUpload, int, string) {
+	mediaType := fields["type"]
+	if mediaType != "movie" && mediaType != "episode" {
+		return nil, http.StatusBadRequest, "type must be 'movie' or 'episode'"
+	}
+	libraryID := strings.TrimSpace(fields["library_id"])
+	if libraryID == "" {
+		return nil, http.StatusBadRequest, "library_id is required"
+	}
+	title := strings.TrimSpace(fields["title"])
+	if title == "" {
+		return nil, http.StatusBadRequest, "title is required"
+	}
+	if fileName == "" {
+		return nil, http.StatusBadRequest, "file is required"
+	}
+
+	lib, err := h.libraries.GetByID(libraryID)
+	if err != nil {
+		return nil, http.StatusBadRequest, "library not found"
+	}
+	var paths []string
+	if err := json.Unmarshal([]byte(lib.Paths), &paths); err != nil || len(paths) == 0 {
+		return nil, http.StatusBadRequest, "library has no configured paths"
+	}
+	libraryPath := paths[0]
+
+	r := &resolvedUpload{libType: string(lib.Type), libraryID: libraryID}
+	ext := filepath.Ext(fileName)
+	if mediaType == "movie" {
+		r.destPath = filepath.Join(libraryPath, title, filepath.Base(fileName))
+		r.scanDirPath = filepath.Join(libraryPath, title)
+	} else {
+		seasonNum, err := strconv.Atoi(strings.TrimSpace(fields["season"]))
+		if err != nil || seasonNum < 1 {
+			return nil, http.StatusBadRequest, "season must be a positive integer"
+		}
+		episodeNum, err := strconv.Atoi(strings.TrimSpace(fields["episode"]))
+		if err != nil || episodeNum < 1 {
+			return nil, http.StatusBadRequest, "episode must be a positive integer"
+		}
+		r.showPath = filepath.Join(libraryPath, title)
+		r.showName = title
+		r.scanDirPath = filepath.Join(r.showPath, fmt.Sprintf("Season %d", seasonNum))
+		r.destPath = filepath.Join(r.scanDirPath, fmt.Sprintf("S%02dE%02d%s", seasonNum, episodeNum, ext))
+	}
+	return r, 0, ""
+}
+
 // Upload accepts a media file via multipart form, writes it to the
 // library's first configured path, and triggers a targeted scanner
 // rescan so it gets picked up. Multipart fields: file, type
@@ -47,103 +110,82 @@ func NewUploadHandler(libraries *services.LibraryService, scannerURL string) *Up
 // @Security     BearerAuth
 // @Router       /admin/upload [post]
 func (h *UploadHandler) Upload(c *gin.Context) {
-	if err := c.Request.ParseMultipartForm(32 << 20); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid multipart form"})
-		return
-	}
-
-	mediaType := c.PostForm("type")
-	if mediaType != "movie" && mediaType != "episode" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "type must be 'movie' or 'episode'"})
-		return
-	}
-
-	libraryID := strings.TrimSpace(c.PostForm("library_id"))
-	if libraryID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "library_id is required"})
-		return
-	}
-
-	title := strings.TrimSpace(c.PostForm("title"))
-	if title == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "title is required"})
-		return
-	}
-
-	fh, err := c.FormFile("file")
+	// Stream the multipart body part-by-part rather than ParseMultipartForm,
+	// which buffers the whole file to a temp file (often a RAM-backed /tmp)
+	// before we ever touch it. The client sends the `file` field last, so by
+	// the time we reach it every text field is known and we can stream the
+	// bytes straight to their destination — constant memory, a single write.
+	reader, err := c.Request.MultipartReader()
 	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "expected multipart/form-data"})
+		return
+	}
+
+	fields := map[string]string{}
+	var res *resolvedUpload
+
+	for {
+		part, err := reader.NextPart()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid multipart form"})
+			return
+		}
+
+		if part.FormName() != "file" {
+			// Small text field — read it fully (capped as a safety net).
+			b, err := io.ReadAll(io.LimitReader(part, 1<<20))
+			part.Close()
+			if err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "invalid form field"})
+				return
+			}
+			fields[part.FormName()] = string(b)
+			continue
+		}
+
+		// File part.
+		r, status, msg := h.resolveUpload(fields, part.FileName())
+		if status != 0 {
+			part.Close()
+			c.JSON(status, gin.H{"error": msg})
+			return
+		}
+		if err := os.MkdirAll(filepath.Dir(r.destPath), 0o755); err != nil {
+			part.Close()
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create directory"})
+			return
+		}
+		dst, err := os.Create(r.destPath)
+		if err != nil {
+			part.Close()
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create destination file"})
+			return
+		}
+		if _, err := io.Copy(dst, part); err != nil {
+			dst.Close()
+			part.Close()
+			os.Remove(r.destPath)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to write file"})
+			return
+		}
+		dst.Close()
+		part.Close()
+		res = r
+	}
+
+	if res == nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "file is required"})
 		return
 	}
 
-	lib, err := h.libraries.GetByID(libraryID)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "library not found"})
-		return
-	}
-
-	var paths []string
-	if err := json.Unmarshal([]byte(lib.Paths), &paths); err != nil || len(paths) == 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "library has no configured paths"})
-		return
-	}
-	libraryPath := paths[0]
-
-	ext := filepath.Ext(fh.Filename)
-
-	var destPath, scanDirPath, showPath, showName string
-	if mediaType == "movie" {
-		destPath = filepath.Join(libraryPath, title, filepath.Base(fh.Filename))
-		scanDirPath = filepath.Join(libraryPath, title)
-	} else {
-		seasonNum, err := strconv.Atoi(strings.TrimSpace(c.PostForm("season")))
-		if err != nil || seasonNum < 1 {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "season must be a positive integer"})
-			return
-		}
-		episodeNum, err := strconv.Atoi(strings.TrimSpace(c.PostForm("episode")))
-		if err != nil || episodeNum < 1 {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "episode must be a positive integer"})
-			return
-		}
-		filename := fmt.Sprintf("S%02dE%02d%s", seasonNum, episodeNum, ext)
-		showPath = filepath.Join(libraryPath, title)
-		showName = title
-		scanDirPath = filepath.Join(showPath, fmt.Sprintf("Season %d", seasonNum))
-		destPath = filepath.Join(scanDirPath, filename)
-	}
-
-	if err := os.MkdirAll(filepath.Dir(destPath), 0o755); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create directory"})
-		return
-	}
-
-	src, err := fh.Open()
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to open uploaded file"})
-		return
-	}
-	dst, err := os.Create(destPath)
-	if err != nil {
-		src.Close()
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create destination file"})
-		return
-	}
-	if _, err := io.Copy(dst, src); err != nil {
-		dst.Close()
-		src.Close()
-		os.Remove(destPath)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to write file"})
-		return
-	}
-	dst.Close()
-	src.Close()
-
-	go h.triggerScanDir(string(lib.Type), libraryID, scanDirPath, showPath, showName)
+	go h.triggerScanDir(res.libType, res.libraryID, res.scanDirPath, res.showPath, res.showName)
 
 	c.JSON(http.StatusAccepted, gin.H{
-		"library_id": libraryID,
-		"path":       destPath,
+		"library_id": res.libraryID,
+		"path":       res.destPath,
 	})
 }
 

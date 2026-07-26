@@ -372,7 +372,13 @@ func (m *memMovieRepo) FindByID(id string) (*models.Movie, error) {
 	}
 	return nil, apperrors.ErrNotFound
 }
-func (m *memMovieRepo) FindAll(string, int, int, string) ([]models.Movie, error) { return nil, nil }
+func (m *memMovieRepo) FindAll(_ string, _, _ int, _ string) ([]models.Movie, error) {
+	out := make([]models.Movie, 0, len(m.movies))
+	for _, x := range m.movies {
+		out = append(out, *x)
+	}
+	return out, nil
+}
 func (m *memMovieRepo) Count(string) (int64, error)                              { return 0, nil }
 func (m *memMovieRepo) FindRecent(int) ([]models.Movie, error)                   { return nil, nil }
 func (m *memMovieRepo) FindUnidentified() ([]models.Movie, error)                { return nil, nil }
@@ -412,8 +418,14 @@ func (m *memShowRepo) FindByID(id string) (*models.TVShow, error) {
 	}
 	return nil, apperrors.ErrNotFound
 }
-func (m *memShowRepo) FindAllUnpaged(string) ([]models.TVShow, error)            { return nil, nil }
-func (m *memShowRepo) FindAll(string, int, int, string) ([]models.TVShow, error) { return nil, nil }
+func (m *memShowRepo) FindAllUnpaged(string) ([]models.TVShow, error) { return nil, nil }
+func (m *memShowRepo) FindAll(_ string, _, _ int, _ string) ([]models.TVShow, error) {
+	out := make([]models.TVShow, 0, len(m.shows))
+	for _, x := range m.shows {
+		out = append(out, *x)
+	}
+	return out, nil
+}
 func (m *memShowRepo) Count(string) (int64, error)                              { return 0, nil }
 func (m *memShowRepo) FindRecent(int) ([]models.TVShow, error)                  { return nil, nil }
 func (m *memShowRepo) FindUnidentified() ([]models.TVShow, error)               { return nil, nil }
@@ -494,8 +506,12 @@ func (m *memAudiobookRepo) FindByID(id string) (*models.Audiobook, error) {
 	}
 	return nil, apperrors.ErrNotFound
 }
-func (m *memAudiobookRepo) FindAll(string, int, int, string) ([]models.Audiobook, error) {
-	return nil, nil
+func (m *memAudiobookRepo) FindAll(_ string, _, _ int, _ string) ([]models.Audiobook, error) {
+	out := make([]models.Audiobook, 0, len(m.books))
+	for _, x := range m.books {
+		out = append(out, *x)
+	}
+	return out, nil
 }
 func (m *memAudiobookRepo) Count(string) (int64, error) { return 0, nil }
 func (m *memAudiobookRepo) Create(x *models.Audiobook) error {

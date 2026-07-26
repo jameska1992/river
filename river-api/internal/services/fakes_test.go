@@ -181,6 +181,8 @@ type memProgressRepo struct {
 	rows              []*models.WatchProgress
 	inProgress        []models.WatchProgress // returned verbatim by FindInProgress
 	completedEpisodes []models.WatchProgress // returned verbatim by FindCompletedEpisodes
+	active            []models.WatchProgress // returned verbatim by FindAllActive
+	byUser            []models.WatchProgress // returned verbatim by FindByUser
 }
 
 func (m *memProgressRepo) match(r *models.WatchProgress, userID, mediaType, mediaID string) bool {
@@ -232,10 +234,10 @@ func (m *memProgressRepo) FindInProgress(userID string, limit int) ([]models.Wat
 	return m.inProgress, nil
 }
 func (m *memProgressRepo) FindAllActive(since time.Time, limit int) ([]models.WatchProgress, error) {
-	return nil, nil
+	return m.active, nil
 }
 func (m *memProgressRepo) FindByUser(userID string, limit int) ([]models.WatchProgress, error) {
-	return nil, nil
+	return m.byUser, nil
 }
 func (m *memProgressRepo) FindCompletedEpisodes(userID string) ([]models.WatchProgress, error) {
 	return m.completedEpisodes, nil
@@ -418,7 +420,13 @@ func (m *memShowRepo) FindByID(id string) (*models.TVShow, error) {
 	}
 	return nil, apperrors.ErrNotFound
 }
-func (m *memShowRepo) FindAllUnpaged(string) ([]models.TVShow, error) { return nil, nil }
+func (m *memShowRepo) FindAllUnpaged(string) ([]models.TVShow, error) {
+	out := make([]models.TVShow, 0, len(m.shows))
+	for _, x := range m.shows {
+		out = append(out, *x)
+	}
+	return out, nil
+}
 func (m *memShowRepo) FindAll(_ string, _, _ int, _ string) ([]models.TVShow, error) {
 	out := make([]models.TVShow, 0, len(m.shows))
 	for _, x := range m.shows {

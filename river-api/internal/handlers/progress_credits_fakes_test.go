@@ -77,19 +77,30 @@ type fakeProgressRepo struct {
 	completedEpisodes []models.WatchProgress
 	active            []models.WatchProgress
 	byUser            []models.WatchProgress
+	// upserted, when non-nil, receives each row passed to Upsert — lets a
+	// WebSocket test synchronise on progress reported by the server goroutine
+	// without racing on the rows slice.
+	upserted chan *models.WatchProgress
 }
 
 func (f *fakeProgressRepo) match(r *models.WatchProgress, userID, mediaType, mediaID string) bool {
 	return r.UserID == userID && r.MediaType == mediaType && r.MediaID == mediaID
 }
 func (f *fakeProgressRepo) Upsert(p *models.WatchProgress) error {
+	replaced := false
 	for i, r := range f.rows {
 		if f.match(r, p.UserID, p.MediaType, p.MediaID) {
 			f.rows[i] = p
-			return nil
+			replaced = true
+			break
 		}
 	}
-	f.rows = append(f.rows, p)
+	if !replaced {
+		f.rows = append(f.rows, p)
+	}
+	if f.upserted != nil {
+		f.upserted <- p
+	}
 	return nil
 }
 func (f *fakeProgressRepo) Find(userID, mediaType, mediaID string) (*models.WatchProgress, error) {

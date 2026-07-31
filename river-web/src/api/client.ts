@@ -1,6 +1,6 @@
 import type {
   User, LoginResponse, ActivityItem,
-  Library, CreateLibraryRequest, UpdateLibraryRequest,
+  Library, LibraryPath, CreateLibraryRequest, UpdateLibraryRequest,
   Movie, CreateMovieRequest, UpdateMovieRequest, IdentifyMovieRequest,
   IdentifyTVShowRequest, UnidentifiedItem,
   TVShow, Season, Episode, CreateTVShowRequest, UpdateTVShowRequest,
@@ -181,7 +181,18 @@ export class RiverClient {
   }
 
   private parseLibrary(raw: RawLibrary): Library {
-    return { ...raw, paths: this.parseJson<string[]>(raw.paths, []) }
+    const raw_paths = this.parseJson<unknown[]>(raw.paths, [])
+    const paths: LibraryPath[] = raw_paths.map(el =>
+      typeof el === 'string'
+        // Legacy bare-string path: fold the library-wide flag into it so an
+        // un-migrated library still shows (and re-saves) its paths correctly.
+        ? { path: el, pre_transcoded: raw.pre_transcoded ?? false }
+        : {
+            path: (el as LibraryPath).path,
+            pre_transcoded: (el as LibraryPath).pre_transcoded ?? false,
+          },
+    )
+    return { ...raw, paths }
   }
 
   private parseMovie(raw: RawMovie): Movie {

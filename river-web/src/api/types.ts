@@ -35,13 +35,23 @@ export interface ActivityItem {
 
 export type LibraryType = 'movie' | 'tvshow' | 'music' | 'audiobook'
 
+// One configured library path plus its per-path already-transcoded flag.
+// When pre_transcoded is true the scanner still runs and metadata still
+// enriches, but the video / audio transcoders skip events from this path —
+// the source files ARE the stream files.
+export interface LibraryPath {
+  path: string
+  pre_transcoded: boolean
+}
+
 export interface Library extends BaseModel {
   name: string
   type: LibraryType
-  paths: string[]
-  // Already-transcoded flag. When true the scanner still runs and
-  // metadata still enriches, but the video / audio transcoders skip
-  // events for this library — the source files ARE the stream files.
+  paths: LibraryPath[]
+  // Legacy library-wide already-transcoded flag. Superseded by the
+  // per-path flag on `paths`; retained only as a fallback for libraries
+  // saved before per-path flags existed (the client folds it into each
+  // path's flag on read). No longer sent on create/update.
   pre_transcoded: boolean
 }
 
@@ -367,8 +377,7 @@ export interface SortParams {
 export interface CreateLibraryRequest {
   name: string
   type: LibraryType
-  paths?: string[]
-  pre_transcoded?: boolean
+  paths?: LibraryPath[]
 }
 export type UpdateLibraryRequest = CreateLibraryRequest
 

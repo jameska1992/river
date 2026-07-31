@@ -43,15 +43,49 @@ func matchKey(s string) string {
 }
 
 type Library struct {
-	ID            string `json:"id"`
-	Name          string `json:"name"`
-	Type          string `json:"type"`
-	Paths         string `json:"paths"` // JSON-encoded []string
+	ID    string `json:"id"`
+	Name  string `json:"name"`
+	Type  string `json:"type"`
+	Paths string `json:"paths"` // JSON-encoded []PathConfig
+	// PreTranscoded is the legacy library-wide flag. It's retained only as
+	// a fallback for rows written before per-path flags existed: the
+	// scanner OR's it into every path's effective flag (see
+	// PathConfig.PreTranscoded), so an un-migrated library keeps skipping
+	// transcoding for all its paths until an admin re-saves it. New/edited
+	// libraries carry the flag per path instead.
+	PreTranscoded bool `json:"pre_transcoded"`
+}
+
+// PathConfig is one configured library path plus whether its contents are
+// already in the canonical stream format. It unmarshals from either the new
+// object form ({"path":"/media","pre_transcoded":true}) or the legacy bare
+// string form ("/media"), so a library stored before per-path flags existed
+// still parses — the legacy element's PreTranscoded defaults to false and the
+// scanner falls back to the library-wide flag.
+type PathConfig struct {
+	Path          string `json:"path"`
 	PreTranscoded bool   `json:"pre_transcoded"`
 }
 
-func (l Library) ParsedPaths() ([]string, error) {
-	var paths []string
+func (p *PathConfig) UnmarshalJSON(data []byte) error {
+	var s string
+	if err := json.Unmarshal(data, &s); err == nil {
+		p.Path = s
+		p.PreTranscoded = false
+		return nil
+	}
+	// Alias avoids recursing into this method.
+	type alias PathConfig
+	var a alias
+	if err := json.Unmarshal(data, &a); err != nil {
+		return err
+	}
+	*p = PathConfig(a)
+	return nil
+}
+
+func (l Library) ParsedPaths() ([]PathConfig, error) {
+	var paths []PathConfig
 	return paths, json.Unmarshal([]byte(l.Paths), &paths)
 }
 

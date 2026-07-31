@@ -8667,11 +8667,11 @@
                     "type": "string"
                 },
                 "paths": {
-                    "description": "JSON-encoded []string",
+                    "description": "Paths is a JSON-encoded array of path configs, each\n{\"path\":\"…\",\"pre_transcoded\":bool}. The API stores and returns it\nverbatim; river-scan parses it (and still accepts the legacy bare-\nstring form). The per-path pre_transcoded flag marks a path whose\ncontents are already in the canonical stream format (H.264/AAC/MP4\nfor video, AAC/M4A for audio): scanning and metadata enrichment\nstill run, but the video / audio transcoders short-circuit on its\nevents so no re-encode and no output-tree copy occurs.",
                     "type": "string"
                 },
                 "pre_transcoded": {
-                    "description": "PreTranscoded marks a library whose contents are already in the\ncanonical stream format (H.264/AAC/MP4 for video, AAC/M4A for\naudio). Scanning and metadata enrichment still run; the video /\naudio transcoders short-circuit on events for these libraries so\nno re-encode and no output-tree copy occurs. Existing rows default\nto false via GORM auto-migrate.",
+                    "description": "PreTranscoded is the legacy library-wide flag, superseded by the\nper-path flag in Paths. It's retained only so libraries saved before\nper-path flags existed keep short-circuiting: river-scan OR's it into\nevery path's effective flag until an admin re-saves the library.\nExisting rows default to false via GORM auto-migrate.",
                     "type": "boolean"
                 },
                 "type": {

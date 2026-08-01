@@ -12,7 +12,7 @@ import {
 } from 'react-icons/ri'
 import { useLibraries } from '../../context/LibrariesContext'
 import { ApiError } from '../../api'
-import type { Library, LibraryType } from '../../api'
+import type { Library, LibraryPath, LibraryType } from '../../api'
 import styles from './LibrariesPage.module.css'
 
 const TYPES: { value: LibraryType; label: string; icon: React.ReactNode }[] = [
@@ -27,11 +27,12 @@ type ModalMode = 'create' | 'edit'
 interface FormState {
   name: string
   type: LibraryType
-  paths: string[]
-  preTranscoded: boolean
+  paths: LibraryPath[]
 }
 
-const defaultForm = (): FormState => ({ name: '', type: 'movie', paths: [''], preTranscoded: false })
+const emptyPath = (): LibraryPath => ({ path: '', pre_transcoded: false })
+
+const defaultForm = (): FormState => ({ name: '', type: 'movie', paths: [emptyPath()] })
 
 export function LibrariesPage() {
   const { libraries, isLoading, error, fetch, create, update, remove } = useLibraries()
@@ -57,8 +58,7 @@ export function LibrariesPage() {
     setForm({
       name: lib.name,
       type: lib.type,
-      paths: lib.paths.length ? lib.paths : [''],
-      preTranscoded: lib.pre_transcoded,
+      paths: lib.paths.length ? lib.paths.map(p => ({ ...p })) : [emptyPath()],
     })
     setFormError('')
     setModal({ mode: 'edit', target: lib })
@@ -70,11 +70,15 @@ export function LibrariesPage() {
   }
 
   function setPath(index: number, value: string) {
-    setForm(f => ({ ...f, paths: f.paths.map((p, i) => i === index ? value : p) }))
+    setForm(f => ({ ...f, paths: f.paths.map((p, i) => i === index ? { ...p, path: value } : p) }))
+  }
+
+  function setPathPreTranscoded(index: number, value: boolean) {
+    setForm(f => ({ ...f, paths: f.paths.map((p, i) => i === index ? { ...p, pre_transcoded: value } : p) }))
   }
 
   function addPath() {
-    setForm(f => ({ ...f, paths: [...f.paths, ''] }))
+    setForm(f => ({ ...f, paths: [...f.paths, emptyPath()] }))
   }
 
   function removePath(index: number) {
@@ -85,7 +89,9 @@ export function LibrariesPage() {
     e.preventDefault()
     setFormError('')
 
-    const paths = form.paths.map(p => p.trim()).filter(Boolean)
+    const paths = form.paths
+      .map(p => ({ ...p, path: p.path.trim() }))
+      .filter(p => p.path)
     if (!form.name.trim()) { setFormError('Name is required.'); return }
     if (paths.length === 0) { setFormError('At least one path is required.'); return }
 
@@ -95,7 +101,6 @@ export function LibrariesPage() {
         name: form.name.trim(),
         type: form.type,
         paths,
-        pre_transcoded: form.preTranscoded,
       }
       if (modal?.mode === 'edit' && modal.target) {
         await update(modal.target.id, data)
@@ -155,7 +160,13 @@ export function LibrariesPage() {
                 </div>
                 <div className={styles.rowPaths}>
                   {lib.paths.map(p => (
-                    <span key={p} className={styles.pathChip}>{p}</span>
+                    <span
+                      key={p.path}
+                      className={styles.pathChip}
+                      title={p.pre_transcoded ? 'Already transcoded — transcoding skipped' : undefined}
+                    >
+                      {p.path}{p.pre_transcoded && ' ✓'}
+                    </span>
                   ))}
                 </div>
                 <div className={styles.rowActions}>
@@ -224,19 +235,34 @@ export function LibrariesPage() {
                 </div>
               )}
 
-              {/* Paths */}
+              {/* Paths — each carries its own "already transcoded" flag.
+                  When checked, the scanner still runs and metadata still
+                  enriches, but the video/audio transcoders skip events from
+                  that path: its source files ARE the stream files. */}
               <div className={styles.field}>
                 <span className="label-md">Paths</span>
+                <span className={styles.checkboxHint}>
+                  Tick “Already transcoded” for a path whose files are already in the canonical
+                  stream format — transcoding is skipped for it; metadata is still collected.
+                </span>
                 <div className={styles.pathList}>
-                  {form.paths.map((path, i) => (
+                  {form.paths.map((p, i) => (
                     <div key={i} className={styles.pathRow}>
                       <input
                         type="text"
                         className="input"
-                        value={path}
+                        value={p.path}
                         onChange={e => setPath(i, e.target.value)}
                         placeholder="/media/movies"
                       />
+                      <label className={styles.checkboxRow} title="Already transcoded — skip transcoding for this path">
+                        <input
+                          type="checkbox"
+                          checked={p.pre_transcoded}
+                          onChange={e => setPathPreTranscoded(i, e.target.checked)}
+                        />
+                        <span className="label-sm">Already transcoded</span>
+                      </label>
                       {form.paths.length > 1 && (
                         <button
                           type="button"
@@ -253,25 +279,6 @@ export function LibrariesPage() {
                     <RiAddCircleLine size={16} /> Add path
                   </button>
                 </div>
-              </div>
-
-              {/* Already-transcoded flag. Skips the video/audio
-                  transcoders for events published from this library —
-                  metadata still runs, scanning still runs, the source
-                  files ARE the stream files. */}
-              <div className={styles.field}>
-                <label className={styles.checkboxRow}>
-                  <input
-                    type="checkbox"
-                    checked={form.preTranscoded}
-                    onChange={e => setForm(f => ({ ...f, preTranscoded: e.target.checked }))}
-                  />
-                  <span className="label-md">Already transcoded</span>
-                </label>
-                <span className={styles.checkboxHint}>
-                  Skip transcoding — files in this library are already in the canonical stream format.
-                  Metadata will still be collected.
-                </span>
               </div>
 
               {formError && <p className={styles.formError} role="alert">{formError}</p>}

@@ -90,18 +90,21 @@ func (s *Scanner) scanLibrary(ctx context.Context, lib apiclient.Library, cache 
 	if err != nil {
 		return fmt.Errorf("parse paths for library %s: %w", lib.ID, err)
 	}
-	for _, libPath := range paths {
-		if err := s.scanPath(ctx, libPath, lib, cache); err != nil {
-			log.Printf("error scanning path %s: %v", libPath, err)
+	for _, pc := range paths {
+		// Effective per-path flag: the path's own flag, OR the legacy
+		// library-wide flag as a fallback for un-migrated rows.
+		preTranscoded := pc.PreTranscoded || lib.PreTranscoded
+		if err := s.scanPath(ctx, pc.Path, preTranscoded, lib, cache); err != nil {
+			log.Printf("error scanning path %s: %v", pc.Path, err)
 		}
 	}
 	return nil
 }
 
-func (s *Scanner) scanPath(ctx context.Context, libPath string, lib apiclient.Library, cache *scanCache) error {
+func (s *Scanner) scanPath(ctx context.Context, libPath string, preTranscoded bool, lib apiclient.Library, cache *scanCache) error {
 	switch lib.Type {
 	case "movie":
-		return s.scanMoviesUnder(ctx, libPath, libPath, lib, cache)
+		return s.scanMoviesUnder(ctx, libPath, libPath, preTranscoded, lib, cache)
 	}
 	// All other types still iterate one level deep: each subdirectory is the
 	// containing unit for that library (show / audiobook / artist).
@@ -119,15 +122,15 @@ func (s *Scanner) scanPath(ctx context.Context, libPath string, lib apiclient.Li
 		dirPath := filepath.Join(libPath, entry.Name())
 		switch lib.Type {
 		case "tvshow":
-			if err := s.scanTVShow(ctx, dirPath, entry.Name(), libPath, lib); err != nil {
+			if err := s.scanTVShow(ctx, dirPath, entry.Name(), libPath, preTranscoded, lib); err != nil {
 				log.Printf("error scanning show %q: %v", entry.Name(), err)
 			}
 		case "audiobook":
-			if err := s.scanAudiobook(ctx, dirPath, entry.Name(), libPath, lib); err != nil {
+			if err := s.scanAudiobook(ctx, dirPath, entry.Name(), libPath, preTranscoded, lib); err != nil {
 				log.Printf("error scanning audiobook %q: %v", entry.Name(), err)
 			}
 		case "music":
-			if err := s.scanMusic(ctx, dirPath, entry.Name(), libPath, lib); err != nil {
+			if err := s.scanMusic(ctx, dirPath, entry.Name(), libPath, preTranscoded, lib); err != nil {
 				log.Printf("error scanning artist %q: %v", entry.Name(), err)
 			}
 		}
@@ -138,9 +141,9 @@ func (s *Scanner) scanPath(ctx context.Context, libPath string, lib apiclient.Li
 // scanMoviesUnder walks root recursively and emits one event per video file.
 // root may be the library path (full-scan) or an arbitrary sub-path (called
 // from the /scan-dir HTTP handler when a user uploads a folder).
-func (s *Scanner) scanMoviesUnder(ctx context.Context, root, libPath string, lib apiclient.Library, cache *scanCache) error {
+func (s *Scanner) scanMoviesUnder(ctx context.Context, root, libPath string, preTranscoded bool, lib apiclient.Library, cache *scanCache) error {
 	return walkMovieFiles(root, s.maxDepth, func(filePath string) error {
-		if err := s.scanMovieFile(ctx, filePath, libPath, lib, cache); err != nil {
+		if err := s.scanMovieFile(ctx, filePath, libPath, preTranscoded, lib, cache); err != nil {
 			log.Printf("error scanning movie file %q: %v", filePath, err)
 		}
 		return nil
@@ -158,7 +161,7 @@ func (s *Scanner) scanMoviesUnder(ctx context.Context, root, libPath string, lib
 // In the flat layout, scanning `Show S01/`, `Show S02/`, `Show S03/` as three
 // separate shows is exactly the duplicated-show bug; the suffix detection
 // keeps them under one show record.
-func (s *Scanner) scanTVShow(ctx context.Context, showPath, showName, libPath string, lib apiclient.Library) error {
+func (s *Scanner) scanTVShow(ctx context.Context, showPath, showName, libPath string, preTranscoded bool, lib apiclient.Library) error {
 	entries, err := os.ReadDir(showPath)
 	if err != nil {
 		return fmt.Errorf("read show dir %s: %w", showPath, err)
@@ -182,7 +185,7 @@ func (s *Scanner) scanTVShow(ctx context.Context, showPath, showName, libPath st
 		// user double-nested. Either way the inner subdirs are the seasons.
 		for _, entry := range seasonSubdirs {
 			seasonPath := filepath.Join(showPath, entry.Name())
-			if err := s.scanSeason(ctx, seasonPath, entry.Name(), showPath, effectiveShowName, libPath, lib); err != nil {
+			if err := s.scanSeason(ctx, seasonPath, entry.Name(), showPath, effectiveShowName, libPath, preTranscoded, lib); err != nil {
 				log.Printf("error scanning season %q: %v", entry.Name(), err)
 			}
 		}
@@ -197,13 +200,13 @@ func (s *Scanner) scanTVShow(ctx context.Context, showPath, showName, libPath st
 	if hasSeasonSuffix {
 		seasonName = showName
 	}
-	if err := s.scanSeason(ctx, showPath, seasonName, showPath, effectiveShowName, libPath, lib); err != nil {
+	if err := s.scanSeason(ctx, showPath, seasonName, showPath, effectiveShowName, libPath, preTranscoded, lib); err != nil {
 		log.Printf("error scanning flat-season show %q: %v", showName, err)
 	}
 	return nil
 }
 
-func (s *Scanner) scanSeason(ctx context.Context, seasonPath, seasonName, showPath, showName, libPath string, lib apiclient.Library) error {
+func (s *Scanner) scanSeason(ctx context.Context, seasonPath, seasonName, showPath, showName, libPath string, preTranscoded bool, lib apiclient.Library) error {
 	files, err := collectMediaFiles(seasonPath, lib.Type)
 	if err != nil {
 		return fmt.Errorf("collect files from %s: %w", seasonPath, err)
@@ -249,7 +252,7 @@ func (s *Scanner) scanSeason(ctx context.Context, seasonPath, seasonName, showPa
 	}
 
 	// See scanMovieFile for the directRegister/publish mode split.
-	directRegister := s.noTranscode || lib.PreTranscoded
+	directRegister := s.noTranscode || preTranscoded
 	publish := !s.noTranscode
 
 	if directRegister {
@@ -273,7 +276,7 @@ func (s *Scanner) scanSeason(ctx context.Context, seasonPath, seasonName, showPa
 			IMDBID:        info.IMDBID,
 			Files:         files,
 			DiscoveredAt:  time.Now().UTC(),
-			PreTranscoded: lib.PreTranscoded,
+			PreTranscoded: preTranscoded,
 		}
 		if err := s.pub.Publish(ctx, event); err != nil {
 			return fmt.Errorf("publish event for %s: %w", seasonPath, err)
@@ -358,7 +361,7 @@ func (s *Scanner) resolveShow(showPath, showName, libraryID string) (*apiclient.
 	return show, nil
 }
 
-func (s *Scanner) scanAudiobook(ctx context.Context, dirPath, dirName, libPath string, lib apiclient.Library) error {
+func (s *Scanner) scanAudiobook(ctx context.Context, dirPath, dirName, libPath string, preTranscoded bool, lib apiclient.Library) error {
 	files, err := collectMediaFiles(dirPath, lib.Type)
 	if err != nil {
 		return fmt.Errorf("collect files from %s: %w", dirPath, err)
@@ -377,7 +380,7 @@ func (s *Scanner) scanAudiobook(ctx context.Context, dirPath, dirName, libPath s
 		return fmt.Errorf("find/create audiobook %q: %w", dirName, err)
 	}
 
-	directRegister := s.noTranscode || lib.PreTranscoded
+	directRegister := s.noTranscode || preTranscoded
 	publish := !s.noTranscode
 
 	if directRegister {
@@ -396,7 +399,7 @@ func (s *Scanner) scanAudiobook(ctx context.Context, dirPath, dirName, libPath s
 			MediaID:       book.ID,
 			Files:         files,
 			DiscoveredAt:  time.Now().UTC(),
-			PreTranscoded: lib.PreTranscoded,
+			PreTranscoded: preTranscoded,
 		}
 		if err := s.pub.Publish(ctx, event); err != nil {
 			return fmt.Errorf("publish event for %s: %w", dirPath, err)
@@ -416,7 +419,7 @@ func (s *Scanner) scanAudiobook(ctx context.Context, dirPath, dirName, libPath s
 // season dir, showPath is the show root, showName is the show dir name; for
 // other library types, showPath and showName are unused.
 func (s *Scanner) ScanDir(ctx context.Context, lib apiclient.Library, dirPath, showPath, showName string, force bool) error {
-	libPath := s.findLibPath(lib, dirPath)
+	libPath, preTranscoded := s.findLibPath(lib, dirPath)
 	defer func() {
 		if err := s.state.Flush(); err != nil {
 			log.Printf("error flushing state: %v", err)
@@ -432,47 +435,52 @@ func (s *Scanner) ScanDir(ctx context.Context, lib apiclient.Library, dirPath, s
 		// picked up. The admin "identify" flow hits this case — it knows
 		// the show's folder_path but not which season changed.
 		if showPath == "" || showPath == dirPath {
-			return s.scanTVShow(ctx, dirPath, filepath.Base(dirPath), libPath, lib)
+			return s.scanTVShow(ctx, dirPath, filepath.Base(dirPath), libPath, preTranscoded, lib)
 		}
 		// Season-level scan: legacy upload flow that points at a single
 		// season directory inside a known show.
-		return s.scanSeason(ctx, dirPath, filepath.Base(dirPath), showPath, showName, libPath, lib)
+		return s.scanSeason(ctx, dirPath, filepath.Base(dirPath), showPath, showName, libPath, preTranscoded, lib)
 	case "audiobook":
-		return s.scanAudiobook(ctx, dirPath, filepath.Base(dirPath), libPath, lib)
+		return s.scanAudiobook(ctx, dirPath, filepath.Base(dirPath), libPath, preTranscoded, lib)
 	case "music":
-		return s.scanMusic(ctx, dirPath, filepath.Base(dirPath), libPath, lib)
+		return s.scanMusic(ctx, dirPath, filepath.Base(dirPath), libPath, preTranscoded, lib)
 	default:
 		cache := newScanCache(s.api)
-		return s.scanMoviesUnder(ctx, dirPath, libPath, lib, cache)
+		return s.scanMoviesUnder(ctx, dirPath, libPath, preTranscoded, lib, cache)
 	}
 }
 
-// findLibPath returns the library path containing dirPath. The library passed in from
-// the /scan-dir endpoint only has ID + Type set, so we look up the full library to find
-// its configured paths and pick the one that contains dirPath. Returns "" if not found.
-func (s *Scanner) findLibPath(lib apiclient.Library, dirPath string) string {
+// findLibPath returns the library path containing dirPath and that path's
+// effective pre-transcoded flag (the path's own flag OR'd with the legacy
+// library-wide flag). The library passed in from the /scan-dir endpoint only
+// has ID + Type set, so we look up the full library to find its configured
+// paths and pick the one that contains dirPath. Returns ("", false) if no
+// configured path contains dirPath.
+func (s *Scanner) findLibPath(lib apiclient.Library, dirPath string) (string, bool) {
 	paths, err := lib.ParsedPaths()
+	libPreTranscoded := lib.PreTranscoded
 	if err != nil || len(paths) == 0 {
 		libs, err := s.api.Libraries()
 		if err != nil {
-			return ""
+			return "", false
 		}
 		for _, l := range libs {
 			if l.ID == lib.ID {
 				if p, err := l.ParsedPaths(); err == nil {
 					paths = p
 				}
+				libPreTranscoded = l.PreTranscoded
 				break
 			}
 		}
 	}
 	for _, p := range paths {
-		clean := filepath.Clean(p)
+		clean := filepath.Clean(p.Path)
 		if dirPath == clean || strings.HasPrefix(dirPath, clean+string(filepath.Separator)) {
-			return clean
+			return clean, p.PreTranscoded || libPreTranscoded
 		}
 	}
-	return ""
+	return "", false
 }
 
 // scanMovieFile is the unit of work for movie libraries: one video file
@@ -480,7 +488,7 @@ func (s *Scanner) findLibPath(lib apiclient.Library, dirPath string) string {
 // basename first, falling back to the parent directory's name and any NFO
 // sidecar there. State is keyed on the file path so adding a single new
 // release into a thousand-file library only emits one event.
-func (s *Scanner) scanMovieFile(ctx context.Context, filePath, libPath string, lib apiclient.Library, cache *scanCache) error {
+func (s *Scanner) scanMovieFile(ctx context.Context, filePath, libPath string, preTranscoded bool, lib apiclient.Library, cache *scanCache) error {
 	hash := contentHash([]string{filePath})
 	if s.state.IsKnown(filePath, hash) {
 		return nil
@@ -528,12 +536,12 @@ func (s *Scanner) scanMovieFile(ctx context.Context, filePath, libPath string, l
 	//   directRegister — write file_path directly against the record
 	//                    (source path IS the stream path). True when
 	//                    the transcoder is disabled entirely OR when
-	//                    this specific library is marked pre-transcoded.
+	//                    this specific path is marked pre-transcoded.
 	//   publish        — emit the RabbitMQ event so downstream metadata
 	//                    consumers enrich the record. Still true for
-	//                    pre-transcoded libraries — the event carries
-	//                    the flag and the video-trans consumer skips.
-	directRegister := s.noTranscode || lib.PreTranscoded
+	//                    pre-transcoded paths — the event carries the
+	//                    flag and the video-trans consumer skips.
+	directRegister := s.noTranscode || preTranscoded
 	publish := !s.noTranscode
 
 	if directRegister {
@@ -554,7 +562,7 @@ func (s *Scanner) scanMovieFile(ctx context.Context, filePath, libPath string, l
 			IMDBID:        info.IMDBID,
 			Files:         []string{filePath},
 			DiscoveredAt:  time.Now().UTC(),
-			PreTranscoded: lib.PreTranscoded,
+			PreTranscoded: preTranscoded,
 		}
 		if err := s.pub.Publish(ctx, event); err != nil {
 			return fmt.Errorf("publish event for %s: %w", filePath, err)
@@ -610,7 +618,7 @@ func (s *Scanner) updateMovieFilePath(movieID, filePath string) error {
 // scanMusic handles one artist directory inside a music library. Music keeps
 // its dir-based grouping (artist → albums → tracks) so we don't break the
 // album-as-folder convention that audio metadata depends on.
-func (s *Scanner) scanMusic(ctx context.Context, dirPath, dirName, libPath string, lib apiclient.Library) error {
+func (s *Scanner) scanMusic(ctx context.Context, dirPath, dirName, libPath string, preTranscoded bool, lib apiclient.Library) error {
 	files, err := collectMediaFiles(dirPath, lib.Type)
 	if err != nil {
 		return fmt.Errorf("collect files from %s: %w", dirPath, err)
@@ -623,7 +631,7 @@ func (s *Scanner) scanMusic(ctx context.Context, dirPath, dirName, libPath strin
 		return nil
 	}
 
-	directRegister := s.noTranscode || lib.PreTranscoded
+	directRegister := s.noTranscode || preTranscoded
 	publish := !s.noTranscode
 
 	// The artist record is needed either way — for direct registration
@@ -649,7 +657,7 @@ func (s *Scanner) scanMusic(ctx context.Context, dirPath, dirName, libPath strin
 			MediaID:       artist.ID,
 			Files:         files,
 			DiscoveredAt:  time.Now().UTC(),
-			PreTranscoded: lib.PreTranscoded,
+			PreTranscoded: preTranscoded,
 		}
 		if err := s.pub.Publish(ctx, event); err != nil {
 			return fmt.Errorf("publish event for %s: %w", dirPath, err)

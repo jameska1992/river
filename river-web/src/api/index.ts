@@ -4,7 +4,7 @@ export { RiverClient, ApiError }
 
 export type {
   BaseModel, User, LoginResponse, ActivityItem, LibraryType,
-  Library, Movie, TVShow, Season, Episode,
+  Library, LibraryPath, Movie, TVShow, Season, Episode,
   WatchParty, WatchPartyMember,
   ServiceLog, LogsResponse,
   CastCredit, CrewCredit, Credits,

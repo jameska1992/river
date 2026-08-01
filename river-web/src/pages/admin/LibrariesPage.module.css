@@ -190,6 +190,11 @@
   flex: 1;
 }
 
+.pathRow .checkboxRow {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
 .removePathBtn {
   flex-shrink: 0;
 }

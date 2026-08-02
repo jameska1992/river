@@ -356,21 +356,22 @@ func buildArgs(inputPath, outputPath string, info *FileInfo, enc videoEncoder) [
 		// happen in the filter graph (before encoder init) because
 		// -pix_fmt alone gets negotiated too late.
 		if enc.hwAccel {
-			// Frames are in CUDA memory; only scale_cuda can operate on
-			// them without a download/upload round-trip.
-			var opts []string
+			// Frames are in CUDA memory. scale_cuda does the resize on-GPU, but
+			// its own `format=` pixel conversion emits SOLID-GREEN frames on
+			// current NVENC combos (10-bit HEVC sources on driver >= 610 with an
+			// ffmpeg 8.x / Lavc 63 scale_cuda). ffmpeg still exits 0, so the
+			// fallback chain never fires and the green file ships. Do the
+			// 10-bit -> 8-bit conversion on the CPU via hwdownload instead;
+			// h264_nvenc re-uploads the frames itself. Pure resize stays on-GPU.
+			var vf []string
 			if needsResize {
-				opts = append(opts,
-					"w='min(iw,1920)'",
-					"h='min(ih,1080)'",
-					"force_original_aspect_ratio=decrease",
-				)
+				vf = append(vf, "scale_cuda=w='min(iw,1920)':h='min(ih,1080)':force_original_aspect_ratio=decrease")
 			}
 			if is10bit {
-				opts = append(opts, "format=yuv420p")
+				vf = append(vf, "hwdownload", "format=p010le", "format=yuv420p")
 			}
-			if len(opts) > 0 {
-				args = append(args, "-vf", "scale_cuda="+strings.Join(opts, ":"))
+			if len(vf) > 0 {
+				args = append(args, "-vf", strings.Join(vf, ","))
 			}
 		} else {
 			// CPU decode → CPU filters → encoder. Always end with

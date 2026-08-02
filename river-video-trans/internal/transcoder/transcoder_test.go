@@ -118,6 +118,7 @@ func TestBuildArgs_SoftwareResizeAndAudioEncode(t *testing.T) {
 }
 
 func TestBuildArgs_HardwarePipeline10Bit(t *testing.T) {
+	// 10-bit HEVC at 1080p: no resize, only a pixel-format downconvert.
 	info := &FileInfo{VideoCodec: "hevc", PixFmt: "yuv420p10le", Width: 1920, Height: 1080,
 		AudioStreams: []AudioStream{{CodecName: "aac"}}}
 	args := buildArgs("in.mkv", "out.mp4", info, nvencHWEncoder)
@@ -129,8 +130,41 @@ func TestBuildArgs_HardwarePipeline10Bit(t *testing.T) {
 		t.Errorf("expected nvenc encoder, got %v", args)
 	}
 	vf, ok := flagValue(args, "-vf")
-	if !ok || !strings.HasPrefix(vf, "scale_cuda=") || !strings.Contains(vf, "format=yuv420p") {
-		t.Errorf("expected scale_cuda with 10-bit→8-bit conversion, got -vf %q", vf)
+	if !ok {
+		t.Fatal("expected a filter chain for 10-bit conversion")
+	}
+	// The 10-bit→8-bit conversion must run on the CPU (hwdownload), NOT via
+	// scale_cuda's format= option, which emits solid-green frames on driver
+	// >= 610 + ffmpeg 8.x. At 1080p there's no resize, so no scale_cuda at all.
+	if !strings.Contains(vf, "hwdownload") || !strings.Contains(vf, "format=yuv420p") {
+		t.Errorf("expected hwdownload + CPU format=yuv420p, got -vf %q", vf)
+	}
+	if strings.Contains(vf, "scale_cuda") {
+		t.Errorf("1080p needs no resize; expected no scale_cuda, got -vf %q", vf)
+	}
+}
+
+func TestBuildArgs_HardwarePipeline10BitDownscale(t *testing.T) {
+	// 10-bit HEVC at 4K: resize on-GPU (scale_cuda) + CPU pixel-format convert.
+	info := &FileInfo{VideoCodec: "hevc", PixFmt: "yuv420p10le", Width: 3840, Height: 2160,
+		AudioStreams: []AudioStream{{CodecName: "aac"}}}
+	args := buildArgs("in.mkv", "out.mp4", info, nvencHWEncoder)
+
+	vf, ok := flagValue(args, "-vf")
+	if !ok {
+		t.Fatal("expected a filter chain")
+	}
+	if !strings.Contains(vf, "scale_cuda=") {
+		t.Errorf("4K should resize on-GPU via scale_cuda, got -vf %q", vf)
+	}
+	if !strings.Contains(vf, "hwdownload") || !strings.Contains(vf, "format=yuv420p") {
+		t.Errorf("expected CPU pixel-format conversion via hwdownload, got -vf %q", vf)
+	}
+	// Regression guard: scale_cuda (first in the chain) must carry no format=
+	// conversion — that combination is the green-frame bug.
+	scaleSeg := strings.SplitN(vf, ",", 2)[0]
+	if strings.Contains(scaleSeg, "format=") {
+		t.Errorf("scale_cuda must not carry format= (green-frame bug), got %q", scaleSeg)
 	}
 }
 

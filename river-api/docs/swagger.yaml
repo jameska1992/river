@@ -420,6 +420,15 @@ definitions:
     - password
     - username
     type: object
+  handlers.mergeRequest:
+    properties:
+      show_ids:
+        items:
+          type: string
+        type: array
+    required:
+    - show_ids
+    type: object
   handlers.metadataRequest:
     properties:
       tmdb_api_key:
@@ -1175,6 +1184,34 @@ definitions:
       sonarr_url:
         type: string
     type: object
+  services.MergeConflict:
+    properties:
+      episode_number:
+        type: integer
+      is_special:
+        type: boolean
+      season_number:
+        type: integer
+      title:
+        type: string
+    type: object
+  services.MergePreview:
+    properties:
+      can_merge:
+        type: boolean
+      conflicts:
+        items:
+          $ref: '#/definitions/services.MergeConflict'
+        type: array
+      episodes_moved:
+        type: integer
+      merged:
+        $ref: '#/definitions/models.TVShow'
+      seasons_moved:
+        type: integer
+      survivor:
+        $ref: '#/definitions/models.TVShow'
+    type: object
   services.MetadataSettings:
     properties:
       tmdb_has_key:
@@ -1637,6 +1674,109 @@ paths:
       summary: Library counts
       tags:
       - admin
+  /admin/tvshows/merge:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Two show ids to merge
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.mergeRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.TVShow'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: colliding episodes block the merge
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Merge two TV shows
+      tags:
+      - tvshows
+  /admin/tvshows/merge/preview:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Two show ids to merge
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.mergeRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/services.MergePreview'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Preview a TV show merge
+      tags:
+      - tvshows
+  /admin/tvshows/resolve:
+    get:
+      parameters:
+      - description: Library id
+        in: query
+        name: library_id
+        required: true
+        type: string
+      - description: Directory root to resolve
+        in: query
+        name: folder_path
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Resolve a show by an absorbed folder path
+      tags:
+      - tvshows
   /admin/unidentified:
     get:
       produces:

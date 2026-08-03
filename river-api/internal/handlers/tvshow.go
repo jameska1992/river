@@ -646,6 +646,7 @@ func (h *TVShowHandler) DeleteEpisode(c *gin.Context) {
 // @Success      206
 // @Failure      404  {object}  map[string]string
 // @Security     BearerAuth
+// @Param        variant  query  string  false  "Set to 'source' to serve the original untranscoded file"
 // @Router       /tvshows/{id}/seasons/{seasonId}/episodes/{episodeId}/stream [get]
 func (h *TVShowHandler) StreamEpisode(c *gin.Context) {
 	episode, err := h.svc.GetEpisode(c.Param("episodeId"))
@@ -653,7 +654,7 @@ func (h *TVShowHandler) StreamEpisode(c *gin.Context) {
 		c.JSON(serviceStatus(err), gin.H{"error": "episode not found"})
 		return
 	}
-	serveMediaWithFallback(c, episode.FilePath, episode.SourcePath, false)
+	serveMediaVariant(c, episode.FilePath, episode.SourcePath, false)
 }
 
 // DownloadEpisode serves the episode as an attachment.
@@ -668,6 +669,7 @@ func (h *TVShowHandler) StreamEpisode(c *gin.Context) {
 // @Success      200
 // @Failure      404  {object}  map[string]string
 // @Security     BearerAuth
+// @Param        variant  query  string  false  "Set to 'source' to serve the original untranscoded file"
 // @Router       /tvshows/{id}/seasons/{seasonId}/episodes/{episodeId}/download [get]
 func (h *TVShowHandler) DownloadEpisode(c *gin.Context) {
 	episode, err := h.svc.GetEpisode(c.Param("episodeId"))
@@ -675,5 +677,5 @@ func (h *TVShowHandler) DownloadEpisode(c *gin.Context) {
 		c.JSON(serviceStatus(err), gin.H{"error": "episode not found"})
 		return
 	}
-	serveMediaWithFallback(c, episode.FilePath, episode.SourcePath, true)
+	serveMediaVariant(c, episode.FilePath, episode.SourcePath, true)
 }

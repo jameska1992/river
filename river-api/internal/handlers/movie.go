@@ -328,6 +328,7 @@ func (h *MovieHandler) Delete(c *gin.Context) {
 // @Success      206
 // @Failure      404  {object}  map[string]string
 // @Security     BearerAuth
+// @Param        variant  query  string  false  "Set to 'source' to serve the original untranscoded file"
 // @Router       /movies/{id}/stream [get]
 func (h *MovieHandler) Stream(c *gin.Context) {
 	movie, err := h.svc.GetByID(c.Param("id"))
@@ -335,7 +336,7 @@ func (h *MovieHandler) Stream(c *gin.Context) {
 		c.JSON(serviceStatus(err), gin.H{"error": "movie not found"})
 		return
 	}
-	serveMediaWithFallback(c, movie.FilePath, movie.SourcePath, false)
+	serveMediaVariant(c, movie.FilePath, movie.SourcePath, false)
 }
 
 // Download serves the movie as an attachment (Content-Disposition).
@@ -348,6 +349,7 @@ func (h *MovieHandler) Stream(c *gin.Context) {
 // @Success      200
 // @Failure      404  {object}  map[string]string
 // @Security     BearerAuth
+// @Param        variant  query  string  false  "Set to 'source' to serve the original untranscoded file"
 // @Router       /movies/{id}/download [get]
 func (h *MovieHandler) Download(c *gin.Context) {
 	movie, err := h.svc.GetByID(c.Param("id"))
@@ -355,5 +357,5 @@ func (h *MovieHandler) Download(c *gin.Context) {
 		c.JSON(serviceStatus(err), gin.H{"error": "movie not found"})
 		return
 	}
-	serveMediaWithFallback(c, movie.FilePath, movie.SourcePath, true)
+	serveMediaVariant(c, movie.FilePath, movie.SourcePath, true)
 }

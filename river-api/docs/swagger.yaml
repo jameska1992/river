@@ -3810,6 +3810,10 @@ paths:
         in: query
         name: token
         type: string
+      - description: Set to 'source' to serve the original untranscoded file
+        in: query
+        name: variant
+        type: string
       produces:
       - video/mp4
       responses:
@@ -4037,6 +4041,10 @@ paths:
       - description: Stream JWT (alternative to Authorization header)
         in: query
         name: token
+        type: string
+      - description: Set to 'source' to serve the original untranscoded file
+        in: query
+        name: variant
         type: string
       produces:
       - video/mp4
@@ -5643,6 +5651,10 @@ paths:
         in: query
         name: token
         type: string
+      - description: Set to 'source' to serve the original untranscoded file
+        in: query
+        name: variant
+        type: string
       produces:
       - video/mp4
       responses:
@@ -5730,6 +5742,10 @@ paths:
       - description: Stream JWT
         in: query
         name: token
+        type: string
+      - description: Set to 'source' to serve the original untranscoded file
+        in: query
+        name: variant
         type: string
       produces:
       - video/mp4

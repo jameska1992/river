@@ -106,3 +106,36 @@ func TestServeMediaWithFallback(t *testing.T) {
 		assert.Equal(t, http.StatusNotFound, w.Code)
 	})
 }
+
+func TestServeMediaVariant(t *testing.T) {
+	transcoded := writeTempFile(t, "transcoded.mp4", "TRANSCODED")
+	source := writeTempFile(t, "source.mkv", "SOURCE")
+
+	t.Run("default serves the transcode", func(t *testing.T) {
+		c, w := mediaCtx("/", "")
+		serveMediaVariant(c, transcoded, source, false)
+		require.Equal(t, http.StatusOK, w.Code)
+		assert.Equal(t, "TRANSCODED", w.Body.String())
+	})
+
+	t.Run("variant=source serves the original", func(t *testing.T) {
+		c, w := mediaCtx("/?variant=source", "")
+		serveMediaVariant(c, transcoded, source, false)
+		require.Equal(t, http.StatusOK, w.Code)
+		assert.Equal(t, "SOURCE", w.Body.String())
+	})
+
+	// Asking for the original must never silently hand back the transcode.
+	t.Run("variant=source 404s when there is no source", func(t *testing.T) {
+		c, w := mediaCtx("/?variant=source", "")
+		serveMediaVariant(c, transcoded, "", false)
+		assert.Equal(t, http.StatusNotFound, w.Code)
+		assert.NotContains(t, w.Body.String(), "TRANSCODED")
+	})
+
+	t.Run("variant=source 404s when the source file is missing", func(t *testing.T) {
+		c, w := mediaCtx("/?variant=source", "")
+		serveMediaVariant(c, transcoded, "/no/such/source.mkv", false)
+		assert.Equal(t, http.StatusNotFound, w.Code)
+	})
+}

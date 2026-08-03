@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import {
   RiArrowLeftLine, RiTv2Line, RiStarLine, RiPlayFill,
-  RiArrowDownSLine, RiTimeLine, RiDownloadLine, RiUserLine,
+  RiArrowDownSLine, RiTimeLine, RiDownloadLine, RiUserLine, RiHdLine,
   RiBookmarkLine, RiBookmarkFill, RiGroupLine, RiAlertFill, RiEditLine,
   RiEyeLine, RiEyeOffLine, RiDeleteBin6Line,
 } from 'react-icons/ri'
@@ -608,6 +608,16 @@ function EpisodeRow({ showId, seasonId, episode, isAdmin, onEdit, onDelete }: { 
           >
             <RiDownloadLine size={16} />
           </a>
+        )}
+        {episode.file_path && episode.source_path && episode.file_path !== episode.source_path && (
+          <Link
+            to={`${watchPath}?variant=source`}
+            className={`btn btn-icon ${styles.epDownload}`}
+            aria-label="Play or download original"
+            title="Original (untranscoded) — may not play in every browser"
+          >
+            <RiHdLine size={16} />
+          </Link>
         )}
         {isAdmin && (
           <>

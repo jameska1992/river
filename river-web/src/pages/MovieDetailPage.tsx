@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
-import { RiArrowLeftLine, RiFilmLine, RiPlayFill, RiStarLine, RiTimeLine, RiDownloadLine, RiUserLine, RiBookmarkLine, RiBookmarkFill, RiGroupLine, RiAlertFill, RiEyeLine, RiEyeOffLine } from 'react-icons/ri'
+import { RiArrowLeftLine, RiFilmLine, RiPlayFill, RiStarLine, RiTimeLine, RiDownloadLine, RiUserLine, RiBookmarkLine, RiBookmarkFill, RiGroupLine, RiAlertFill, RiEyeLine, RiEyeOffLine, RiHdLine } from 'react-icons/ri'
 import { useMovies } from '../context/MoviesContext'
 import { useAuth } from '../context/AuthContext'
 import { imageUrl } from '../util/imageUrl'
@@ -246,6 +246,16 @@ export function MovieDetailPage() {
                     >
                       <RiDownloadLine size={18} />
                     </a>
+                  )}
+                  {movie.file_path && movie.source_path && movie.file_path !== movie.source_path && (
+                    <Link
+                      to={`/movie/${id}/watch?variant=source`}
+                      className="btn btn-secondary"
+                      title="Play or download the original, untranscoded file (may not play in every browser)"
+                    >
+                      <RiHdLine size={18} />
+                      Original
+                    </Link>
                   )}
                 </div>
                 {credits && (credits.cast.length > 0 || credits.crew.length > 0) && (

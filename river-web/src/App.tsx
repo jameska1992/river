@@ -27,6 +27,7 @@ import { CollectionsPage } from './pages/CollectionsPage'
 import { CollectionDetailPage } from './pages/CollectionDetailPage'
 import { WatchlistPage } from './pages/WatchlistPage'
 import { AdminLayout } from './pages/admin/AdminLayout'
+import { MergeTVShowsPage } from './pages/admin/MergeTVShowsPage'
 import { OverviewPage } from './pages/admin/OverviewPage'
 import { LibrariesPage } from './pages/admin/LibrariesPage'
 import { UploadPage } from './pages/admin/UploadPage'
@@ -119,6 +120,7 @@ export default function App() {
                 <Route path="libraries" element={<LibrariesPage />} />
                 <Route path="upload" element={<UploadPage />} />
                 <Route path="unidentified" element={<UnidentifiedPage />} />
+                <Route path="merge-shows" element={<MergeTVShowsPage />} />
                 <Route path="users" element={<UsersPage />} />
                 <Route path="logs" element={<LogsPage />} />
                 <Route path="scanner-state" element={<ScannerStatePage />} />

@@ -1,5 +1,5 @@
 import { NavLink, Outlet } from 'react-router-dom'
-import { RiDashboard2Line, RiFolder3Line, RiUploadCloud2Line, RiTeamLine, RiFileListLine, RiQuestionLine, RiDatabase2Line, RiSettings3Line } from 'react-icons/ri'
+import { RiDashboard2Line, RiFolder3Line, RiUploadCloud2Line, RiTeamLine, RiFileListLine, RiQuestionLine, RiDatabase2Line, RiSettings3Line, RiGitMergeLine } from 'react-icons/ri'
 import styles from './AdminLayout.module.css'
 
 const navItems = [
@@ -7,6 +7,7 @@ const navItems = [
   { to: '/admin/libraries',      label: 'Libraries',     icon: <RiFolder3Line /> },
   { to: '/admin/upload',         label: 'Upload',        icon: <RiUploadCloud2Line /> },
   { to: '/admin/unidentified',   label: 'Unidentified',  icon: <RiQuestionLine /> },
+  { to: '/admin/merge-shows',    label: 'Merge Shows',   icon: <RiGitMergeLine /> },
   { to: '/admin/scanner-state',  label: 'Scanner State', icon: <RiDatabase2Line /> },
   { to: '/admin/users',          label: 'Users',         icon: <RiTeamLine /> },
   { to: '/admin/logs',           label: 'Logs',          icon: <RiFileListLine /> },

@@ -12,6 +12,7 @@ import {
   RiCloseLine,
   RiPictureInPicture2Line,
   RiReplay10Fill, RiForward10Fill,
+  RiDownloadLine,
 } from 'react-icons/ri'
 import { useTVShows } from '../context/TVShowsContext'
 import { useAuth } from '../context/AuthContext'
@@ -74,6 +75,8 @@ export function EpisodeWatchPage() {
   const location = useLocation()
   const [searchParams] = useSearchParams()
   const partyId = searchParams.get('party') ?? undefined
+  // ?variant=source plays the original untranscoded file (best effort).
+  const isSource = searchParams.get('variant') === 'source'
   const { user } = useAuth()
   const { fetchEpisodes, fetchSeasons, episodeStreamUrl } = useTVShows()
   const [room, setRoom] = useState<WatchParty | null>(null)
@@ -89,14 +92,18 @@ export function EpisodeWatchPage() {
   const progressRef = useRef({ position: 0, duration: 0 })
   const subtitleCuesRef = useRef<VTTCue[]>([])
   const wsRef = useRef<ReturnType<typeof api.openProgressSocket> | null>(null)
-  const [videoSrc, setVideoSrc] = useState<string | undefined>(
-    () => showId && seasonId && episodeId ? episodeStreamUrl(showId, seasonId, episodeId) : undefined
+  const srcFor = useCallback(
+    () => (showId && seasonId && episodeId
+      ? (isSource
+          ? api.episodeStreamUrl(showId, seasonId, episodeId, 'source')
+          : episodeStreamUrl(showId, seasonId, episodeId))
+      : undefined),
+    [showId, seasonId, episodeId, isSource, episodeStreamUrl],
   )
+  const [videoSrc, setVideoSrc] = useState<string | undefined>(srcFor)
+  const [sourceUnplayable, setSourceUnplayable] = useState(false)
 
-  const buildStreamSrc = useCallback(
-    () => showId && seasonId && episodeId ? episodeStreamUrl(showId, seasonId, episodeId) : undefined,
-    [showId, seasonId, episodeId, episodeStreamUrl],
-  )
+  const buildStreamSrc = srcFor
   const { recover, onError: onVideoError } = useMediaRecovery(videoRef, buildStreamSrc, setVideoSrc)
 
   const [playing, setPlaying] = useState(false)
@@ -125,13 +132,14 @@ export function EpisodeWatchPage() {
   useEffect(() => {
     if (!showId || !seasonId || !episodeId) return
     // eslint-disable-next-line react-hooks/set-state-in-effect -- resets the player when the show/season/episode params change
-    setVideoSrc(episodeStreamUrl(showId, seasonId, episodeId))
+    setVideoSrc(srcFor())
     setCurrentTime(0)
     setDuration(0)
     setUpNextDismissed(false)
+    setSourceUnplayable(false)
     lastReportRef.current = 0
     progressRef.current = { position: 0, duration: 0 }
-  }, [showId, seasonId, episodeId, episodeStreamUrl])
+  }, [showId, seasonId, episodeId, srcFor])
 
   // Resolve prev/next sequential episodes, crossing season boundaries as needed
   useEffect(() => {
@@ -195,10 +203,11 @@ export function EpisodeWatchPage() {
   useEffect(() => {
     if (!showId || !seasonId || !episodeId) return
     api.getEpisodeSubtitles(showId, seasonId, episodeId).then(setSubtitles).catch(() => {})
-    api.getEpisodeAudioTracks(showId, seasonId, episodeId).then(setAudioTracks).catch(() => {})
+    // Extracted audio tracks come from the transcode, so skip them for the source.
+    if (!isSource) api.getEpisodeAudioTracks(showId, seasonId, episodeId).then(setAudioTracks).catch(() => {})
     wsRef.current = api.openProgressSocket()
     return () => { wsRef.current?.close(); wsRef.current = null }
-  }, [showId, seasonId, episodeId])
+  }, [showId, seasonId, episodeId, isSource])
 
   useEffect(() => {
     if (!partyId) return
@@ -542,9 +551,25 @@ export function EpisodeWatchPage() {
         onTimeUpdate={onTimeUpdate}
         onLoadedMetadata={onLoadedMetadata}
         onVolumeChange={onVolumeChange}
-        onError={onVideoError}
+        onError={isSource ? () => setSourceUnplayable(true) : onVideoError}
         autoPlay
       />
+
+      {sourceUnplayable && (
+        <div className={styles.sourceError} onClick={e => e.stopPropagation()}>
+          <p className="body-lg">This original file can’t be played in your browser.</p>
+          <p className="label-sm">Its codec or container isn’t browser-supported. Download it to play in another app, or watch the transcoded version.</p>
+          <div className={styles.sourceErrorActions}>
+            <a className="btn btn-primary" href={api.episodeDownloadUrl(showId!, seasonId!, episodeId!, 'source')}>
+              <RiDownloadLine size={18} /> Download original
+            </a>
+            {/* Full navigation (not SPA Link) so the player reloads onto the transcode. */}
+            <a className="btn btn-secondary" href={`/show/${showId}/season/${seasonId}/episode/${episodeId}/watch`}>
+              Play transcoded version
+            </a>
+          </div>
+        </div>
+      )}
 
       {subtitleText && (
         <div className={styles.subtitleOverlay}>{subtitleText}</div>
@@ -597,7 +622,22 @@ export function EpisodeWatchPage() {
         <Link to={`/show/${showId}`} className={`btn btn-icon ${styles.backBtn}`}>
           <RiArrowLeftLine size={20} />
         </Link>
-        {title && <span className={`label-md ${styles.topTitle}`}>{title}</span>}
+        {title && (
+          <span className={`label-md ${styles.topTitle}`}>
+            {title}{isSource && <span className={styles.originalTag}>ORIGINAL</span>}
+          </span>
+        )}
+        {isSource && showId && seasonId && episodeId && (
+          <a
+            href={api.episodeDownloadUrl(showId, seasonId, episodeId, 'source')}
+            className={`btn btn-icon ${styles.backBtn}`}
+            title="Download original"
+            aria-label="Download original"
+            onClick={e => e.stopPropagation()}
+          >
+            <RiDownloadLine size={20} />
+          </a>
+        )}
       </div>
 
       {/* Bottom controls */}

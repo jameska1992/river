@@ -4073,6 +4073,12 @@ const docTemplate = `{
                         "description": "Stream JWT",
                         "name": "token",
                         "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Set to 'source' to serve the original untranscoded file",
+                        "name": "variant",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -4432,6 +4438,12 @@ const docTemplate = `{
                         "type": "string",
                         "description": "Stream JWT (alternative to Authorization header)",
                         "name": "token",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Set to 'source' to serve the original untranscoded file",
+                        "name": "variant",
                         "in": "query"
                     }
                 ],
@@ -6980,6 +6992,12 @@ const docTemplate = `{
                         "description": "Stream JWT",
                         "name": "token",
                         "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Set to 'source' to serve the original untranscoded file",
+                        "name": "variant",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -7115,6 +7133,12 @@ const docTemplate = `{
                         "type": "string",
                         "description": "Stream JWT",
                         "name": "token",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Set to 'source' to serve the original untranscoded file",
+                        "name": "variant",
                         "in": "query"
                     }
                 ],

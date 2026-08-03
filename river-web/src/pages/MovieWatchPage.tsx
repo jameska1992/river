@@ -9,6 +9,7 @@ import {
   RiSpeakLine,
   RiPictureInPicture2Line,
   RiReplay10Fill, RiForward10Fill,
+  RiDownloadLine,
 } from 'react-icons/ri'
 import { useMovies } from '../context/MoviesContext'
 import { useAuth } from '../context/AuthContext'
@@ -59,6 +60,9 @@ export function MovieWatchPage() {
   const { id } = useParams<{ id: string }>()
   const [searchParams] = useSearchParams()
   const partyId = searchParams.get('party') ?? undefined
+  // ?variant=source plays the original untranscoded file (best effort — the
+  // browser may not support its codec/container).
+  const isSource = searchParams.get('variant') === 'source'
   const { user } = useAuth()
   const { getOne, streamUrl } = useMovies()
   const [movie, setMovie] = useState<Movie | null>(null)
@@ -74,9 +78,14 @@ export function MovieWatchPage() {
   const progressRef = useRef({ position: 0, duration: 0 })
   const subtitleCuesRef = useRef<VTTCue[]>([])
   const wsRef = useRef<ReturnType<typeof api.openProgressSocket> | null>(null)
-  const [videoSrc, setVideoSrc] = useState<string | undefined>(() => id ? streamUrl(id) : undefined)
+  const initialSrc = useCallback(
+    () => (id ? (isSource ? api.movieStreamUrl(id, 'source') : streamUrl(id)) : undefined),
+    [id, isSource, streamUrl],
+  )
+  const [videoSrc, setVideoSrc] = useState<string | undefined>(initialSrc)
+  const [sourceUnplayable, setSourceUnplayable] = useState(false)
 
-  const buildStreamSrc = useCallback(() => (id ? streamUrl(id) : undefined), [id, streamUrl])
+  const buildStreamSrc = initialSrc
   const { recover, onError: onVideoError } = useMediaRecovery(videoRef, buildStreamSrc, setVideoSrc)
 
   const [playing, setPlaying] = useState(false)
@@ -102,10 +111,12 @@ export function MovieWatchPage() {
     if (!id) return
     getOne(id).then(setMovie).catch(() => {})
     api.getMovieSubtitles(id).then(setSubtitles).catch(() => {})
-    api.getMovieAudioTracks(id).then(setAudioTracks).catch(() => {})
+    // The audio-track switcher streams extracted tracks from the transcode, so
+    // it doesn't apply when playing the original source file.
+    if (!isSource) api.getMovieAudioTracks(id).then(setAudioTracks).catch(() => {})
     wsRef.current = api.openProgressSocket()
     return () => { wsRef.current?.close(); wsRef.current = null }
-  }, [id, getOne])
+  }, [id, getOne, isSource])
 
   useEffect(() => {
     if (!partyId) return
@@ -412,9 +423,27 @@ export function MovieWatchPage() {
         onTimeUpdate={onTimeUpdate}
         onLoadedMetadata={onLoadedMetadata}
         onVolumeChange={onVolumeChange}
-        onError={onVideoError}
+        onError={isSource ? () => setSourceUnplayable(true) : onVideoError}
         autoPlay
       />
+
+      {sourceUnplayable && (
+        <div className={styles.sourceError} onClick={e => e.stopPropagation()}>
+          <p className="body-lg">This original file can’t be played in your browser.</p>
+          <p className="label-sm">Its codec or container isn’t browser-supported. Download it to play in another app, or watch the transcoded version.</p>
+          <div className={styles.sourceErrorActions}>
+            {id && (
+              <a className="btn btn-primary" href={api.movieDownloadUrl(id, 'source')}>
+                <RiDownloadLine size={18} /> Download original
+              </a>
+            )}
+            {/* Full navigation (not SPA Link) so the player reloads onto the transcode. */}
+            <a className="btn btn-secondary" href={`/movie/${id}/watch`}>
+              Play transcoded version
+            </a>
+          </div>
+        </div>
+      )}
 
       {subtitleText && (
         <div className={styles.subtitleOverlay}>{subtitleText}</div>
@@ -440,7 +469,22 @@ export function MovieWatchPage() {
         <Link to={`/movie/${id}`} className={`btn btn-icon ${styles.backBtn}`}>
           <RiArrowLeftLine size={20} />
         </Link>
-        {movie && <span className={`label-md ${styles.topTitle}`}>{movie.title}</span>}
+        {movie && (
+          <span className={`label-md ${styles.topTitle}`}>
+            {movie.title}{isSource && <span className={styles.originalTag}>ORIGINAL</span>}
+          </span>
+        )}
+        {isSource && id && (
+          <a
+            href={api.movieDownloadUrl(id, 'source')}
+            className={`btn btn-icon ${styles.backBtn}`}
+            title="Download original"
+            aria-label="Download original"
+            onClick={e => e.stopPropagation()}
+          >
+            <RiDownloadLine size={20} />
+          </a>
+        )}
       </div>
 
       {/* Bottom controls */}

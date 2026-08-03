@@ -501,12 +501,12 @@ export class RiverClient {
     return this.request('DELETE', `/movies/${id}${qs}`)
   }
 
-  movieStreamUrl(id: string): string {
-    return this.streamUrl(`/movies/${id}/stream`)
+  movieStreamUrl(id: string, variant?: 'source'): string {
+    return this.streamUrl(`/movies/${id}/stream`, variant)
   }
 
-  movieDownloadUrl(id: string): string {
-    return this.streamUrl(`/movies/${id}/download`)
+  movieDownloadUrl(id: string, variant?: 'source'): string {
+    return this.streamUrl(`/movies/${id}/download`, variant)
   }
 
   async getMovieSubtitles(id: string): Promise<Subtitle[]> {
@@ -633,12 +633,12 @@ export class RiverClient {
     return this.request('DELETE', `/tvshows/${showId}/seasons/${seasonId}/episodes/${episodeId}${qs}`)
   }
 
-  episodeStreamUrl(showId: string, seasonId: string, episodeId: string): string {
-    return this.streamUrl(`/tvshows/${showId}/seasons/${seasonId}/episodes/${episodeId}/stream`)
+  episodeStreamUrl(showId: string, seasonId: string, episodeId: string, variant?: 'source'): string {
+    return this.streamUrl(`/tvshows/${showId}/seasons/${seasonId}/episodes/${episodeId}/stream`, variant)
   }
 
-  episodeDownloadUrl(showId: string, seasonId: string, episodeId: string): string {
-    return this.streamUrl(`/tvshows/${showId}/seasons/${seasonId}/episodes/${episodeId}/download`)
+  episodeDownloadUrl(showId: string, seasonId: string, episodeId: string, variant?: 'source'): string {
+    return this.streamUrl(`/tvshows/${showId}/seasons/${seasonId}/episodes/${episodeId}/download`, variant)
   }
 
   // --- Artists ---
@@ -997,9 +997,12 @@ export class RiverClient {
   // regular access token (15 min) would otherwise expire mid-playback.
   // Falls back to the access token only when the stream token isn't
   // available yet (e.g. session created against an older server build).
-  private streamUrl(path: string): string {
+  private streamUrl(path: string, variant?: 'source'): string {
     const token = this.streamToken || this.accessToken
-    const base = `${this.baseURL}${path}`
-    return token ? `${base}?token=${encodeURIComponent(token)}` : base
+    const params = new URLSearchParams()
+    if (token) params.set('token', token)
+    if (variant) params.set('variant', variant)
+    const qs = params.toString()
+    return qs ? `${this.baseURL}${path}?${qs}` : `${this.baseURL}${path}`
   }
 }

@@ -19,6 +19,26 @@ func serveMediaFileDownload(c *gin.Context, filePath string) {
 	serveMedia(c, filePath, true)
 }
 
+// serveMediaVariant picks which file to serve based on the ?variant= query.
+// "source" serves the original the scanner discovered (transcoded, source) and
+// 404s if no distinct original is available — it deliberately does NOT fall
+// back to the transcode, so a user who asks for the original never silently
+// gets the re-encode. Any other value (including absent) keeps the default
+// transcode-then-source behaviour.
+func serveMediaVariant(c *gin.Context, transcoded, source string, download bool) {
+	if c.Query("variant") == "source" {
+		if p := firstReadable(source); p != "" {
+			serveMedia(c, p, download)
+			return
+		}
+		log.Printf("WARN stream 404: original source requested but unavailable — source=%q (%s)",
+			source, statReason(source))
+		c.JSON(http.StatusNotFound, gin.H{"error": "original source not available"})
+		return
+	}
+	serveMediaWithFallback(c, transcoded, source, download)
+}
+
 // serveMediaWithFallback streams from primary if present, otherwise from
 // fallback. Lets the UI offer playback before the transcode/copy pipeline
 // has settled a canonical FilePath: primary = post-transcode location,

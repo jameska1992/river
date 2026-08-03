@@ -683,6 +683,155 @@ const docTemplate = `{
                 }
             }
         },
+        "/admin/tvshows/merge": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "tvshows"
+                ],
+                "summary": "Merge two TV shows",
+                "parameters": [
+                    {
+                        "description": "Two show ids to merge",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.mergeRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.TVShow"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "colliding episodes block the merge",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/tvshows/merge/preview": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "tvshows"
+                ],
+                "summary": "Preview a TV show merge",
+                "parameters": [
+                    {
+                        "description": "Two show ids to merge",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.mergeRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/services.MergePreview"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/tvshows/resolve": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "tvshows"
+                ],
+                "summary": "Resolve a show by an absorbed folder path",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Library id",
+                        "name": "library_id",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Directory root to resolve",
+                        "name": "folder_path",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "show_id is empty when there is no mapping",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/admin/unidentified": {
             "get": {
                 "security": [
@@ -8026,6 +8175,20 @@ const docTemplate = `{
                 }
             }
         },
+        "handlers.mergeRequest": {
+            "type": "object",
+            "required": [
+                "show_ids"
+            ],
+            "properties": {
+                "show_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
         "handlers.metadataRequest": {
             "type": "object",
             "properties": {
@@ -9073,6 +9236,49 @@ const docTemplate = `{
                 },
                 "sonarr_url": {
                     "type": "string"
+                }
+            }
+        },
+        "services.MergeConflict": {
+            "type": "object",
+            "properties": {
+                "episode_number": {
+                    "type": "integer"
+                },
+                "is_special": {
+                    "type": "boolean"
+                },
+                "season_number": {
+                    "type": "integer"
+                },
+                "title": {
+                    "type": "string"
+                }
+            }
+        },
+        "services.MergePreview": {
+            "type": "object",
+            "properties": {
+                "can_merge": {
+                    "type": "boolean"
+                },
+                "conflicts": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/services.MergeConflict"
+                    }
+                },
+                "episodes_moved": {
+                    "type": "integer"
+                },
+                "merged": {
+                    "$ref": "#/definitions/models.TVShow"
+                },
+                "seasons_moved": {
+                    "type": "integer"
+                },
+                "survivor": {
+                    "$ref": "#/definitions/models.TVShow"
                 }
             }
         },

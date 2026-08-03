@@ -3,7 +3,7 @@ import type {
   Library, LibraryPath, CreateLibraryRequest, UpdateLibraryRequest,
   Movie, CreateMovieRequest, UpdateMovieRequest, IdentifyMovieRequest,
   IdentifyTVShowRequest, UnidentifiedItem,
-  TVShow, Season, Episode, CreateTVShowRequest, UpdateTVShowRequest,
+  TVShow, Season, Episode, CreateTVShowRequest, UpdateTVShowRequest, MergePreview,
   CreateSeasonRequest, UpdateSeasonRequest, CreateEpisodeRequest, UpdateEpisodeRequest,
   Artist, Album, Track, CreateArtistRequest, UpdateArtistRequest,
   CreateAlbumRequest, UpdateAlbumRequest, CreateTrackRequest,
@@ -23,6 +23,10 @@ import type {
 interface RawLibrary extends Omit<Library, 'paths'> { paths: string }
 interface RawMovie extends Omit<Movie, 'genres'> { genres: string }
 interface RawTVShow extends Omit<TVShow, 'genres'> { genres: string }
+interface RawMergePreview extends Omit<MergePreview, 'survivor' | 'merged'> {
+  survivor: RawTVShow
+  merged: RawTVShow
+}
 
 type QueryParams = Record<string, string | number | undefined>
 
@@ -575,6 +579,20 @@ export class RiverClient {
   async deleteTVShow(id: string, deleteFiles = false): Promise<void> {
     const qs = deleteFiles ? '?delete_files=true' : ''
     return this.request('DELETE', `/tvshows/${id}${qs}`)
+  }
+
+  // previewMergeTVShows reports what merging two shows would do (which one
+  // survives, how much moves, any blocking episode conflicts) without changing
+  // anything. The older show always survives regardless of argument order.
+  async previewMergeTVShows(showIds: [string, string]): Promise<MergePreview> {
+    const raw = await this.request<RawMergePreview>('POST', '/admin/tvshows/merge/preview', { show_ids: showIds })
+    return { ...raw, survivor: this.parseTVShow(raw.survivor), merged: this.parseTVShow(raw.merged) }
+  }
+
+  // mergeTVShows folds the newer show into the older and returns the survivor.
+  async mergeTVShows(showIds: [string, string]): Promise<TVShow> {
+    const raw = await this.request<RawTVShow>('POST', '/admin/tvshows/merge', { show_ids: showIds })
+    return this.parseTVShow(raw)
   }
 
   // --- Seasons ---

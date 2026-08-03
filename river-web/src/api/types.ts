@@ -158,7 +158,29 @@ export interface TVShow extends BaseModel {
   poster_path: string
   backdrop_path: string
   trailer_url: string
+  folder_path: string
   seasons?: Season[]
+}
+
+// MergeConflict is an episode on the absorbed show that would collide with an
+// existing one on the survivor (same season number, episode number, special
+// flag). Any conflict blocks the merge.
+export interface MergeConflict {
+  season_number: number
+  episode_number: number
+  is_special: boolean
+  title: string
+}
+
+// MergePreview is the dry-run result of merging two shows: which one survives
+// (the older), how much moves, and any blocking conflicts.
+export interface MergePreview {
+  survivor: TVShow
+  merged: TVShow
+  seasons_moved: number
+  episodes_moved: number
+  conflicts: MergeConflict[]
+  can_merge: boolean
 }
 
 export interface Season extends BaseModel {

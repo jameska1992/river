@@ -20,7 +20,7 @@ export type {
   CreateLibraryRequest, UpdateLibraryRequest,
   CreateMovieRequest, UpdateMovieRequest, IdentifyMovieRequest,
   IdentifyTVShowRequest, UnidentifiedItem,
-  CreateTVShowRequest, UpdateTVShowRequest,
+  CreateTVShowRequest, UpdateTVShowRequest, MergePreview, MergeConflict,
   CreateSeasonRequest, UpdateSeasonRequest, CreateEpisodeRequest, UpdateEpisodeRequest,
   CreateArtistRequest, UpdateArtistRequest,
   CreateAlbumRequest, UpdateAlbumRequest, CreateTrackRequest,

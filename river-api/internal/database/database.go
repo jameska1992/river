@@ -32,6 +32,7 @@ func Migrate(db *gorm.DB) error {
 		&models.TVShow{},
 		&models.Season{},
 		&models.Episode{},
+		&models.TVShowPath{},
 		&models.Artist{},
 		&models.Album{},
 		&models.Track{},

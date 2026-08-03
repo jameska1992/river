@@ -1763,13 +1763,7 @@ paths:
       - application/json
       responses:
         "200":
-          description: OK
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "404":
-          description: Not Found
+          description: show_id is empty when there is no mapping
           schema:
             additionalProperties:
               type: string

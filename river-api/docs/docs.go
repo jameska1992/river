@@ -821,16 +821,7 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
+                        "description": "show_id is empty when there is no mapping",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {

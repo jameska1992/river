@@ -25,14 +25,14 @@ func (r mergeRequest) valid() bool {
 }
 
 // ResolvePath resolves a merged-away directory root to its surviving show.
+// Returns 200 with an empty show_id when the path maps to no show.
 //
 // @Summary      Resolve a show by an absorbed folder path
 // @Tags         tvshows
 // @Produce      json
 // @Param        library_id   query     string  true  "Library id"
 // @Param        folder_path  query     string  true  "Directory root to resolve"
-// @Success      200          {object}  map[string]string
-// @Failure      404          {object}  map[string]string
+// @Success      200          {object}  map[string]string  "show_id is empty when there is no mapping"
 // @Router       /admin/tvshows/resolve [get]
 func (h *ShowMergeHandler) ResolvePath(c *gin.Context) {
 	libraryID := c.Query("library_id")

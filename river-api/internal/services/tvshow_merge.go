@@ -116,11 +116,17 @@ func (s *ShowMergeService) buildPreview(survivor, merged *models.TVShow) (*Merge
 }
 
 // ResolveShowByPath returns the id of the show that owns folderPath within
-// libraryID via a recorded merge alias, or ErrNotFound. river-scan calls this
-// so episodes discovered under an absorbed root attach to the surviving show
-// instead of re-creating the duplicate.
+// libraryID via a recorded merge alias, or "" when there's no such mapping.
+// river-scan calls this so episodes discovered under an absorbed root attach to
+// the surviving show instead of re-creating the duplicate. "no mapping" is a
+// normal result (empty id, nil error), not an error, so callers don't have to
+// treat a miss as a failure.
 func (s *ShowMergeService) ResolveShowByPath(libraryID, folderPath string) (string, error) {
-	return s.merge.FindShowIDByPath(libraryID, folderPath)
+	id, err := s.merge.FindShowIDByPath(libraryID, folderPath)
+	if errors.Is(err, ErrNotFound) {
+		return "", nil
+	}
+	return id, err
 }
 
 // PreviewMerge reports what merging the two shows would do without changing

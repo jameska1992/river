@@ -451,6 +451,10 @@ func (c *Client) ListTVShows(libraryID string) ([]TVShow, error) {
 //     existed) or already equals this one. A row whose folder_path is set
 //     to a *different* path is treated as a different show, so the create
 //     branch fires below and the two folders end up on separate rows.
+//   - Pass 3: merge alias. Before creating a new row, ask river-api whether
+//     this folder was absorbed into another show by an admin merge. If so the
+//     folder belongs to the surviving show — attach here instead of spawning
+//     the duplicate the merge just removed.
 func (c *Client) FindOrCreateTVShow(libraryID, title, folderPath string) (*TVShow, error) {
 	shows, err := c.listTVShows(libraryID)
 	if err != nil {
@@ -475,7 +479,32 @@ func (c *Client) FindOrCreateTVShow(libraryID, title, folderPath string) (*TVSho
 		}
 	}
 
+	if folderPath != "" {
+		survivorID, err := c.resolveShowIDByPath(libraryID, folderPath)
+		if err != nil {
+			return nil, err
+		}
+		if survivorID != "" {
+			return c.GetTVShow(survivorID)
+		}
+	}
+
 	return c.createTVShow(TVShowRequest{LibraryID: libraryID, Title: title, FolderPath: folderPath})
+}
+
+// resolveShowIDByPath asks river-api whether folderPath was merged into an
+// existing show. Returns the surviving show id, or "" when there's no mapping
+// (a normal miss for a genuinely new folder).
+func (c *Client) resolveShowIDByPath(libraryID, folderPath string) (string, error) {
+	var result struct {
+		ShowID string `json:"show_id"`
+	}
+	path := fmt.Sprintf("/api/admin/tvshows/resolve?library_id=%s&folder_path=%s",
+		url.QueryEscape(libraryID), url.QueryEscape(folderPath))
+	if err := c.do("GET", path, nil, &result); err != nil {
+		return "", err
+	}
+	return result.ShowID, nil
 }
 
 // UpdateTVShowFolderPath targets only the show's folder_path field, so the

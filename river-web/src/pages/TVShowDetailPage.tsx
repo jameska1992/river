@@ -2,9 +2,9 @@ import { useEffect, useState, useCallback } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import {
   RiArrowLeftLine, RiTv2Line, RiStarLine, RiPlayFill,
-  RiArrowDownSLine, RiTimeLine, RiDownloadLine, RiUserLine, RiHdLine,
-  RiBookmarkLine, RiBookmarkFill, RiGroupLine, RiAlertFill, RiEditLine,
-  RiEyeLine, RiEyeOffLine, RiDeleteBin6Line,
+  RiArrowDownSLine, RiTimeLine, RiUserLine,
+  RiBookmarkLine, RiBookmarkFill, RiAlertFill, RiEditLine,
+  RiEyeLine, RiEyeOffLine,
 } from 'react-icons/ri'
 import { useTVShows } from '../context/TVShowsContext'
 import { useAuth } from '../context/AuthContext'
@@ -13,6 +13,7 @@ import { useWatchlist } from '../context/WatchlistContext'
 import type { TVShow, Season, Episode, Credits } from '../api'
 import { api } from '../api'
 import { AdminMediaMenu } from '../components/AdminMediaMenu'
+import { EpisodeActionsMenu } from '../components/EpisodeActionsMenu'
 import { MetadataModal } from '../components/MetadataModal'
 import { IdentifyTVShowModal } from '../components/IdentifyTVShowModal'
 import { EpisodeMetadataModal } from '../components/EpisodeMetadataModal'
@@ -591,54 +592,18 @@ function EpisodeRow({ showId, seasonId, episode, isAdmin, onEdit, onDelete }: { 
             </span>
           )}
         </div>
-        <button
-          className={`btn btn-icon ${styles.epDownload}`}
-          onClick={() => startEpisodeParty(showId, seasonId, episode.id, navigate)}
-          aria-label="Start Watch Party"
-          title="Start Watch Party"
-        >
-          <RiGroupLine size={15} />
-        </button>
-        {episode.file_path && (
-          <a
-            href={api.episodeDownloadUrl(showId, seasonId, episode.id)}
-            className={`btn btn-icon ${styles.epDownload}`}
-            aria-label="Download episode"
-            title="Download"
-          >
-            <RiDownloadLine size={16} />
-          </a>
-        )}
-        {episode.file_path && episode.source_path && episode.file_path !== episode.source_path && (
-          <Link
-            to={`${watchPath}?variant=source`}
-            className={`btn btn-icon ${styles.epDownload}`}
-            aria-label="Play or download original"
-            title="Original (untranscoded) — may not play in every browser"
-          >
-            <RiHdLine size={16} />
-          </Link>
-        )}
-        {isAdmin && (
-          <>
-            <button
-              className={`btn btn-icon ${styles.epDownload}`}
-              onClick={onEdit}
-              aria-label="Edit episode metadata"
-              title="Edit episode"
-            >
-              <RiEditLine size={15} />
-            </button>
-            <button
-              className={`btn btn-icon ${styles.epDownload}`}
-              onClick={onDelete}
-              aria-label="Delete episode"
-              title="Delete episode"
-            >
-              <RiDeleteBin6Line size={15} />
-            </button>
-          </>
-        )}
+        <EpisodeActionsMenu
+          onWatchParty={() => startEpisodeParty(showId, seasonId, episode.id, navigate)}
+          downloadUrl={episode.file_path ? api.episodeDownloadUrl(showId, seasonId, episode.id) : undefined}
+          originalPath={
+            episode.file_path && episode.source_path && episode.file_path !== episode.source_path
+              ? `${watchPath}?variant=source`
+              : undefined
+          }
+          isAdmin={isAdmin}
+          onEdit={onEdit}
+          onDelete={onDelete}
+        />
       </div>
     </div>
   )

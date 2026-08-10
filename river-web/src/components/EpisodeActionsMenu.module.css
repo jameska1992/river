@@ -1,0 +1,60 @@
+.root {
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+/* Muted to match the other icon buttons in the episode row; brightens on
+   hover the same way .epDownload does. */
+.trigger {
+  flex-shrink: 0;
+  color: var(--color-on-surface-variant);
+}
+.trigger:hover { color: var(--color-on-surface); }
+
+/* Fixed + portaled to <body>: the coordinates are supplied inline by the
+   component (anchored to the trigger), letting the menu escape the episode
+   list's overflow clip. */
+.menu {
+  position: fixed;
+  min-width: 200px;
+  background: var(--color-surface-highest);
+  border: 1px solid var(--color-outline-variant);
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  z-index: 100;
+  overflow: hidden;
+  animation: popIn 0.1s ease;
+}
+
+@keyframes popIn {
+  from { opacity: 0; transform: scale(0.95) translateY(-4px); }
+  to   { opacity: 1; transform: scale(1)    translateY(0); }
+}
+
+/* Shared by button and link items so a download <a> and an <edit> button read
+   identically. */
+.item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 10px var(--space-2);
+  background: none;
+  border: none;
+  color: var(--color-on-surface);
+  font-family: var(--font-body);
+  font-size: 14px;
+  cursor: pointer;
+  text-align: left;
+  text-decoration: none;
+  transition: background 0.1s ease;
+}
+.item svg { flex-shrink: 0; }
+.item:hover { background: rgba(255, 255, 255, 0.06); }
+.item:active { background: rgba(255, 255, 255, 0.1); }
+
+/* Destructive variant — Delete. */
+.itemDanger { color: rgb(255, 110, 110); }
+.itemDanger:hover { background: rgba(255, 90, 90, 0.10); }
+.itemDanger:active { background: rgba(255, 90, 90, 0.18); }

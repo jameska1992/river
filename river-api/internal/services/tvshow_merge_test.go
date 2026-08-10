@@ -18,6 +18,9 @@ type fakeMergeRepo struct {
 	survivorID, mergedID string
 	alias                *models.TVShowPath
 	err                  error
+	// survivor maps a merged-away show id to the id of the show that absorbed
+	// it, backing FindSurvivorID.
+	survivor map[string]string
 }
 
 func (f *fakeMergeRepo) Merge(survivorID, mergedID string, alias *models.TVShowPath) error {
@@ -27,6 +30,13 @@ func (f *fakeMergeRepo) Merge(survivorID, mergedID string, alias *models.TVShowP
 }
 
 func (f *fakeMergeRepo) FindShowIDByPath(string, string) (string, error) { return "", ErrNotFound }
+
+func (f *fakeMergeRepo) FindSurvivorID(mergedID string) (string, error) {
+	if id, ok := f.survivor[mergedID]; ok {
+		return id, nil
+	}
+	return "", ErrNotFound
+}
 
 func mgShow(id uuid.UUID, created time.Time, folder string) *models.TVShow {
 	return &models.TVShow{

@@ -13,7 +13,7 @@ import (
 func TestTVShowService_ShowReadPassthroughs(t *testing.T) {
 	show := &models.TVShow{Base: models.Base{ID: uuid.New()}, Title: "Firefly", Genres: `["sci-fi"]`}
 	shows := &memShowRepo{shows: []*models.TVShow{show}}
-	svc := NewTVShowService(shows, &memSeasonRepo{}, &memEpisodeRepo{}, &memCleanupRepo{})
+	svc := NewTVShowService(shows, &memSeasonRepo{}, &memEpisodeRepo{}, &memCleanupRepo{}, nil)
 
 	list, err := svc.ListShows(TVShowFilter{})
 	require.NoError(t, err)
@@ -47,7 +47,7 @@ func TestTVShowService_SimilarShows_RanksByGenre(t *testing.T) {
 	match := &models.TVShow{Base: models.Base{ID: uuid.New()}, Title: "Match", Genres: `["crime"]`}
 	miss := &models.TVShow{Base: models.Base{ID: uuid.New()}, Title: "Miss", Genres: `["comedy"]`}
 	shows := &memShowRepo{shows: []*models.TVShow{src, match, miss}}
-	svc := NewTVShowService(shows, &memSeasonRepo{}, &memEpisodeRepo{}, &memCleanupRepo{})
+	svc := NewTVShowService(shows, &memSeasonRepo{}, &memEpisodeRepo{}, &memCleanupRepo{}, nil)
 
 	got, err := svc.SimilarShows(src.ID.String(), 10)
 	require.NoError(t, err)
@@ -61,7 +61,7 @@ func TestTVShowService_Seasons(t *testing.T) {
 	season := &models.Season{Base: models.Base{ID: uuid.New()}, TVShowID: show.ID, Number: 1, Title: "S1"}
 	shows := &memShowRepo{shows: []*models.TVShow{show}}
 	seasons := &memSeasonRepo{seasons: []*models.Season{season}}
-	svc := NewTVShowService(shows, seasons, &memEpisodeRepo{}, &memCleanupRepo{})
+	svc := NewTVShowService(shows, seasons, &memEpisodeRepo{}, &memCleanupRepo{}, nil)
 
 	list, err := svc.ListSeasons(show.ID.String())
 	require.NoError(t, err)
@@ -91,7 +91,7 @@ func TestTVShowService_Episodes(t *testing.T) {
 	shows := &memShowRepo{shows: []*models.TVShow{show}}
 	seasons := &memSeasonRepo{seasons: []*models.Season{season}}
 	episodes := &memEpisodeRepo{}
-	svc := NewTVShowService(shows, seasons, episodes, &memCleanupRepo{})
+	svc := NewTVShowService(shows, seasons, episodes, &memCleanupRepo{}, nil)
 
 	// Create (no existing → new row).
 	ep, err := svc.CreateEpisode(show.ID.String(), season.ID.String(), EpisodeInput{
@@ -139,7 +139,7 @@ func TestTVShowService_UpdateEpisode_Reparent(t *testing.T) {
 	shows := &memShowRepo{shows: []*models.TVShow{show}}
 	seasons := &memSeasonRepo{seasons: []*models.Season{s1, s2}}
 	episodes := &memEpisodeRepo{episodes: []*models.Episode{ep}}
-	svc := NewTVShowService(shows, seasons, episodes, &memCleanupRepo{})
+	svc := NewTVShowService(shows, seasons, episodes, &memCleanupRepo{}, nil)
 
 	moved, err := svc.UpdateEpisode(ep.ID.String(), EpisodeInput{SeasonID: s2.ID.String()})
 	require.NoError(t, err)

@@ -15,8 +15,8 @@ import (
 
 func tvShowRouter(shows *fakeShowRepo) *gin.Engine {
 	gin.SetMode(gin.TestMode)
-	// seasons/episodes/cleanup nil — CreateShow/GetShow only touch `shows`.
-	svc := services.NewTVShowService(shows, nil, nil, nil)
+	// seasons/episodes/cleanup/merge nil — CreateShow/GetShow only touch `shows`.
+	svc := services.NewTVShowService(shows, nil, nil, nil, nil)
 	h := NewTVShowHandler(svc, "", "")
 	r := gin.New()
 	r.POST("/tvshows", h.CreateShow)

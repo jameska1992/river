@@ -18,7 +18,7 @@ import (
 func recentlyAddedRouter(movies *fakeMovieRepo, shows *fakeShowRepo) *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	movieSvc := services.NewMovieService(movies, fakeCleanupRepo{})
-	tvSvc := services.NewTVShowService(shows, nil, nil, nil)
+	tvSvc := services.NewTVShowService(shows, nil, nil, nil, nil)
 	h := NewRecentlyAddedHandler(movieSvc, tvSvc)
 	r := gin.New()
 	r.GET("/recently-added", h.List)

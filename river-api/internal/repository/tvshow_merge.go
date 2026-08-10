@@ -25,6 +25,12 @@ type TVShowMergeRepository interface {
 	// folderPath within libraryID, or ErrNotFound. Lets the scanner route a
 	// merged-away directory to its surviving show.
 	FindShowIDByPath(libraryID, folderPath string) (string, error)
+	// FindSurvivorID returns the id of the show that absorbed mergedID via a
+	// recorded merge alias, or ErrNotFound when mergedID was never merged away.
+	// Lets an episode write that still carries a merged-away show id — e.g. a
+	// transcode that finished after an admin merged the show — redirect onto
+	// the survivor instead of failing.
+	FindSurvivorID(mergedID string) (string, error)
 }
 
 type tvShowMergeRepository struct{ db *gorm.DB }
@@ -37,6 +43,20 @@ func (r *tvShowMergeRepository) FindShowIDByPath(libraryID, folderPath string) (
 	var p models.TVShowPath
 	err := r.db.
 		Where("library_id = ? AND folder_path = ?", libraryID, folderPath).
+		First(&p).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return "", apperrors.ErrNotFound
+		}
+		return "", err
+	}
+	return p.TVShowID.String(), nil
+}
+
+func (r *tvShowMergeRepository) FindSurvivorID(mergedID string) (string, error) {
+	var p models.TVShowPath
+	err := r.db.
+		Where("merged_from_show_id = ?", mergedID).
 		First(&p).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {

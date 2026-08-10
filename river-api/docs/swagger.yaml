@@ -3924,6 +3924,46 @@ paths:
       summary: Identify movie
       tags:
       - admin
+  /movies/{id}/re-transcode:
+    post:
+      parameters:
+      - description: Movie ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "502":
+          description: Bad Gateway
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "503":
+          description: Service Unavailable
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Re-transcode movie
+      tags:
+      - admin
   /movies/{id}/refresh-metadata:
     post:
       parameters:
@@ -5671,6 +5711,56 @@ paths:
       summary: Download episode
       tags:
       - tvshows
+  /tvshows/{id}/seasons/{seasonId}/episodes/{episodeId}/re-transcode:
+    post:
+      parameters:
+      - description: TV show ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Season ID
+        in: path
+        name: seasonId
+        required: true
+        type: string
+      - description: Episode ID
+        in: path
+        name: episodeId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "502":
+          description: Bad Gateway
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "503":
+          description: Service Unavailable
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Re-transcode episode
+      tags:
+      - admin
   /tvshows/{id}/seasons/{seasonId}/episodes/{episodeId}/source-path:
     patch:
       consumes:

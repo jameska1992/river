@@ -30,6 +30,11 @@ type MediaDiscoveredEvent struct {
 	// consumers treat it as a hard skip (the scanner has already
 	// registered the media record with source == stream path).
 	PreTranscoded bool `json:"pre_transcoded,omitempty"`
+	// ForceTranscode tells the video transcoder to re-process this file even
+	// when a transcoded output already exists, overwriting it in place. Set by
+	// the /retranscode endpoint behind the admin "re-transcode" action; a
+	// normal scan never sets it.
+	ForceTranscode bool `json:"force_transcode,omitempty"`
 }
 
 type Publisher struct {

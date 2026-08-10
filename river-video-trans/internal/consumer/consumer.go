@@ -27,6 +27,10 @@ type MediaDiscoveredEvent struct {
 	// scanner has already registered the media record and any audio /
 	// subtitle sidecars pointing at the source files.
 	PreTranscoded bool `json:"pre_transcoded,omitempty"`
+	// ForceTranscode requests re-processing even when a transcoded output
+	// already exists at the canonical path — the admin "re-transcode" action
+	// (river-scan /retranscode) sets it so the output is overwritten in place.
+	ForceTranscode bool `json:"force_transcode,omitempty"`
 }
 
 type Consumer struct {

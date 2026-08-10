@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { RiMoreLine, RiRefreshLine, RiEditLine, RiSearchLine, RiInformationLine, RiDeleteBin6Line } from 'react-icons/ri'
+import { RiMoreLine, RiRefreshLine, RiEditLine, RiSearchLine, RiInformationLine, RiRestartLine, RiDeleteBin6Line } from 'react-icons/ri'
 import styles from './AdminMediaMenu.module.css'
 
 interface Props {
@@ -10,6 +10,10 @@ interface Props {
   // record — source paths, IDs, timestamps, etc. Aimed at admin debug
   // workflows where you want to see exactly what's in the database.
   onShowDetails?: () => void
+  // onReTranscode re-runs the transcoder for this item, overwriting the
+  // existing output. Optional — only wired where a source file exists to
+  // re-process (e.g. the movie page).
+  onReTranscode?: () => void
   // onDelete opens a confirmation modal that lets the admin pick between
   // remove-from-db and remove-and-delete-files. Left optional so existing
   // call sites that haven't wired it up yet still compile.
@@ -20,7 +24,7 @@ interface Props {
   identifyLabel?: string
 }
 
-export function AdminMediaMenu({ onRefresh, onEdit, onIdentify, onShowDetails, onDelete, identifyLabel }: Props) {
+export function AdminMediaMenu({ onRefresh, onEdit, onIdentify, onShowDetails, onReTranscode, onDelete, identifyLabel }: Props) {
   const [open, setOpen] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
   const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle')
@@ -68,6 +72,11 @@ export function AdminMediaMenu({ onRefresh, onEdit, onIdentify, onShowDetails, o
     onShowDetails?.()
   }
 
+  const handleReTranscode = () => {
+    setOpen(false)
+    onReTranscode?.()
+  }
+
   const handleDelete = () => {
     setOpen(false)
     onDelete?.()
@@ -105,6 +114,12 @@ export function AdminMediaMenu({ onRefresh, onEdit, onIdentify, onShowDetails, o
             <button className={styles.item} onClick={handleDetails} role="menuitem">
               <RiInformationLine size={16} />
               <span>Show details</span>
+            </button>
+          )}
+          {onReTranscode && (
+            <button className={styles.item} onClick={handleReTranscode} role="menuitem">
+              <RiRestartLine size={16} />
+              <span>Re-transcode</span>
             </button>
           )}
           {onDelete && (

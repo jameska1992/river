@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
-import { RiMoreLine, RiGroupLine, RiDownloadLine, RiHdLine, RiEditLine, RiDeleteBin6Line } from 'react-icons/ri'
+import { RiMoreLine, RiGroupLine, RiDownloadLine, RiHdLine, RiEditLine, RiRestartLine, RiDeleteBin6Line } from 'react-icons/ri'
 import styles from './EpisodeActionsMenu.module.css'
 
 interface Props {
@@ -13,6 +13,7 @@ interface Props {
   originalPath?: string
   isAdmin: boolean
   onEdit: () => void
+  onReTranscode: () => void
   onDelete: () => void
 }
 
@@ -27,7 +28,7 @@ type Coords = { top?: number; bottom?: number; right: number }
 // clips overflow for its expand/collapse animation, so an in-flow dropdown
 // would be cut off on the last rows. Fixed coords are anchored to the trigger
 // and flipped above it when there isn't room below.
-export function EpisodeActionsMenu({ onWatchParty, downloadUrl, originalPath, isAdmin, onEdit, onDelete }: Props) {
+export function EpisodeActionsMenu({ onWatchParty, downloadUrl, originalPath, isAdmin, onEdit, onReTranscode, onDelete }: Props) {
   const [open, setOpen] = useState(false)
   const [coords, setCoords] = useState<Coords | null>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)
@@ -127,6 +128,10 @@ export function EpisodeActionsMenu({ onWatchParty, downloadUrl, originalPath, is
               <button className={styles.item} onClick={run(onEdit)} role="menuitem">
                 <RiEditLine size={16} />
                 <span>Edit metadata</span>
+              </button>
+              <button className={styles.item} onClick={run(onReTranscode)} role="menuitem">
+                <RiRestartLine size={16} />
+                <span>Re-transcode</span>
               </button>
               <button className={`${styles.item} ${styles.itemDanger}`} onClick={run(onDelete)} role="menuitem">
                 <RiDeleteBin6Line size={16} />

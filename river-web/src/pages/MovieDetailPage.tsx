@@ -16,6 +16,16 @@ import { SimilarCarousel } from '../components/SimilarCarousel'
 import { useBackTo } from '../hooks/useBackTo'
 import styles from './MovieDetailPage.module.css'
 
+async function reTranscodeMovie(id: string) {
+  if (!confirm('Re-transcode this movie? This overwrites the existing transcoded file and runs in the background.')) return
+  try {
+    await api.reTranscodeMovie(id)
+    alert('Re-transcode queued. It will run in the background.')
+  } catch (e) {
+    alert('Failed to queue re-transcode: ' + (e instanceof Error ? e.message : String(e)))
+  }
+}
+
 export function MovieDetailPage() {
   const { id } = useParams<{ id: string }>()
   const { getOne } = useMovies()
@@ -152,6 +162,7 @@ export function MovieDetailPage() {
                   onEdit={() => setEditOpen(true)}
                   onIdentify={() => setIdentifyOpen(true)}
                   onShowDetails={() => setDetailsOpen(true)}
+                  onReTranscode={() => reTranscodeMovie(id!)}
                   onDelete={() => setDeleteOpen(true)}
                   identifyLabel="Identify movie"
                 />

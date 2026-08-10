@@ -481,6 +481,18 @@ async function startEpisodeParty(
   navigate(`/show/${showId}/season/${seasonId}/episode/${episodeId}/watch?party=${room.id}`)
 }
 
+// ── Re-transcode helper ───────────────────────────────────
+
+async function reTranscodeEpisode(showId: string, seasonId: string, episodeId: string) {
+  if (!confirm('Re-transcode this episode? This overwrites the existing transcoded file and runs in the background.')) return
+  try {
+    await api.reTranscodeEpisode(showId, seasonId, episodeId)
+    alert('Re-transcode queued. It will run in the background.')
+  } catch (e) {
+    alert('Failed to queue re-transcode: ' + (e instanceof Error ? e.message : String(e)))
+  }
+}
+
 function SeasonRow({ showId, season, episodes, loading, expanded, onToggle, isAdmin, onEditSeason, onEditEpisode, onDeleteEpisode }: SeasonRowProps) {
   const label = season.title && season.title !== `Season ${season.number}`
     ? season.title
@@ -602,6 +614,7 @@ function EpisodeRow({ showId, seasonId, episode, isAdmin, onEdit, onDelete }: { 
           }
           isAdmin={isAdmin}
           onEdit={onEdit}
+          onReTranscode={() => reTranscodeEpisode(showId, seasonId, episode.id)}
           onDelete={onDelete}
         />
       </div>

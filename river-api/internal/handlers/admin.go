@@ -3,6 +3,7 @@ package handlers
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -596,4 +597,130 @@ func (h *AdminHandler) RefreshArtistMetadata(c *gin.Context) {
 	}
 	defer resp.Body.Close()
 	c.JSON(http.StatusAccepted, gin.H{"message": "metadata refresh triggered"})
+}
+
+// postRetranscode proxies a single-item force-transcode request to river-scan,
+// which owns the RabbitMQ publisher (river-api has none). Returns (0, nil) on
+// success, or an HTTP status + body to write on failure.
+func (h *AdminHandler) postRetranscode(payload map[string]any) (int, gin.H) {
+	body, _ := json.Marshal(payload)
+	resp, err := h.http.Post(h.scanURL+"/retranscode", "application/json", bytes.NewReader(body))
+	if err != nil {
+		return http.StatusBadGateway, gin.H{"error": "could not reach scanner: " + err.Error()}
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusAccepted {
+		msg, _ := io.ReadAll(resp.Body)
+		return http.StatusBadGateway, gin.H{"error": "scanner rejected re-transcode: " + string(bytes.TrimSpace(msg))}
+	}
+	return 0, nil
+}
+
+// ReTranscodeMovie re-runs the transcoder for one movie, overwriting the
+// existing output. Uses the movie's recorded source_path as the input.
+//
+// @Summary      Re-transcode movie
+// @Tags         admin
+// @Produce      json
+// @Param        id  path  string  true  "Movie ID"
+// @Success      202  {object}  map[string]string
+// @Failure      409  {object}  map[string]string
+// @Failure      502  {object}  map[string]string
+// @Failure      503  {object}  map[string]string
+// @Security     BearerAuth
+// @Router       /movies/{id}/re-transcode [post]
+func (h *AdminHandler) ReTranscodeMovie(c *gin.Context) {
+	if h.scanURL == "" {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "RIVER_SCAN_URL is not configured"})
+		return
+	}
+	id := c.Param("id")
+	movie, err := h.movieSvc.GetByID(id)
+	if err != nil {
+		c.JSON(serviceStatus(err), gin.H{"error": "movie not found"})
+		return
+	}
+	if movie.SourcePath == "" {
+		c.JSON(http.StatusConflict, gin.H{"error": "no source file recorded for this movie; re-scan the library first"})
+		return
+	}
+	if status, body := h.postRetranscode(map[string]any{
+		"library_id":   movie.LibraryID.String(),
+		"library_type": "movie",
+		"media_id":     id,
+		"file":         movie.SourcePath,
+	}); status != 0 {
+		c.JSON(status, body)
+		return
+	}
+	c.JSON(http.StatusAccepted, gin.H{"message": "re-transcode queued"})
+}
+
+// ReTranscodeEpisode re-runs the transcoder for one episode, overwriting the
+// existing output. The transcoder derives the season number from the season
+// name, so it's resolved from the season record here.
+//
+// @Summary      Re-transcode episode
+// @Tags         admin
+// @Produce      json
+// @Param        id         path  string  true  "TV show ID"
+// @Param        seasonId   path  string  true  "Season ID"
+// @Param        episodeId  path  string  true  "Episode ID"
+// @Success      202  {object}  map[string]string
+// @Failure      409  {object}  map[string]string
+// @Failure      502  {object}  map[string]string
+// @Failure      503  {object}  map[string]string
+// @Security     BearerAuth
+// @Router       /tvshows/{id}/seasons/{seasonId}/episodes/{episodeId}/re-transcode [post]
+func (h *AdminHandler) ReTranscodeEpisode(c *gin.Context) {
+	if h.scanURL == "" {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "RIVER_SCAN_URL is not configured"})
+		return
+	}
+	showID := c.Param("id")
+	seasonID := c.Param("seasonId")
+	episodeID := c.Param("episodeId")
+
+	episode, err := h.tvShowSvc.GetEpisode(episodeID)
+	if err != nil {
+		c.JSON(serviceStatus(err), gin.H{"error": "episode not found"})
+		return
+	}
+	if episode.SourcePath == "" {
+		c.JSON(http.StatusConflict, gin.H{"error": "no source file recorded for this episode; re-scan the library first"})
+		return
+	}
+	show, err := h.tvShowSvc.GetShow(showID)
+	if err != nil {
+		c.JSON(serviceStatus(err), gin.H{"error": "show not found"})
+		return
+	}
+	seasons, err := h.tvShowSvc.ListSeasons(showID)
+	if err != nil {
+		c.JSON(serviceStatus(err), gin.H{"error": err.Error()})
+		return
+	}
+	seasonName := ""
+	for _, s := range seasons {
+		if s.ID.String() == seasonID {
+			seasonName = fmt.Sprintf("Season %d", s.Number)
+			break
+		}
+	}
+	if seasonName == "" {
+		c.JSON(http.StatusNotFound, gin.H{"error": "season not found"})
+		return
+	}
+	if status, body := h.postRetranscode(map[string]any{
+		"library_id":   show.LibraryID.String(),
+		"library_type": "tvshow",
+		"media_id":     showID,
+		"season_id":    seasonID,
+		"season_name":  seasonName,
+		"file":         episode.SourcePath,
+	}); status != 0 {
+		c.JSON(status, body)
+		return
+	}
+	c.JSON(http.StatusAccepted, gin.H{"message": "re-transcode queued"})
 }

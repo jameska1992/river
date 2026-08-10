@@ -372,6 +372,17 @@ export class RiverClient {
     await this.request('POST', `/artists/${id}/refresh-metadata`)
   }
 
+  // reTranscodeMovie / reTranscodeEpisode re-run the transcoder for a single
+  // item, overwriting the existing output. Admin-only; returns once the job is
+  // queued (202), the actual transcode runs in the background.
+  async reTranscodeMovie(id: string): Promise<void> {
+    await this.request('POST', `/movies/${id}/re-transcode`)
+  }
+
+  async reTranscodeEpisode(showId: string, seasonId: string, episodeId: string): Promise<void> {
+    await this.request('POST', `/tvshows/${showId}/seasons/${seasonId}/episodes/${episodeId}/re-transcode`)
+  }
+
   uploadMedia(data: FormData, onProgress?: (pct: number) => void): Promise<UploadResult> {
     return new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest()

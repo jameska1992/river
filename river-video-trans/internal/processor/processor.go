@@ -129,7 +129,7 @@ func (p *Processor) processMovie(event consumer.MediaDiscoveredEvent) error {
 		title, year = parseDirName(event.DirectoryName)
 	}
 
-	info, finalPath, err := p.processMovieFile(videoFile, title, year)
+	info, finalPath, err := p.processMovieFile(videoFile, title, year, event.ForceTranscode)
 	if err != nil {
 		return fmt.Errorf("process file %q: %w", videoFile, err)
 	}
@@ -265,11 +265,11 @@ func (p *Processor) processTVShow(event consumer.MediaDiscoveredEvent) error {
 		}
 		epNum := parseEpisodeNumber(file)
 		if epNum == 0 {
-			p.processSpecialFile(file, showID, seasonID, showName, seasonNum, specialBySource)
+			p.processSpecialFile(file, showID, seasonID, showName, seasonNum, specialBySource, event.ForceTranscode)
 			continue
 		}
 
-		info, finalPath, err := p.processEpisodeFile(file, showName, seasonNum, epNum)
+		info, finalPath, err := p.processEpisodeFile(file, showName, seasonNum, epNum, event.ForceTranscode)
 		if err != nil {
 			log.Printf("ERROR processing file %q: %v", file, err)
 			continue
@@ -319,6 +319,7 @@ func (p *Processor) processSpecialFile(
 	file, showID, seasonID, showName string,
 	seasonNum int,
 	specialBySource map[string]apiclient.Episode,
+	force bool,
 ) {
 	ep, found := specialBySource[file]
 	if !found {
@@ -326,7 +327,7 @@ func (p *Processor) processSpecialFile(
 		return
 	}
 	outPath := specialOutputPath(file, showName, seasonNum, ep.Number, p.outputDir)
-	info, finalPath, err := p.processEpisodeFileTo(file, outPath)
+	info, finalPath, err := p.processEpisodeFileTo(file, outPath, force)
 	if err != nil {
 		log.Printf("ERROR processing special %q: %v", file, err)
 		return
@@ -347,7 +348,7 @@ func (p *Processor) processSpecialFile(
 // the output to {outputDir}/{Title} ({Year})/{Title}.mp4. Returns the
 // probe info (for subtitle extraction) and the final path stored on the
 // movie record.
-func (p *Processor) processMovieFile(path, title string, year int) (*transcoder.FileInfo, string, error) {
+func (p *Processor) processMovieFile(path, title string, year int, force bool) (*transcoder.FileInfo, string, error) {
 	info, err := transcoder.Probe(path)
 	if err != nil {
 		return nil, "", fmt.Errorf("probe: %w", err)
@@ -357,10 +358,13 @@ func (p *Processor) processMovieFile(path, title string, year int) (*transcoder.
 
 	// Always check for an existing output first — even if the source happens to
 	// be a compatible format and would otherwise short-circuit before this check.
-	if _, err := os.Stat(outPath); err == nil {
-		log.Printf("INFO transcoded output already exists: %q", outPath)
-		p.api.Log("info", fmt.Sprintf("output already exists for movie %s", filepath.Base(outPath)))
-		return info, outPath, nil
+	// A forced re-transcode skips the short-circuit and overwrites the output.
+	if !force {
+		if _, err := os.Stat(outPath); err == nil {
+			log.Printf("INFO transcoded output already exists: %q", outPath)
+			p.api.Log("info", fmt.Sprintf("output already exists for movie %s", filepath.Base(outPath)))
+			return info, outPath, nil
+		}
 	}
 
 	if !transcoder.NeedsTranscode(path, info) {
@@ -396,24 +400,27 @@ func (p *Processor) processMovieFile(path, title string, year int) (*transcoder.
 // processEpisodeFile probes and transcodes a TV episode if necessary,
 // writing the output to {outputDir}/{ShowName}/Season N/S{ss:02}E{ee:02}.mp4.
 // Same probe/early-return semantics as processMovieFile.
-func (p *Processor) processEpisodeFile(path, showName string, seasonNum, episodeNum int) (*transcoder.FileInfo, string, error) {
+func (p *Processor) processEpisodeFile(path, showName string, seasonNum, episodeNum int, force bool) (*transcoder.FileInfo, string, error) {
 	outPath := episodeOutputPath(path, showName, seasonNum, episodeNum, p.outputDir)
-	return p.processEpisodeFileTo(path, outPath)
+	return p.processEpisodeFileTo(path, outPath, force)
 }
 
 // processEpisodeFileTo does the probe / no-transcode-needed / copy / transcode
 // dance against a caller-supplied output path. processEpisodeFile is a thin
 // wrapper that resolves the standard SxxExx path; specials use specialOutputPath.
-func (p *Processor) processEpisodeFileTo(path, outPath string) (*transcoder.FileInfo, string, error) {
+func (p *Processor) processEpisodeFileTo(path, outPath string, force bool) (*transcoder.FileInfo, string, error) {
 	info, err := transcoder.Probe(path)
 	if err != nil {
 		return nil, "", fmt.Errorf("probe: %w", err)
 	}
 
-	if _, err := os.Stat(outPath); err == nil {
-		log.Printf("INFO transcoded output already exists: %q", outPath)
-		p.api.Log("info", fmt.Sprintf("output already exists for episode %s", filepath.Base(outPath)))
-		return info, outPath, nil
+	// A forced re-transcode skips the exists short-circuit and overwrites.
+	if !force {
+		if _, err := os.Stat(outPath); err == nil {
+			log.Printf("INFO transcoded output already exists: %q", outPath)
+			p.api.Log("info", fmt.Sprintf("output already exists for episode %s", filepath.Base(outPath)))
+			return info, outPath, nil
+		}
 	}
 
 	if !transcoder.NeedsTranscode(path, info) {

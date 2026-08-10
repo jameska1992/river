@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 	"time"
 
@@ -16,6 +17,8 @@ import (
 	"river-scan/internal/publisher"
 	"river-scan/internal/scanner"
 	"river-scan/internal/state"
+
+	"github.com/google/uuid"
 )
 
 func main() {
@@ -143,6 +146,53 @@ func main() {
 				log.Printf("scan-dir error: %v", err)
 			}
 		}()
+		w.WriteHeader(http.StatusAccepted)
+	})
+	mux.HandleFunc("POST /retranscode", func(w http.ResponseWriter, r *http.Request) {
+		// Publish a single force-transcode event for one already-discovered
+		// movie or episode. river-api builds the payload from the media record
+		// (it holds the ids + source path) and proxies here because it has no
+		// RabbitMQ connection of its own. Unlike a scan, this bypasses the
+		// content-hash state entirely — the event is emitted verbatim with
+		// force_transcode set so the transcoder overwrites the existing output.
+		if pub == nil {
+			http.Error(w, "transcoding is disabled", http.StatusServiceUnavailable)
+			return
+		}
+		var req struct {
+			LibraryID   string `json:"library_id"`
+			LibraryType string `json:"library_type"` // "movie" | "tvshow"
+			MediaID     string `json:"media_id"`     // movie id, or show id for episodes
+			SeasonID    string `json:"season_id"`    // episodes only
+			SeasonName  string `json:"season_name"`  // "Season N" — episodes only
+			File        string `json:"file"`         // absolute source path to re-transcode
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil ||
+			req.LibraryID == "" || req.MediaID == "" || req.File == "" ||
+			(req.LibraryType != "movie" && req.LibraryType != "tvshow") {
+			http.Error(w, "invalid request", http.StatusBadRequest)
+			return
+		}
+		event := publisher.MediaDiscoveredEvent{
+			EventID:        uuid.New().String(),
+			LibraryID:      req.LibraryID,
+			LibraryType:    req.LibraryType,
+			DirectoryName:  filepath.Base(filepath.Dir(req.File)),
+			DirectoryPath:  filepath.Dir(req.File),
+			SeasonName:     req.SeasonName,
+			MediaID:        req.MediaID,
+			SeasonID:       req.SeasonID,
+			Files:          []string{req.File},
+			DiscoveredAt:   time.Now().UTC(),
+			ForceTranscode: true,
+		}
+		if err := pub.Publish(context.Background(), event); err != nil {
+			log.Printf("retranscode publish error: %v", err)
+			api.Log("error", "retranscode: "+err.Error())
+			http.Error(w, "publish failed", http.StatusBadGateway)
+			return
+		}
+		log.Printf("retranscode queued: type=%s media=%s file=%q", req.LibraryType, req.MediaID, req.File)
 		w.WriteHeader(http.StatusAccepted)
 	})
 	srv := &http.Server{Addr: ":" + cfg.HTTPPort, Handler: mux}

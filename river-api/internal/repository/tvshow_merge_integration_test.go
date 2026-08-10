@@ -125,3 +125,51 @@ func TestMerge_FindShowIDByPath_NotFound(t *testing.T) {
 	_, err := repo.FindShowIDByPath(uuid.New().String(), "/nope")
 	assert.Error(t, err)
 }
+
+// FindSurvivorID resolves a merged-away show id to its survivor via the alias
+// recorded by Merge — the redirect that keeps a late episode write (a transcode
+// finishing after a merge) attaching to the surviving show.
+func TestMerge_FindSurvivorID(t *testing.T) {
+	db := newMergeTestDB(t)
+	repo := NewTVShowMergeRepository(db)
+
+	lib := uuid.New()
+	survivor := models.TVShow{LibraryID: lib, Title: "MyShow", FolderPath: "/media/shows/MyShow"}
+	merged := models.TVShow{LibraryID: lib, Title: "MyShow", FolderPath: "/truenas/tv/MyShow"}
+	require.NoError(t, db.Create(&survivor).Error)
+	require.NoError(t, db.Create(&merged).Error)
+
+	alias := &models.TVShowPath{
+		TVShowID: survivor.ID, FolderPath: merged.FolderPath, LibraryID: lib, MergedFromShowID: merged.ID.String(),
+	}
+	require.NoError(t, repo.Merge(survivor.ID.String(), merged.ID.String(), alias))
+
+	gotID, err := repo.FindSurvivorID(merged.ID.String())
+	require.NoError(t, err)
+	assert.Equal(t, survivor.ID.String(), gotID)
+
+	// A show that was never merged has no survivor.
+	_, err = repo.FindSurvivorID(uuid.New().String())
+	assert.Error(t, err)
+}
+
+// FindByIDIncludingDeleted still returns a season after it's soft-deleted,
+// unlike FindByID — used to recover a merged-away season's number.
+func TestSeason_FindByIDIncludingDeleted(t *testing.T) {
+	db := newMergeTestDB(t)
+	repo := NewSeasonRepository(db)
+
+	season := models.Season{TVShowID: uuid.New(), Number: 3}
+	require.NoError(t, db.Create(&season).Error)
+	require.NoError(t, db.Delete(&models.Season{}, "id = ?", season.ID).Error)
+
+	_, err := repo.FindByID(season.ID.String())
+	assert.Error(t, err, "soft-deleted season is invisible to FindByID")
+
+	got, err := repo.FindByIDIncludingDeleted(season.ID.String())
+	require.NoError(t, err)
+	assert.Equal(t, 3, got.Number)
+
+	_, err = repo.FindByIDIncludingDeleted(uuid.New().String())
+	assert.Error(t, err)
+}

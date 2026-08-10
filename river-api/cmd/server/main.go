@@ -78,7 +78,7 @@ func main() {
 	authSvc := services.NewAuthService(userRepo, refreshTokenRepo, cfg.JWTSecret, cfg.JWTAccessExpiry, cfg.JWTRefreshExpiry, cfg.JWTStreamExpiry)
 	librarySvc := services.NewLibraryService(libraryRepo)
 	movieSvc := services.NewMovieService(movieRepo, mediaCleanupRepo)
-	tvShowSvc := services.NewTVShowService(tvShowRepo, seasonRepo, episodeRepo, mediaCleanupRepo)
+	tvShowSvc := services.NewTVShowService(tvShowRepo, seasonRepo, episodeRepo, mediaCleanupRepo, tvShowMergeRepo)
 	showMergeSvc := services.NewShowMergeService(tvShowRepo, seasonRepo, episodeRepo, tvShowMergeRepo)
 	musicSvc := services.NewMusicService(artistRepo, albumRepo, trackRepo)
 	audiobookSvc := services.NewAudiobookService(audiobookRepo, chapterRepo, mediaCleanupRepo)

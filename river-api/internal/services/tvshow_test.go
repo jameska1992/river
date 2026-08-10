@@ -14,7 +14,7 @@ import (
 // newTVShowService wires a TVShowService; seasons is nil since the methods
 // under test here don't touch the season repository.
 func newTVShowService(shows *memShowRepo, episodes *memEpisodeRepo, cleanup *memCleanupRepo) *TVShowService {
-	return NewTVShowService(shows, nil, episodes, cleanup)
+	return NewTVShowService(shows, nil, episodes, cleanup, nil)
 }
 
 func TestTVShowService_CreateShow_DefaultsGenres(t *testing.T) {

@@ -10,12 +10,14 @@ import "github.com/google/uuid"
 //
 // FolderPath is unique across all shows — a directory root belongs to exactly
 // one show. LibraryID is retained because merged roots can live in a different
-// library than the survivor. MergedFromShowID is audit-only: the id of the show
-// that was folded in when this alias was recorded.
+// library than the survivor. MergedFromShowID is the id of the show that was
+// folded in when this alias was recorded; it's indexed so a write still
+// carrying a merged-away show id can redirect onto the survivor (see
+// TVShowMergeRepository.FindSurvivorID).
 type TVShowPath struct {
 	Base
 	TVShowID         uuid.UUID `gorm:"type:varchar(36);not null;index" json:"tv_show_id"`
 	FolderPath       string    `gorm:"not null;uniqueIndex" json:"folder_path"`
 	LibraryID        uuid.UUID `gorm:"type:varchar(36);not null;index" json:"library_id"`
-	MergedFromShowID string    `gorm:"type:varchar(36)" json:"merged_from_show_id"`
+	MergedFromShowID string    `gorm:"type:varchar(36);index" json:"merged_from_show_id"`
 }

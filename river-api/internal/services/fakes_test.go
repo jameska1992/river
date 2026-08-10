@@ -328,10 +328,29 @@ func (m *memEpisodeRepo) Delete(id string) error {
 	return apperrors.ErrNotFound
 }
 
-type memSeasonRepo struct{ seasons []*models.Season }
+type memSeasonRepo struct {
+	seasons []*models.Season
+	// deleted holds soft-deleted seasons: only FindByIDIncludingDeleted sees
+	// them, mirroring GORM's soft-delete scoping. Used to model a season that a
+	// merge folded into a same-numbered survivor season.
+	deleted []*models.Season
+}
 
 func (m *memSeasonRepo) FindByID(id string) (*models.Season, error) {
 	for _, s := range m.seasons {
+		if s.ID.String() == id {
+			return s, nil
+		}
+	}
+	return nil, apperrors.ErrNotFound
+}
+func (m *memSeasonRepo) FindByIDIncludingDeleted(id string) (*models.Season, error) {
+	for _, s := range m.seasons {
+		if s.ID.String() == id {
+			return s, nil
+		}
+	}
+	for _, s := range m.deleted {
 		if s.ID.String() == id {
 			return s, nil
 		}

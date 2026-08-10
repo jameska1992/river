@@ -105,6 +105,11 @@ type SeasonRepository interface {
 	FindByShowID(showID string) ([]models.Season, error)
 	FindByID(id string) (*models.Season, error)
 	FindByIDAndShowID(id, showID string) (*models.Season, error)
+	// FindByIDIncludingDeleted looks a season up by id even after it was
+	// soft-deleted. Used only to recover the number of a season that a merge
+	// folded into a same-numbered survivor season, so a late episode write can
+	// be redirected to that survivor season.
+	FindByIDIncludingDeleted(id string) (*models.Season, error)
 	Create(season *models.Season) error
 	Save(season *models.Season) error
 }
@@ -132,6 +137,17 @@ func (r *seasonRepository) FindByID(id string) (*models.Season, error) {
 func (r *seasonRepository) FindByIDAndShowID(id, showID string) (*models.Season, error) {
 	var season models.Season
 	if err := r.db.First(&season, "id = ? AND tv_show_id = ?", id, showID).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, apperrors.ErrNotFound
+		}
+		return nil, err
+	}
+	return &season, nil
+}
+
+func (r *seasonRepository) FindByIDIncludingDeleted(id string) (*models.Season, error) {
+	var season models.Season
+	if err := r.db.Unscoped().First(&season, "id = ?", id).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, apperrors.ErrNotFound
 		}

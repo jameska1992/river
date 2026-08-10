@@ -1,6 +1,7 @@
 package services
 
 import (
+	"errors"
 	"sort"
 	"time"
 
@@ -15,6 +16,11 @@ type TVShowService struct {
 	seasons  repository.SeasonRepository
 	episodes repository.EpisodeRepository
 	cleanup  repository.MediaCleanupRepository
+	// merge resolves a merged-away show id to its survivor so writes that
+	// still carry a pre-merge id (e.g. a transcode finishing after an admin
+	// merged the show) can be redirected. May be nil in unit tests that don't
+	// exercise the redirect path.
+	merge repository.TVShowMergeRepository
 }
 
 func NewTVShowService(
@@ -22,8 +28,9 @@ func NewTVShowService(
 	seasons repository.SeasonRepository,
 	episodes repository.EpisodeRepository,
 	cleanup repository.MediaCleanupRepository,
+	merge repository.TVShowMergeRepository,
 ) *TVShowService {
-	return &TVShowService{shows: shows, seasons: seasons, episodes: episodes, cleanup: cleanup}
+	return &TVShowService{shows: shows, seasons: seasons, episodes: episodes, cleanup: cleanup, merge: merge}
 }
 
 // --- TV Shows ---
@@ -137,7 +144,80 @@ func (s *TVShowService) CreateShow(input TVShowInput) (*models.TVShow, error) {
 }
 
 func (s *TVShowService) GetShow(id string) (*models.TVShow, error) {
-	return s.shows.FindByID(id)
+	show, err := s.shows.FindByID(id)
+	if errors.Is(err, ErrNotFound) {
+		// The id may belong to a show that was merged into another. Follow the
+		// redirect so a caller holding a pre-merge id — notably river-video-trans
+		// finishing a transcode that was queued before the merge — resolves the
+		// surviving show instead of failing outright.
+		if survivorID, ok := s.followMergedShow(id); ok {
+			return s.shows.FindByID(survivorID)
+		}
+	}
+	return show, err
+}
+
+// followMergedShow walks the merge-alias chain from a possibly-merged-away show
+// id to the id of the show that ultimately absorbed it. Returns ok=false when
+// showID was never merged (or no merge repo is wired). The walk is bounded and
+// cycle-guarded so a self- or loop-referencing alias can't spin.
+func (s *TVShowService) followMergedShow(showID string) (string, bool) {
+	if s.merge == nil {
+		return "", false
+	}
+	seen := map[string]bool{showID: true}
+	cur := showID
+	for i := 0; i < 16; i++ {
+		next, err := s.merge.FindSurvivorID(cur)
+		if err != nil || seen[next] {
+			break
+		}
+		seen[next] = true
+		cur = next
+	}
+	if cur == showID {
+		return "", false
+	}
+	return cur, true
+}
+
+// resolveSeasonForWrite loads the season identified by (showID, seasonID) for a
+// write, transparently following a TV-show merge when the pair no longer
+// resolves. This covers the race where an admin merges a show while one of its
+// episodes is still transcoding: river-video-trans finishes holding the
+// pre-merge show/season ids, and without this the late CreateEpisode would 404
+// and the transcoded file would be orphaned. Returns the live survivor season
+// so the episode still registers.
+func (s *TVShowService) resolveSeasonForWrite(showID, seasonID string) (*models.Season, error) {
+	season, err := s.seasons.FindByIDAndShowID(seasonID, showID)
+	if !errors.Is(err, ErrNotFound) {
+		return season, err
+	}
+	survivorID, ok := s.followMergedShow(showID)
+	if !ok {
+		return nil, err
+	}
+	// Case 1: the whole season was re-parented onto the survivor (id unchanged).
+	if moved, merr := s.seasons.FindByIDAndShowID(seasonID, survivorID); merr == nil {
+		return moved, nil
+	}
+	// Case 2: the merged season collided with a same-numbered survivor season
+	// and was soft-deleted, its episodes folded in. Match the survivor season
+	// by the (now soft-deleted) merged season's number.
+	merged, merr := s.seasons.FindByIDIncludingDeleted(seasonID)
+	if merr != nil {
+		return nil, err
+	}
+	survivorSeasons, merr := s.seasons.FindByShowID(survivorID)
+	if merr != nil {
+		return nil, merr
+	}
+	for i := range survivorSeasons {
+		if survivorSeasons[i].Number == merged.Number {
+			return &survivorSeasons[i], nil
+		}
+	}
+	return nil, err
 }
 
 func (s *TVShowService) UpdateShow(id string, input TVShowInput) (*models.TVShow, error) {
@@ -306,11 +386,14 @@ func (s *TVShowService) ListEpisodes(seasonID string) ([]models.Episode, error) 
 }
 
 func (s *TVShowService) CreateEpisode(showID, seasonID string, input EpisodeInput) (*models.Episode, error) {
-	season, err := s.seasons.FindByIDAndShowID(seasonID, showID)
+	season, err := s.resolveSeasonForWrite(showID, seasonID)
 	if err != nil {
 		return nil, err
 	}
-	if existing, err := s.episodes.FindBySeasonAndNumber(seasonID, input.Number, input.IsSpecial); err == nil {
+	// Dedupe against the resolved season's episodes — after a merge redirect
+	// this is the survivor season, so an episode river-meta-tv already created
+	// there gets its file_path backfilled instead of a duplicate being made.
+	if existing, err := s.episodes.FindBySeasonAndNumber(season.ID.String(), input.Number, input.IsSpecial); err == nil {
 		return s.updateEpisodeFields(existing, input)
 	}
 	episode := models.Episode{

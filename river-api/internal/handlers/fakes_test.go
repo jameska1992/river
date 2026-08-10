@@ -463,6 +463,9 @@ func (f *fakeSeasonRepo) FindByIDAndShowID(id, showID string) (*models.Season, e
 	}
 	return nil, apperrors.ErrNotFound
 }
+func (f *fakeSeasonRepo) FindByIDIncludingDeleted(id string) (*models.Season, error) {
+	return f.FindByID(id)
+}
 func (f *fakeSeasonRepo) Create(s *models.Season) error {
 	if s.ID == uuid.Nil {
 		s.ID = uuid.New()

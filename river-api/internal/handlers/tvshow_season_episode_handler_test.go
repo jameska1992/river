@@ -15,7 +15,7 @@ import (
 
 func tvNestedRouter(shows *fakeShowRepo, seasons *fakeSeasonRepo, episodes *fakeEpisodeRepo) *gin.Engine {
 	gin.SetMode(gin.TestMode)
-	svc := services.NewTVShowService(shows, seasons, episodes, fakeCleanupRepo{})
+	svc := services.NewTVShowService(shows, seasons, episodes, fakeCleanupRepo{}, nil)
 	h := NewTVShowHandler(svc, "", "")
 	r := gin.New()
 	r.POST("/tvshows/:id/seasons", h.CreateSeason)

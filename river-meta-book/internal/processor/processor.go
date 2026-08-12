@@ -57,7 +57,18 @@ func (p *Processor) RefreshByID(id string) error {
 }
 
 func (p *Processor) enrich(book *apiclient.Audiobook) error {
-	meta, err := p.ol.FetchMetadata(book.Title)
+	// Sticky matching: once a book is pinned to an Open Library work, resolve by
+	// that key so a rescan can't drift to a different title-search result. Only
+	// fall back to a fresh title search when no key is stored yet.
+	var (
+		meta *openlib.Metadata
+		err  error
+	)
+	if book.OpenLibraryKey != "" {
+		meta, err = p.ol.FetchByWorkKey(book.OpenLibraryKey)
+	} else {
+		meta, err = p.ol.FetchMetadata(book.Title)
+	}
 	if err != nil {
 		if errors.Is(err, openlib.ErrNotFound) {
 			log.Printf("WARN openlib: no results for %q, skipping enrichment", book.Title)

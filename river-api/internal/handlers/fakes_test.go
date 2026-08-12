@@ -356,6 +356,15 @@ func (f *fakeChapterRepo) Create(c *models.AudiobookChapter) error {
 	f.chapters = append(f.chapters, c)
 	return nil
 }
+func (f *fakeChapterRepo) Delete(id string) error {
+	for i, c := range f.chapters {
+		if c.ID.String() == id {
+			f.chapters = append(f.chapters[:i], f.chapters[i+1:]...)
+			return nil
+		}
+	}
+	return apperrors.ErrNotFound
+}
 
 // fakeSubtitleRepo — in-memory SubtitleRepository.
 type fakeSubtitleRepo struct{ subs []*models.Subtitle }

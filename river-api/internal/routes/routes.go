@@ -261,6 +261,7 @@ func Register(r *gin.Engine, secret string,
 			audiobooks.PUT("/:id", middleware.AdminOnly(), audiobook.Update)
 			audiobooks.DELETE("/:id", middleware.AdminOnly(), audiobook.Delete)
 			audiobooks.POST("/:id/chapters", middleware.AdminOnly(), audiobook.CreateChapter)
+			audiobooks.DELETE("/:id/chapters/:chapterId", middleware.AdminOnly(), audiobook.DeleteChapter)
 		}
 
 		// Watchlist

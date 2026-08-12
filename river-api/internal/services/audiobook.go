@@ -167,3 +167,13 @@ func (s *AudiobookService) CreateChapter(audiobookID string, input ChapterInput)
 func (s *AudiobookService) GetChapter(id string) (*models.AudiobookChapter, error) {
 	return s.chapters.FindByID(id)
 }
+
+// DeleteChapter removes a single chapter row. The caller (handler) owns any
+// on-disk file removal + scanner-state cleanup — this layer only touches the
+// DB, mirroring TVShowService.DeleteEpisode.
+func (s *AudiobookService) DeleteChapter(id string) error {
+	if err := s.cleanup.PurgeChapter(id); err != nil {
+		return err
+	}
+	return s.chapters.Delete(id)
+}

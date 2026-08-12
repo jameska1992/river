@@ -597,6 +597,15 @@ func (m *memChapterRepo) Create(c *models.AudiobookChapter) error {
 	m.chapters = append(m.chapters, c)
 	return nil
 }
+func (m *memChapterRepo) Delete(id string) error {
+	for i, c := range m.chapters {
+		if c.ID.String() == id {
+			m.chapters = append(m.chapters[:i], m.chapters[i+1:]...)
+			return nil
+		}
+	}
+	return apperrors.ErrNotFound
+}
 
 type memArtistRepo struct{ artists []*models.Artist }
 

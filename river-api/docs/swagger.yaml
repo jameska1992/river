@@ -2639,6 +2639,10 @@ paths:
         name: id
         required: true
         type: string
+      - description: Also delete chapter files from disk
+        in: query
+        name: delete_files
+        type: boolean
       responses:
         "204":
           description: No Content
@@ -2782,6 +2786,43 @@ paths:
       security:
       - BearerAuth: []
       summary: Create chapter
+      tags:
+      - audiobooks
+  /audiobooks/{id}/chapters/{chapterId}:
+    delete:
+      parameters:
+      - description: Audiobook ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Chapter ID
+        in: path
+        name: chapterId
+        required: true
+        type: string
+      - description: Also delete the chapter file from disk
+        in: query
+        name: delete_files
+        type: boolean
+      responses:
+        "204":
+          description: No Content
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete chapter
       tags:
       - audiobooks
   /audiobooks/{id}/chapters/{chapterId}/stream:

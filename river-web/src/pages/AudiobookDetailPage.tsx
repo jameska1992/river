@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, useNavigate } from 'react-router-dom'
 import {
   RiArrowLeftLine, RiHeadphoneLine, RiPlayFill, RiTimeLine, RiDownloadLine,
-  RiBookmarkLine, RiBookmarkFill,
+  RiBookmarkLine, RiBookmarkFill, RiDeleteBin6Line,
 } from 'react-icons/ri'
 import { useAudiobooks } from '../context/AudiobooksContext'
 import { useAuth } from '../context/AuthContext'
@@ -13,6 +13,7 @@ import { api } from '../api'
 import { AdminMediaMenu } from '../components/AdminMediaMenu'
 import { MetadataModal } from '../components/MetadataModal'
 import { MediaDetailsModal } from '../components/MediaDetailsModal'
+import { DeleteMediaModal } from '../components/DeleteMediaModal'
 import { SimilarCarousel } from '../components/SimilarCarousel'
 import { useBackTo } from '../hooks/useBackTo'
 import styles from './AudiobookDetailPage.module.css'
@@ -24,6 +25,7 @@ export function AudiobookDetailPage() {
   const isAdmin = user?.role === 'admin'
   const { isInWatchlist, toggle } = useWatchlist()
 
+  const navigate = useNavigate()
   const [book, setBook] = useState<Audiobook | null>(null)
   const goBack = useBackTo(book ? `/library/${book.library_id}` : '/')
   const [chapters, setChapters] = useState<AudiobookChapter[]>([])
@@ -31,6 +33,8 @@ export function AudiobookDetailPage() {
   const [error, setError] = useState<string | null>(null)
   const [editOpen, setEditOpen] = useState(false)
   const [detailsOpen, setDetailsOpen] = useState(false)
+  const [deleteOpen, setDeleteOpen] = useState(false)
+  const [deletingChapter, setDeletingChapter] = useState<AudiobookChapter | null>(null)
 
   useEffect(() => {
     if (!id) return
@@ -99,6 +103,7 @@ export function AudiobookDetailPage() {
                 onRefresh={() => api.refreshAudiobookMetadata(id!)}
                 onEdit={() => setEditOpen(true)}
                 onShowDetails={() => setDetailsOpen(true)}
+                onDelete={() => setDeleteOpen(true)}
               />
             )}
           </div>
@@ -173,7 +178,13 @@ export function AudiobookDetailPage() {
           </h2>
           <div className={styles.chapterList}>
             {chapters.map(ch => (
-              <ChapterRow key={ch.id} audiobookId={id!} chapter={ch} />
+              <ChapterRow
+                key={ch.id}
+                audiobookId={id!}
+                chapter={ch}
+                isAdmin={isAdmin}
+                onDelete={() => setDeletingChapter(ch)}
+              />
             ))}
           </div>
         </div>
@@ -198,11 +209,36 @@ export function AudiobookDetailPage() {
           onClose={() => setDetailsOpen(false)}
         />
       )}
+
+      {deleteOpen && book && (
+        <DeleteMediaModal
+          mediaLabel="audiobook"
+          title={book.year > 0 ? `${book.title} (${book.year})` : book.title}
+          onConfirm={async deleteFiles => {
+            await api.deleteAudiobook(book.id, deleteFiles)
+            navigate(`/library/${book.library_id}`)
+          }}
+          onClose={() => setDeleteOpen(false)}
+        />
+      )}
+
+      {deletingChapter && id && (
+        <DeleteMediaModal
+          mediaLabel="chapter"
+          title={deletingChapter.title || `Chapter ${deletingChapter.number}`}
+          onConfirm={async deleteFiles => {
+            await api.deleteChapter(id, deletingChapter.id, deleteFiles)
+            // Drop the row locally so the list updates without a refetch.
+            setChapters(prev => prev.filter(c => c.id !== deletingChapter.id))
+          }}
+          onClose={() => setDeletingChapter(null)}
+        />
+      )}
     </div>
   )
 }
 
-function ChapterRow({ audiobookId, chapter }: { audiobookId: string; chapter: AudiobookChapter }) {
+function ChapterRow({ audiobookId, chapter, isAdmin, onDelete }: { audiobookId: string; chapter: AudiobookChapter; isAdmin: boolean; onDelete: () => void }) {
   const { chapterStreamUrl } = useAudiobooks()
   const listenTo = `/audiobook/${audiobookId}/listen?chapter=${chapter.id}`
   const downloadUrl = chapterStreamUrl(audiobookId, chapter.id)
@@ -244,6 +280,16 @@ function ChapterRow({ audiobookId, chapter }: { audiobookId: string; chapter: Au
           >
             <RiDownloadLine size={16} />
           </a>
+        )}
+        {isAdmin && (
+          <button
+            className={`btn btn-icon ${styles.chDownload}`}
+            onClick={onDelete}
+            aria-label="Delete chapter"
+            title="Delete chapter"
+          >
+            <RiDeleteBin6Line size={16} />
+          </button>
         )}
       </div>
     </div>

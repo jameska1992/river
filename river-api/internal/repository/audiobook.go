@@ -70,6 +70,7 @@ type ChapterRepository interface {
 	FindByAudiobookID(audiobookID string) ([]models.AudiobookChapter, error)
 	FindByID(id string) (*models.AudiobookChapter, error)
 	Create(chapter *models.AudiobookChapter) error
+	Delete(id string) error
 }
 
 type chapterRepository struct{ db *gorm.DB }
@@ -94,4 +95,8 @@ func (r *chapterRepository) FindByID(id string) (*models.AudiobookChapter, error
 
 func (r *chapterRepository) Create(chapter *models.AudiobookChapter) error {
 	return r.db.Create(chapter).Error
+}
+
+func (r *chapterRepository) Delete(id string) error {
+	return r.db.Delete(&models.AudiobookChapter{}, "id = ?", id).Error
 }

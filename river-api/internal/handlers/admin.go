@@ -8,6 +8,8 @@ import (
 	"log"
 	"net/http"
 	"path/filepath"
+	"regexp"
+	"strings"
 	"time"
 
 	"river-api/internal/repository"
@@ -26,9 +28,10 @@ type AdminHandler struct {
 	stats        repository.StatsRepository
 	movieSvc     *services.MovieService
 	tvShowSvc    *services.TVShowService
+	audiobookSvc *services.AudiobookService
 }
 
-func NewAdminHandler(scanURL, metaMovieURL, metaTVURL, metaBookURL, metaMusicURL string, stats repository.StatsRepository, movieSvc *services.MovieService, tvShowSvc *services.TVShowService) *AdminHandler {
+func NewAdminHandler(scanURL, metaMovieURL, metaTVURL, metaBookURL, metaMusicURL string, stats repository.StatsRepository, movieSvc *services.MovieService, tvShowSvc *services.TVShowService, audiobookSvc *services.AudiobookService) *AdminHandler {
 	return &AdminHandler{
 		scanURL:      scanURL,
 		metaMovieURL: metaMovieURL,
@@ -39,6 +42,7 @@ func NewAdminHandler(scanURL, metaMovieURL, metaTVURL, metaBookURL, metaMusicURL
 		stats:        stats,
 		movieSvc:     movieSvc,
 		tvShowSvc:    tvShowSvc,
+		audiobookSvc: audiobookSvc,
 	}
 }
 
@@ -571,6 +575,78 @@ func (h *AdminHandler) RefreshAudiobookMetadata(c *gin.Context) {
 	}
 	defer resp.Body.Close()
 	c.JSON(http.StatusAccepted, gin.H{"message": "metadata refresh triggered"})
+}
+
+// workKeyPattern matches an Open Library work OLID (e.g. "OL45804W").
+var workKeyPattern = regexp.MustCompile(`^OL[0-9]+W$`)
+
+// normalizeWorkKey accepts a work key as a full URL, a "/works/OL…W" path, or a
+// bare "OL…W", and returns the canonical "/works/OL…W" form. ok is false when
+// the input isn't a valid work key.
+func normalizeWorkKey(s string) (string, bool) {
+	s = strings.TrimSpace(s)
+	s = strings.TrimPrefix(s, "https://openlibrary.org")
+	s = strings.TrimPrefix(s, "http://openlibrary.org")
+	s = strings.TrimSuffix(s, "/")
+	s = strings.TrimPrefix(s, "/works/")
+	if !workKeyPattern.MatchString(s) {
+		return "", false
+	}
+	return "/works/" + s, true
+}
+
+// IdentifyAudiobook pins an audiobook to a specific Open Library work and
+// re-runs enrichment. The work key becomes the authoritative identifier, so
+// subsequent refresh/rescan resolve by it rather than re-searching by title
+// (see river-meta-book's sticky-by-key behaviour). Mirrors IdentifyMovie.
+//
+// @Summary      Identify audiobook by Open Library work key
+// @Tags         admin
+// @Accept       json
+// @Produce      json
+// @Param        id    path      string  true  "Audiobook ID"
+// @Param        body  body      object  true  "{open_library_key}"
+// @Success      202   {object}  map[string]string
+// @Failure      400   {object}  map[string]string
+// @Failure      404   {object}  map[string]string
+// @Failure      502   {object}  map[string]string
+// @Failure      503   {object}  map[string]string
+// @Security     BearerAuth
+// @Router       /audiobooks/{id}/identify [post]
+func (h *AdminHandler) IdentifyAudiobook(c *gin.Context) {
+	if h.metaBookURL == "" {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "RIVER_META_BOOK_URL is not configured"})
+		return
+	}
+	id := c.Param("id")
+
+	var req struct {
+		OpenLibraryKey string `json:"open_library_key"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	key, ok := normalizeWorkKey(req.OpenLibraryKey)
+	if !ok {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid Open Library work key; expected e.g. OL45804W or /works/OL45804W"})
+		return
+	}
+
+	// Persist the key first so it survives even if the metadata service is
+	// briefly unreachable; the next scheduled refresh will still resolve by it.
+	if _, err := h.audiobookSvc.SetOpenLibraryKey(id, key); err != nil {
+		c.JSON(serviceStatus(err), gin.H{"error": "audiobook not found"})
+		return
+	}
+
+	resp, err := h.http.Post(h.metaBookURL+"/refresh/"+id, "application/json", nil)
+	if err != nil {
+		c.JSON(http.StatusBadGateway, gin.H{"error": "could not reach metadata service: " + err.Error()})
+		return
+	}
+	defer resp.Body.Close()
+	c.JSON(http.StatusAccepted, gin.H{"message": "audiobook identified, metadata refresh triggered"})
 }
 
 // RefreshArtistMetadata asks river-meta-music to re-fetch metadata for an artist.

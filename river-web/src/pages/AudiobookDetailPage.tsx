@@ -13,6 +13,7 @@ import { api } from '../api'
 import { AdminMediaMenu } from '../components/AdminMediaMenu'
 import { MetadataModal } from '../components/MetadataModal'
 import { MediaDetailsModal } from '../components/MediaDetailsModal'
+import { IdentifyAudiobookModal } from '../components/IdentifyAudiobookModal'
 import { DeleteMediaModal } from '../components/DeleteMediaModal'
 import { SimilarCarousel } from '../components/SimilarCarousel'
 import { useBackTo } from '../hooks/useBackTo'
@@ -32,6 +33,7 @@ export function AudiobookDetailPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [editOpen, setEditOpen] = useState(false)
+  const [identifyOpen, setIdentifyOpen] = useState(false)
   const [detailsOpen, setDetailsOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [deletingChapter, setDeletingChapter] = useState<AudiobookChapter | null>(null)
@@ -102,8 +104,10 @@ export function AudiobookDetailPage() {
               <AdminMediaMenu
                 onRefresh={() => api.refreshAudiobookMetadata(id!)}
                 onEdit={() => setEditOpen(true)}
+                onIdentify={() => setIdentifyOpen(true)}
                 onShowDetails={() => setDetailsOpen(true)}
                 onDelete={() => setDeleteOpen(true)}
+                identifyLabel="Identify audiobook"
               />
             )}
           </div>
@@ -198,6 +202,13 @@ export function AudiobookDetailPage() {
           item={book}
           onSave={updated => setBook(updated)}
           onClose={() => setEditOpen(false)}
+        />
+      )}
+
+      {identifyOpen && book && (
+        <IdentifyAudiobookModal
+          book={book}
+          onClose={() => setIdentifyOpen(false)}
         />
       )}
 

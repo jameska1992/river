@@ -13,7 +13,7 @@ import (
 func TestAdminHandler_GetStats(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	stats := fakeStatsRepo{movies: 10, tvShows: 9, tracks: 0, audiobooks: 3}
-	h := NewAdminHandler("", "", "", "", "", stats, nil, nil)
+	h := NewAdminHandler("", "", "", "", "", stats, nil, nil, nil)
 	r := gin.New()
 	r.GET("/admin/stats", h.GetStats)
 

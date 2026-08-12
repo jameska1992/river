@@ -14,7 +14,16 @@ type Audiobook struct {
 	Genre     string             `json:"genre"`
 	CoverPath string             `json:"cover_path"`
 	Duration  int                `json:"duration"` // seconds
-	Chapters  []AudiobookChapter `gorm:"foreignKey:AudiobookID" json:"chapters,omitempty"`
+	// OpenLibraryKey is the resolved Open Library work key (e.g.
+	// "/works/OL45804W"). It's the stable anchor for re-enrichment — sticky
+	// once set (Update only overwrites it when non-empty) so a rescan can't
+	// drift to a different title-search result. Empty until first enrichment.
+	OpenLibraryKey string `gorm:"index" json:"open_library_key"`
+	// ISBNs is a JSON-encoded []string of the ISBNs Open Library reports for
+	// the work (edition-level, often empty for audiobooks). Same JSON-in-a-
+	// string convention as Genres/Paths. Also sticky in Update.
+	ISBNs    string             `json:"isbns"`
+	Chapters []AudiobookChapter `gorm:"foreignKey:AudiobookID" json:"chapters,omitempty"`
 }
 
 type AudiobookChapter struct {

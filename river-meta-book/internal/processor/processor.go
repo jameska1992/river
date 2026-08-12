@@ -1,6 +1,7 @@
 package processor
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -66,16 +67,31 @@ func (p *Processor) enrich(book *apiclient.Audiobook) error {
 		return fmt.Errorf("openlib fetch %q: %w", book.Title, err)
 	}
 
+	// ISBNs: JSON-encode when present; leave empty otherwise so river-api's
+	// sticky Update preserves any previously-stored value rather than clearing it.
+	isbns := ""
+	if len(meta.ISBNs) > 0 {
+		if b, err := json.Marshal(meta.ISBNs); err == nil {
+			isbns = string(b)
+		}
+	}
+
 	if _, err := p.api.UpdateAudiobook(book.ID, apiclient.AudiobookRequest{
-		LibraryID:   book.LibraryID,
-		Title:       book.Title,
-		Author:      meta.Author,
-		Narrator:    book.Narrator,  // preserve: not available from Open Library
-		Description: meta.Description,
+		LibraryID: book.LibraryID,
+		Title:     book.Title,
+		// Coalesce the enriched fields against what's already on the record:
+		// only overwrite when Open Library returned a non-empty value, so a
+		// sparse result (or a later fetch-by-key) can't blank an admin's edit.
+		Author:      coalesceStr(meta.Author, book.Author),
+		Narrator:    book.Narrator, // preserve: not available from Open Library
+		Description: coalesceStr(meta.Description, book.Description),
 		Year:        coalesce(meta.Year, book.Year),
-		Genre:       meta.Genre,
-		CoverPath:   meta.CoverURL,
+		Genre:       coalesceStr(meta.Genre, book.Genre),
+		CoverPath:   coalesceStr(meta.CoverURL, book.CoverPath),
 		Duration:    book.Duration, // preserve: computed by audio transcoder
+		// Sticky identifiers. Empty values are omitted / preserved server-side.
+		OpenLibraryKey: meta.WorkKey,
+		ISBNs:          isbns,
 	}); err != nil {
 		return fmt.Errorf("update audiobook %s: %w", book.ID, err)
 	}
@@ -110,6 +126,13 @@ func findAudiobook(books []apiclient.Audiobook, title string) *apiclient.Audiobo
 
 func coalesce(a, b int) int {
 	if a != 0 {
+		return a
+	}
+	return b
+}
+
+func coalesceStr(a, b string) string {
+	if a != "" {
 		return a
 	}
 	return b

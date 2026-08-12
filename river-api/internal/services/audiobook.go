@@ -46,6 +46,12 @@ type AudiobookInput struct {
 	Genre       string
 	CoverPath   string
 	Duration    int
+	// OpenLibraryKey / ISBNs are sticky external identifiers: Update only
+	// overwrites them when the incoming value is non-empty, so a generic edit
+	// (which doesn't send them) can't erase what enrichment resolved. Mirrors
+	// the TMDBID stickiness on movies/TV shows.
+	OpenLibraryKey string
+	ISBNs          string
 }
 
 func (s *AudiobookService) List(f AudiobookFilter) ([]models.Audiobook, error) {
@@ -102,6 +108,7 @@ func (s *AudiobookService) Create(input AudiobookInput) (*models.Audiobook, erro
 		LibraryID: input.LibraryID, Title: input.Title, Author: input.Author,
 		Narrator: input.Narrator, Description: input.Description, Year: input.Year,
 		Genre: input.Genre, CoverPath: input.CoverPath, Duration: input.Duration,
+		OpenLibraryKey: input.OpenLibraryKey, ISBNs: input.ISBNs,
 	}
 	return &book, s.books.Create(&book)
 }
@@ -123,6 +130,15 @@ func (s *AudiobookService) Update(id string, input AudiobookInput) (*models.Audi
 	book.Genre = input.Genre
 	book.CoverPath = input.CoverPath
 	book.Duration = input.Duration
+	// Sticky external identifiers — only overwrite when the caller actually
+	// supplies one, so a generic metadata edit (which omits them) can't erase
+	// what enrichment resolved. Same rule as TMDBID on movies/TV.
+	if input.OpenLibraryKey != "" {
+		book.OpenLibraryKey = input.OpenLibraryKey
+	}
+	if input.ISBNs != "" {
+		book.ISBNs = input.ISBNs
+	}
 	return book, s.books.Save(book)
 }
 

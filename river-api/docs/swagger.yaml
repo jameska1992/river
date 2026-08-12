@@ -177,9 +177,18 @@ definitions:
         type: integer
       genre:
         type: string
+      isbns:
+        type: string
       library_id:
         type: string
       narrator:
+        type: string
+      open_library_key:
+        description: |-
+          Optional Open Library identifiers. Enrichment (river-meta-book) sends
+          them; the admin edit form omits them and the service keeps the stored
+          values (sticky), so leaving them off is non-destructive. ISBNs is a
+          JSON-encoded []string, same convention as movie/TV Genres.
         type: string
       title:
         type: string
@@ -762,9 +771,22 @@ definitions:
         type: string
       id:
         type: string
+      isbns:
+        description: |-
+          ISBNs is a JSON-encoded []string of the ISBNs Open Library reports for
+          the work (edition-level, often empty for audiobooks). Same JSON-in-a-
+          string convention as Genres/Paths. Also sticky in Update.
+        type: string
       library_id:
         type: string
       narrator:
+        type: string
+      open_library_key:
+        description: |-
+          OpenLibraryKey is the resolved Open Library work key (e.g.
+          "/works/OL45804W"). It's the stable anchor for re-enrichment — sticky
+          once set (Update only overwrites it when non-empty) so a rescan can't
+          drift to a different title-search result. Empty until first enrichment.
         type: string
       title:
         type: string

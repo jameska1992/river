@@ -114,16 +114,18 @@ func (c *Client) doWithRetry(method, path string, body, out interface{}, retry b
 }
 
 type Audiobook struct {
-	ID          string `json:"id"`
-	LibraryID   string `json:"library_id"`
-	Title       string `json:"title"`
-	Author      string `json:"author"`
-	Narrator    string `json:"narrator"`
-	Description string `json:"description"`
-	Year        int    `json:"year"`
-	Genre       string `json:"genre"`
-	CoverPath   string `json:"cover_path"`
-	Duration    int    `json:"duration"`
+	ID             string `json:"id"`
+	LibraryID      string `json:"library_id"`
+	Title          string `json:"title"`
+	Author         string `json:"author"`
+	Narrator       string `json:"narrator"`
+	Description    string `json:"description"`
+	Year           int    `json:"year"`
+	Genre          string `json:"genre"`
+	CoverPath      string `json:"cover_path"`
+	Duration       int    `json:"duration"`
+	OpenLibraryKey string `json:"open_library_key"`
+	ISBNs          string `json:"isbns"`
 }
 
 type AudiobookRequest struct {
@@ -136,6 +138,11 @@ type AudiobookRequest struct {
 	Genre       string `json:"genre"`
 	CoverPath   string `json:"cover_path"`
 	Duration    int    `json:"duration"`
+	// OpenLibraryKey / ISBNs are the sticky identifiers stored on the record.
+	// ISBNs is a JSON-encoded []string. river-api only overwrites them when
+	// non-empty, so sending an empty ISBNs never clears an existing value.
+	OpenLibraryKey string `json:"open_library_key,omitempty"`
+	ISBNs          string `json:"isbns,omitempty"`
 }
 
 func (c *Client) GetAudiobook(id string) (*Audiobook, error) {

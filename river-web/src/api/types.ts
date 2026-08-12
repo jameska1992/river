@@ -249,6 +249,10 @@ export interface Audiobook extends BaseModel {
   genre: string
   cover_path: string
   duration: number   // seconds
+  // Open Library identifiers resolved by river-meta-book. open_library_key is
+  // the sticky work-key anchor; isbns is a JSON-encoded string[] (often empty).
+  open_library_key: string
+  isbns: string
   chapters?: AudiobookChapter[]
 }
 

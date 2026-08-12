@@ -81,4 +81,31 @@ func TestAudiobookService_Update(t *testing.T) {
 		_, err := svc.Update(uuid.New().String(), AudiobookInput{Title: "X"})
 		assert.ErrorIs(t, err, ErrNotFound)
 	})
+
+	t.Run("sticky identifiers: empty input preserves stored key/isbns", func(t *testing.T) {
+		b := &models.Audiobook{
+			Base: models.Base{ID: uuid.New()}, Title: "T",
+			OpenLibraryKey: "/works/OL45804W", ISBNs: `["9780441172719"]`,
+		}
+		r := &memAudiobookRepo{books: []*models.Audiobook{b}}
+		s := NewAudiobookService(r, &memChapterRepo{}, &memCleanupRepo{})
+
+		// A generic edit (no identifiers) must not erase them.
+		updated, err := s.Update(b.ID.String(), AudiobookInput{Title: "T2", Genre: "Sci-Fi"})
+		require.NoError(t, err)
+		assert.Equal(t, "T2", updated.Title)
+		assert.Equal(t, "/works/OL45804W", updated.OpenLibraryKey, "key preserved")
+		assert.Equal(t, `["9780441172719"]`, updated.ISBNs, "isbns preserved")
+	})
+
+	t.Run("sticky identifiers: non-empty input overwrites", func(t *testing.T) {
+		b := &models.Audiobook{Base: models.Base{ID: uuid.New()}, Title: "T", OpenLibraryKey: "/works/OLold"}
+		r := &memAudiobookRepo{books: []*models.Audiobook{b}}
+		s := NewAudiobookService(r, &memChapterRepo{}, &memCleanupRepo{})
+
+		updated, err := s.Update(b.ID.String(), AudiobookInput{Title: "T", OpenLibraryKey: "/works/OLnew", ISBNs: `["x"]`})
+		require.NoError(t, err)
+		assert.Equal(t, "/works/OLnew", updated.OpenLibraryKey)
+		assert.Equal(t, `["x"]`, updated.ISBNs)
+	})
 }

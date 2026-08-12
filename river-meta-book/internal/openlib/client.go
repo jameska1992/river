@@ -22,6 +22,12 @@ type Metadata struct {
 	Year        int
 	Genre       string
 	CoverURL    string
+	// WorkKey is the Open Library work key (e.g. "/works/OL45804W") — the
+	// stable identifier stored on the record for sticky re-enrichment.
+	WorkKey string
+	// ISBNs are the ISBNs Open Library lists for the work (across editions);
+	// often empty for audiobooks.
+	ISBNs []string
 }
 
 func New() *Client {
@@ -31,7 +37,7 @@ func New() *Client {
 func (c *Client) FetchMetadata(title string) (*Metadata, error) {
 	params := url.Values{}
 	params.Set("title", title)
-	params.Set("fields", "key,title,author_name,first_publish_year,subject,cover_i")
+	params.Set("fields", "key,title,author_name,first_publish_year,subject,cover_i,isbn")
 	params.Set("limit", "1")
 
 	resp, err := c.http.Get("https://openlibrary.org/search.json?" + params.Encode())
@@ -51,6 +57,7 @@ func (c *Client) FetchMetadata(title string) (*Metadata, error) {
 			FirstPublishYear int      `json:"first_publish_year"`
 			Subject          []string `json:"subject"`
 			CoverI           int      `json:"cover_i"`
+			ISBN             []string `json:"isbn"`
 		} `json:"docs"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
@@ -62,8 +69,10 @@ func (c *Client) FetchMetadata(title string) (*Metadata, error) {
 
 	doc := result.Docs[0]
 	meta := &Metadata{
-		Title: doc.Title,
-		Year:  doc.FirstPublishYear,
+		Title:   doc.Title,
+		Year:    doc.FirstPublishYear,
+		WorkKey: doc.Key,
+		ISBNs:   doc.ISBN,
 	}
 	if len(doc.AuthorName) > 0 {
 		meta.Author = doc.AuthorName[0]

@@ -8049,10 +8049,17 @@ const docTemplate = `{
                 "genre": {
                     "type": "string"
                 },
+                "isbns": {
+                    "type": "string"
+                },
                 "library_id": {
                     "type": "string"
                 },
                 "narrator": {
+                    "type": "string"
+                },
+                "open_library_key": {
+                    "description": "Optional Open Library identifiers. Enrichment (river-meta-book) sends\nthem; the admin edit form omits them and the service keeps the stored\nvalues (sticky), so leaving them off is non-destructive. ISBNs is a\nJSON-encoded []string, same convention as movie/TV Genres.",
                     "type": "string"
                 },
                 "title": {
@@ -8907,10 +8914,18 @@ const docTemplate = `{
                 "id": {
                     "type": "string"
                 },
+                "isbns": {
+                    "description": "ISBNs is a JSON-encoded []string of the ISBNs Open Library reports for\nthe work (edition-level, often empty for audiobooks). Same JSON-in-a-\nstring convention as Genres/Paths. Also sticky in Update.",
+                    "type": "string"
+                },
                 "library_id": {
                     "type": "string"
                 },
                 "narrator": {
+                    "type": "string"
+                },
+                "open_library_key": {
+                    "description": "OpenLibraryKey is the resolved Open Library work key (e.g.\n\"/works/OL45804W\"). It's the stable anchor for re-enrichment — sticky\nonce set (Update only overwrites it when non-empty) so a rescan can't\ndrift to a different title-search result. Empty until first enrichment.",
                     "type": "string"
                 },
                 "title": {

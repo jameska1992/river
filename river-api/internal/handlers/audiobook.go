@@ -35,6 +35,12 @@ type audiobookRequest struct {
 	Genre       string `json:"genre"`
 	CoverPath   string `json:"cover_path"`
 	Duration    int    `json:"duration"`
+	// Optional Open Library identifiers. Enrichment (river-meta-book) sends
+	// them; the admin edit form omits them and the service keeps the stored
+	// values (sticky), so leaving them off is non-destructive. ISBNs is a
+	// JSON-encoded []string, same convention as movie/TV Genres.
+	OpenLibraryKey string `json:"open_library_key"`
+	ISBNs          string `json:"isbns"`
 }
 
 // List returns a paginated audiobook list.
@@ -96,6 +102,7 @@ func (h *AudiobookHandler) Create(c *gin.Context) {
 		LibraryID: libID, Title: req.Title, Author: req.Author, Narrator: req.Narrator,
 		Description: req.Description, Year: req.Year, Genre: req.Genre,
 		CoverPath: req.CoverPath, Duration: req.Duration,
+		OpenLibraryKey: req.OpenLibraryKey, ISBNs: req.ISBNs,
 	})
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create audiobook"})
@@ -172,6 +179,7 @@ func (h *AudiobookHandler) Update(c *gin.Context) {
 		LibraryID: libID, Title: req.Title, Author: req.Author, Narrator: req.Narrator,
 		Description: req.Description, Year: req.Year, Genre: req.Genre,
 		CoverPath: req.CoverPath, Duration: req.Duration,
+		OpenLibraryKey: req.OpenLibraryKey, ISBNs: req.ISBNs,
 	})
 	if err != nil {
 		c.JSON(serviceStatus(err), gin.H{"error": err.Error()})

@@ -2882,6 +2882,60 @@ paths:
       summary: Stream chapter
       tags:
       - audiobooks
+  /audiobooks/{id}/identify:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Audiobook ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: '{open_library_key}'
+        in: body
+        name: body
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "502":
+          description: Bad Gateway
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "503":
+          description: Service Unavailable
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Identify audiobook by Open Library work key
+      tags:
+      - admin
   /audiobooks/{id}/refresh-metadata:
     post:
       parameters:

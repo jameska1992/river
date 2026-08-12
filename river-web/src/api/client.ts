@@ -2,7 +2,7 @@ import type {
   User, LoginResponse, ActivityItem,
   Library, LibraryPath, CreateLibraryRequest, UpdateLibraryRequest,
   Movie, CreateMovieRequest, UpdateMovieRequest, IdentifyMovieRequest,
-  IdentifyTVShowRequest, UnidentifiedItem,
+  IdentifyTVShowRequest, IdentifyAudiobookRequest, UnidentifiedItem,
   TVShow, Season, Episode, CreateTVShowRequest, UpdateTVShowRequest, MergePreview,
   CreateSeasonRequest, UpdateSeasonRequest, CreateEpisodeRequest, UpdateEpisodeRequest,
   Artist, Album, Track, CreateArtistRequest, UpdateArtistRequest,
@@ -354,6 +354,12 @@ export class RiverClient {
 
   async identifyTVShow(id: string, data: IdentifyTVShowRequest): Promise<void> {
     await this.request('POST', `/tvshows/${id}/identify`, data)
+  }
+
+  // identifyAudiobook pins the book to an Open Library work key and triggers a
+  // metadata refresh; enrichment then resolves by that key (no title drift).
+  async identifyAudiobook(id: string, data: IdentifyAudiobookRequest): Promise<void> {
+    await this.request('POST', `/audiobooks/${id}/identify`, data)
   }
 
   async getUnidentifiedMedia(): Promise<UnidentifiedItem[]> {

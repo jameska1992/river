@@ -117,6 +117,18 @@ func (s *AudiobookService) GetByID(id string) (*models.Audiobook, error) {
 	return s.books.FindByID(id)
 }
 
+// SetOpenLibraryKey pins the audiobook to a specific Open Library work,
+// touching only that field. Used by the admin "identify" flow so an operator
+// can correct a wrong match; the subsequent enrichment resolves by this key.
+func (s *AudiobookService) SetOpenLibraryKey(id, key string) (*models.Audiobook, error) {
+	book, err := s.books.FindByID(id)
+	if err != nil {
+		return nil, err
+	}
+	book.OpenLibraryKey = key
+	return book, s.books.Save(book)
+}
+
 func (s *AudiobookService) Update(id string, input AudiobookInput) (*models.Audiobook, error) {
 	book, err := s.books.FindByID(id)
 	if err != nil {

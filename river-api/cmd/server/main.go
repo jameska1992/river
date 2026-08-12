@@ -128,7 +128,7 @@ func main() {
 		handlers.NewTVShowHandler(tvShowSvc, cfg.RiverScanURL, cfg.MediaBasePath),
 		handlers.NewMusicHandler(musicSvc),
 		handlers.NewAudiobookHandler(audiobookSvc, cfg.RiverScanURL, cfg.MediaBasePath),
-		handlers.NewAdminHandler(cfg.RiverScanURL, cfg.RiverMetaMovieURL, cfg.RiverMetaTVURL, cfg.RiverMetaBookURL, cfg.RiverMetaMusicURL, statsRepo, movieSvc, tvShowSvc),
+		handlers.NewAdminHandler(cfg.RiverScanURL, cfg.RiverMetaMovieURL, cfg.RiverMetaTVURL, cfg.RiverMetaBookURL, cfg.RiverMetaMusicURL, statsRepo, movieSvc, tvShowSvc, audiobookSvc),
 		handlers.NewAdminUsersHandler(authSvc, progressSvc),
 		handlers.NewUploadHandler(librarySvc, cfg.RiverScanURL),
 		handlers.NewProgressHandler(progressSvc),

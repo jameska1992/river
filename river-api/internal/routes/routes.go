@@ -99,6 +99,7 @@ func Register(r *gin.Engine, secret string,
 		protected.POST("/tvshows/:id/seasons/:seasonId/episodes/:episodeId/re-transcode", middleware.AdminOnly(), admin.ReTranscodeEpisode)
 		protected.GET("/admin/unidentified", middleware.AdminOnly(), admin.Unidentified)
 		protected.POST("/audiobooks/:id/refresh-metadata", middleware.AdminOnly(), admin.RefreshAudiobookMetadata)
+		protected.POST("/audiobooks/:id/identify", middleware.AdminOnly(), admin.IdentifyAudiobook)
 		protected.POST("/artists/:id/refresh-metadata", middleware.AdminOnly(), admin.RefreshArtistMetadata)
 
 		// Admin — user management

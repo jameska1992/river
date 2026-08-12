@@ -434,6 +434,12 @@ export interface IdentifyTVShowRequest {
   imdb_id?: string
 }
 
+export interface IdentifyAudiobookRequest {
+  // Open Library work key — accepts "OL…W" or "/works/OL…W"; the server
+  // normalises and validates it.
+  open_library_key: string
+}
+
 export interface UnidentifiedItem {
   id: string
   type: 'movie' | 'tvshow'

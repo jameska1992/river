@@ -47,7 +47,7 @@ func TestReTranscodeMovie_ProxiesForceEvent(t *testing.T) {
 		SourcePath: "/media/movies/Foo/Foo.mkv",
 	}}}
 	movieSvc := services.NewMovieService(movies, fakeCleanupRepo{})
-	h := NewAdminHandler(scan.srv.URL, "", "", "", "", nil, movieSvc, nil)
+	h := NewAdminHandler(scan.srv.URL, "", "", "", "", nil, movieSvc, nil, nil)
 
 	r := gin.New()
 	r.POST("/movies/:id/re-transcode", h.ReTranscodeMovie)
@@ -70,7 +70,7 @@ func TestReTranscodeMovie_NoSourceIsConflict(t *testing.T) {
 	movies := &fakeMovieRepo{movies: []*models.Movie{{
 		Base: models.Base{ID: movieID}, LibraryID: uuid.New(), Title: "Foo", SourcePath: "",
 	}}}
-	h := NewAdminHandler(scan.srv.URL, "", "", "", "", nil, services.NewMovieService(movies, fakeCleanupRepo{}), nil)
+	h := NewAdminHandler(scan.srv.URL, "", "", "", "", nil, services.NewMovieService(movies, fakeCleanupRepo{}), nil, nil)
 
 	r := gin.New()
 	r.POST("/movies/:id/re-transcode", h.ReTranscodeMovie)
@@ -84,7 +84,7 @@ func TestReTranscodeMovie_NoScanURLIsUnavailable(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	movieID := uuid.New()
 	movies := &fakeMovieRepo{movies: []*models.Movie{{Base: models.Base{ID: movieID}, SourcePath: "/x.mkv"}}}
-	h := NewAdminHandler("", "", "", "", "", nil, services.NewMovieService(movies, fakeCleanupRepo{}), nil)
+	h := NewAdminHandler("", "", "", "", "", nil, services.NewMovieService(movies, fakeCleanupRepo{}), nil, nil)
 
 	r := gin.New()
 	r.POST("/movies/:id/re-transcode", h.ReTranscodeMovie)
@@ -105,7 +105,7 @@ func TestReTranscodeEpisode_ProxiesForceEventWithSeasonName(t *testing.T) {
 		SourcePath: "/media/shows/Show/Season 2/S02E03.mkv",
 	}}}
 	tvSvc := services.NewTVShowService(shows, seasons, episodes, fakeCleanupRepo{}, nil)
-	h := NewAdminHandler(scan.srv.URL, "", "", "", "", nil, nil, tvSvc)
+	h := NewAdminHandler(scan.srv.URL, "", "", "", "", nil, nil, tvSvc, nil)
 
 	r := gin.New()
 	r.POST("/tvshows/:id/seasons/:seasonId/episodes/:episodeId/re-transcode", h.ReTranscodeEpisode)
@@ -134,7 +134,7 @@ func TestReTranscodeEpisode_NoSourceIsConflict(t *testing.T) {
 		Base: models.Base{ID: epID}, TVShowID: showID, SeasonID: seasonID, Number: 1, SourcePath: "",
 	}}}
 	tvSvc := services.NewTVShowService(shows, seasons, episodes, fakeCleanupRepo{}, nil)
-	h := NewAdminHandler(scan.srv.URL, "", "", "", "", nil, nil, tvSvc)
+	h := NewAdminHandler(scan.srv.URL, "", "", "", "", nil, nil, tvSvc, nil)
 
 	r := gin.New()
 	r.POST("/tvshows/:id/seasons/:seasonId/episodes/:episodeId/re-transcode", h.ReTranscodeEpisode)

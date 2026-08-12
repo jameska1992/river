@@ -372,6 +372,20 @@
   min-width: 0;
 }
 
+/* Watched state: tint the number, dim the title, and prefix a check so a
+   watched episode is scannable at a glance without opening the ⋯ menu. */
+.epNumWatched {
+  color: var(--color-secondary);
+}
+.epTitleWatched {
+  color: var(--color-on-surface-variant);
+}
+.epWatchedCheck {
+  color: var(--color-secondary);
+  vertical-align: -2px;
+  margin-right: 4px;
+}
+
 .epDesc {
   color: var(--color-on-surface-variant);
   margin: 0;

@@ -183,7 +183,8 @@ func (h *AudiobookHandler) Update(c *gin.Context) {
 // Delete removes the audiobook (cascades chapters) and asks
 // river-scan to forget the content-hash entries for any folder under
 // the book on disk so a subsequent scan rediscovers it instead of
-// silently skipping a folder whose hash still matches the cache.
+// silently skipping a folder whose hash still matches the cache. When
+// ?delete_files=true it also removes each chapter's file from disk.
 //
 // We derive the on-disk folder from chapter file paths since the
 // Audiobook model itself doesn't record a FolderPath. We send each
@@ -195,24 +196,42 @@ func (h *AudiobookHandler) Update(c *gin.Context) {
 //
 // @Summary      Delete audiobook
 // @Tags         audiobooks
-// @Param        id  path  string  true  "Audiobook ID"
+// @Param        id            path   string  true   "Audiobook ID"
+// @Param        delete_files  query  bool    false  "Also delete chapter files from disk"
 // @Success      204
 // @Failure      500  {object}  map[string]string
 // @Security     BearerAuth
 // @Router       /audiobooks/{id} [delete]
 func (h *AudiobookHandler) Delete(c *gin.Context) {
 	id := c.Param("id")
+	deleteFiles := parseBoolQuery(c.Query("delete_files"))
 
-	// Walk chapters before deleting so we still have file paths to work
+	// Walk chapters before deleting so we still have their paths to work
 	// from. If listing fails we proceed with the delete anyway — the
-	// scan-state forget is best-effort.
+	// scan-state forget is best-effort. Snapshot both the distinct parent
+	// dirs (for the scanner forget) and the individual files (for on-disk
+	// removal) up front, since the rows are gone after the delete.
 	bookDirs := map[string]struct{}{}
+	var files []string
 	if chapters, err := h.svc.ListChapters(id); err == nil {
 		for _, ch := range chapters {
 			if ch.FilePath == "" {
 				continue
 			}
 			bookDirs[filepath.Dir(ch.FilePath)] = struct{}{}
+			files = append(files, ch.FilePath)
+		}
+	}
+
+	// Remove chapter files before the DB row. removeUnderBase rejects
+	// anything outside MEDIA_BASE_PATH so an empty/malformed path can't
+	// take out the wrong file; a missing file is a silent no-op.
+	if deleteFiles {
+		for _, f := range files {
+			if err := removeUnderBase(f, h.mediaBase); err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to delete chapter file: " + err.Error()})
+				return
+			}
 		}
 	}
 
@@ -228,6 +247,51 @@ func (h *AudiobookHandler) Delete(c *gin.Context) {
 		prefixes = append(prefixes, d)
 	}
 	h.scan.Forget(paths, nil, prefixes)
+
+	c.JSON(http.StatusNoContent, nil)
+}
+
+// DeleteChapter removes a single chapter row, optionally deletes its file
+// from disk, and asks river-scan to forget the book directory's content
+// hash so the next scan re-publishes the book (re-creating the chapter when
+// the file is still on disk). Mirrors TVShowHandler.DeleteEpisode.
+//
+// @Summary      Delete chapter
+// @Tags         audiobooks
+// @Param        id            path   string  true   "Audiobook ID"
+// @Param        chapterId     path   string  true   "Chapter ID"
+// @Param        delete_files  query  bool    false  "Also delete the chapter file from disk"
+// @Success      204
+// @Failure      404  {object}  map[string]string
+// @Failure      500  {object}  map[string]string
+// @Security     BearerAuth
+// @Router       /audiobooks/{id}/chapters/{chapterId} [delete]
+func (h *AudiobookHandler) DeleteChapter(c *gin.Context) {
+	chapterID := c.Param("chapterId")
+	deleteFiles := parseBoolQuery(c.Query("delete_files"))
+
+	chapter, err := h.svc.GetChapter(chapterID)
+	if err != nil {
+		c.JSON(serviceStatus(err), gin.H{"error": "chapter not found"})
+		return
+	}
+	filePath := chapter.FilePath
+
+	if deleteFiles && filePath != "" {
+		if err := removeUnderBase(filePath, h.mediaBase); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to delete file_path: " + err.Error()})
+			return
+		}
+	}
+
+	if err := h.svc.DeleteChapter(chapterID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to delete chapter"})
+		return
+	}
+
+	if filePath != "" {
+		h.scan.Forget([]string{filepath.Dir(filePath)}, nil, nil)
+	}
 
 	c.JSON(http.StatusNoContent, nil)
 }

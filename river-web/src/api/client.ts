@@ -752,11 +752,24 @@ export class RiverClient {
     return this.request<Audiobook>('PUT', `/audiobooks/${id}`, data)
   }
 
-  async deleteAudiobook(id: string): Promise<void> {
-    return this.request('DELETE', `/audiobooks/${id}`)
+  // deleteAudiobook removes the book row (cascading chapters) plus the
+  // scanner state for the book's folder(s). Set deleteFiles=true to also
+  // remove each chapter file from disk.
+  async deleteAudiobook(id: string, deleteFiles = false): Promise<void> {
+    const qs = deleteFiles ? '?delete_files=true' : ''
+    return this.request('DELETE', `/audiobooks/${id}${qs}`)
   }
 
   // --- Chapters ---
+
+  // deleteChapter removes one chapter row. Set deleteFiles=true to also
+  // remove the chapter file on disk. The scanner forgets the book directory's
+  // hash so the next scan re-publishes it (recreating the row when the file is
+  // still present).
+  async deleteChapter(audiobookId: string, chapterId: string, deleteFiles = false): Promise<void> {
+    const qs = deleteFiles ? '?delete_files=true' : ''
+    return this.request('DELETE', `/audiobooks/${audiobookId}/chapters/${chapterId}${qs}`)
+  }
 
   async listChapters(audiobookId: string): Promise<AudiobookChapter[]> {
     return this.request<AudiobookChapter[]>('GET', `/audiobooks/${audiobookId}/chapters`)

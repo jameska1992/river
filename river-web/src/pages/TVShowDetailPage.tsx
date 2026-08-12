@@ -4,7 +4,7 @@ import {
   RiArrowLeftLine, RiTv2Line, RiStarLine, RiPlayFill,
   RiArrowDownSLine, RiTimeLine, RiUserLine,
   RiBookmarkLine, RiBookmarkFill, RiAlertFill, RiEditLine,
-  RiEyeLine, RiEyeOffLine,
+  RiEyeLine, RiEyeOffLine, RiCheckLine,
 } from 'react-icons/ri'
 import { useTVShows } from '../context/TVShowsContext'
 import { useAuth } from '../context/AuthContext'
@@ -57,6 +57,9 @@ export function TVShowDetailPage() {
   // state without flashing the wrong label.
   const [watchedState, setWatchedState] = useState<{ total: number; completed: number } | null>(null)
   const [watchedSaving, setWatchedSaving] = useState(false)
+  // Per-episode completion for the current user: the set of episode ids marked
+  // watched, driving the row indicator + the ⋯ menu's toggle label.
+  const [watchedEpisodes, setWatchedEpisodes] = useState<Set<string>>(new Set())
 
   const playNext = async () => {
     if (!id) return
@@ -74,9 +77,37 @@ export function TVShowDetailPage() {
     api.getShowWatchState(id)
       .then(s => setWatchedState({ total: s.total, completed: s.completed }))
       .catch(() => setWatchedState(null))
+    // One call gets every episode-progress row for the user; keep the ids of
+    // the completed ones so each row knows its watched state without N fetches.
+    api.getProgressAll('episode')
+      .then(rows => setWatchedEpisodes(new Set(rows.filter(r => r.completed).map(r => r.media_id))))
+      .catch(() => {})
   }, [id])
 
   const isWatched = !!watchedState && watchedState.total > 0 && watchedState.completed >= watchedState.total
+
+  // Toggle one episode's watched state. Optimistically updates the per-episode
+  // set and keeps the show-level completed count in sync (so the eye toggle
+  // flips when the last episode is (un)marked); rolls both back on failure.
+  async function toggleEpisodeWatched(episode: Episode, next: boolean) {
+    const prevSet = watchedEpisodes
+    const prevState = watchedState
+    setWatchedEpisodes(prev => {
+      const s = new Set(prev)
+      if (next) s.add(episode.id)
+      else s.delete(episode.id)
+      return s
+    })
+    setWatchedState(prev => prev
+      ? { total: prev.total, completed: Math.max(0, Math.min(prev.total, prev.completed + (next ? 1 : -1))) }
+      : prev)
+    try {
+      await api.setProgressCompleted('episode', episode.id, next)
+    } catch {
+      setWatchedEpisodes(prevSet)
+      setWatchedState(prevState)
+    }
+  }
 
   async function toggleShowWatched() {
     if (!id || watchedSaving || !watchedState) return
@@ -305,6 +336,8 @@ export function TVShowDetailPage() {
                 onEditSeason={() => setEditingSeason(season)}
                 onEditEpisode={ep => setEditingEpisode({ seasonId: season.id, episode: ep })}
                 onDeleteEpisode={ep => setDeletingEpisode({ seasonId: season.id, episode: ep })}
+                watchedEpisodes={watchedEpisodes}
+                onToggleWatched={toggleEpisodeWatched}
               />
             ))}
           </div>
@@ -467,6 +500,8 @@ interface SeasonRowProps {
   onEditSeason: () => void
   onEditEpisode: (ep: Episode) => void
   onDeleteEpisode: (ep: Episode) => void
+  watchedEpisodes: Set<string>
+  onToggleWatched: (ep: Episode, next: boolean) => void
 }
 
 // ── Start Party helper ────────────────────────────────────
@@ -493,7 +528,7 @@ async function reTranscodeEpisode(showId: string, seasonId: string, episodeId: s
   }
 }
 
-function SeasonRow({ showId, season, episodes, loading, expanded, onToggle, isAdmin, onEditSeason, onEditEpisode, onDeleteEpisode }: SeasonRowProps) {
+function SeasonRow({ showId, season, episodes, loading, expanded, onToggle, isAdmin, onEditSeason, onEditEpisode, onDeleteEpisode, watchedEpisodes, onToggleWatched }: SeasonRowProps) {
   const label = season.title && season.title !== `Season ${season.number}`
     ? season.title
     : `Season ${season.number}`
@@ -538,6 +573,8 @@ function SeasonRow({ showId, season, episodes, loading, expanded, onToggle, isAd
                 isAdmin={isAdmin}
                 onEdit={() => onEditEpisode(ep)}
                 onDelete={() => onDeleteEpisode(ep)}
+                watched={watchedEpisodes.has(ep.id)}
+                onToggleWatched={next => onToggleWatched(ep, next)}
               />
             ))}
             {!loading && episodes?.length === 0 && (
@@ -552,7 +589,7 @@ function SeasonRow({ showId, season, episodes, loading, expanded, onToggle, isAd
 
 // ── Episode row ──────────────────────────────────────────
 
-function EpisodeRow({ showId, seasonId, episode, isAdmin, onEdit, onDelete }: { showId: string; seasonId: string; episode: Episode; isAdmin: boolean; onEdit: () => void; onDelete: () => void }) {
+function EpisodeRow({ showId, seasonId, episode, isAdmin, onEdit, onDelete, watched, onToggleWatched }: { showId: string; seasonId: string; episode: Episode; isAdmin: boolean; onEdit: () => void; onDelete: () => void; watched: boolean; onToggleWatched: (next: boolean) => void }) {
   const navigate = useNavigate()
   const runtime = episode.runtime > 0
     ? `${Math.floor(episode.runtime / 60) > 0 ? `${Math.floor(episode.runtime / 60)}h ` : ''}${episode.runtime % 60}m`
@@ -566,12 +603,13 @@ function EpisodeRow({ showId, seasonId, episode, isAdmin, onEdit, onDelete }: { 
 
   return (
     <div className={styles.episode}>
-      <span className={`label-md ${styles.epNum}`}>
+      <span className={`label-md ${styles.epNum} ${watched ? styles.epNumWatched : ''}`}>
         {episode.is_special ? 'SPEC' : `E${String(episode.number).padStart(2, '0')}`}
       </span>
 
       <div className={styles.epInfo}>
-        <span className="label-md">
+        <span className={`label-md ${watched ? styles.epTitleWatched : ''}`}>
+          {watched && <RiCheckLine size={14} className={styles.epWatchedCheck} aria-label="Watched" />}
           {episode.title || (episode.is_special ? 'Special' : `Episode ${episode.number}`)}
         </span>
         {episode.description && (
@@ -606,6 +644,8 @@ function EpisodeRow({ showId, seasonId, episode, isAdmin, onEdit, onDelete }: { 
         </div>
         <EpisodeActionsMenu
           onWatchParty={() => startEpisodeParty(showId, seasonId, episode.id, navigate)}
+          watched={watched}
+          onToggleWatched={() => onToggleWatched(!watched)}
           downloadUrl={episode.file_path ? api.episodeDownloadUrl(showId, seasonId, episode.id) : undefined}
           originalPath={
             episode.file_path && episode.source_path && episode.file_path !== episode.source_path

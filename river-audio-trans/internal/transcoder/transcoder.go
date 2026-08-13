@@ -108,10 +108,20 @@ func OutputPath(inputPath, libraryType, libraryPath, outputDir string) string {
 	return filepath.Join(outputDir, libraryType, rel, name)
 }
 
-// Transcode converts inputPath to AAC in an M4A container at outputPath.
-func Transcode(inputPath, outputPath string) error {
+// DefaultMusicBitrate is the historical hardcoded AAC bitrate (kbps). Used
+// as the fallback when the admin-configured transcoding setting can't be
+// fetched, so behavior is unchanged out of the box.
+const DefaultMusicBitrate = 256
+
+// Transcode converts inputPath to AAC in an M4A container at outputPath at
+// the given bitrate (kbps). A non-positive bitrate falls back to the
+// historical default rather than emitting an invalid "-b:a 0k".
+func Transcode(inputPath, outputPath string, bitrateKbps int) error {
 	if err := os.MkdirAll(filepath.Dir(outputPath), 0o755); err != nil {
 		return fmt.Errorf("create output dir: %w", err)
+	}
+	if bitrateKbps <= 0 {
+		bitrateKbps = DefaultMusicBitrate
 	}
 
 	cmd := exec.Command(
@@ -119,7 +129,7 @@ func Transcode(inputPath, outputPath string) error {
 		"-i", inputPath,
 		"-vn",
 		"-c:a", "aac",
-		"-b:a", "256k",
+		"-b:a", fmt.Sprintf("%dk", bitrateKbps),
 		"-movflags", "+faststart",
 		"-y",
 		outputPath,

@@ -315,6 +315,16 @@ export class RiverClient {
     return this.request('PUT', '/admin/settings/scanning', { scan_interval: scanInterval })
   }
 
+  async getTranscodingSettings(): Promise<import('./types').TranscodingSettings> {
+    return this.request('GET', '/admin/settings/transcoding')
+  }
+
+  async updateTranscodingSettings(
+    body: import('./types').TranscodingSettings,
+  ): Promise<import('./types').TranscodingSettings> {
+    return this.request('PUT', '/admin/settings/transcoding', body)
+  }
+
   async getScannerState(): Promise<{
     directories: Record<string, { library_id: string; content_hash: string; last_scanned: string }>
     shows:       Record<string, string>

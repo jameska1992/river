@@ -711,3 +711,18 @@ export interface MetadataSettings {
 export interface ScanningSettings {
   scan_interval: string
 }
+
+// TranscodingSettings mirrors the resolved config from
+// GET/PUT /admin/settings/transcoding. All fields are structured knobs
+// (never raw ffmpeg flags); quality is a single 0–51 value mapped to both
+// NVENC -cq and libx264 -crf. audio_bitrate drives the video transcoder's
+// audio path (river-video-trans); music_bitrate drives river-audio-trans.
+export interface TranscodingSettings {
+  max_height: number // 0 = no cap; else 720 / 1080 / 2160
+  quality: number // 0–51
+  nvenc_preset: string // p1–p7
+  x264_preset: string // ultrafast–veryslow
+  force_cpu: boolean
+  audio_bitrate: number // kbps
+  music_bitrate: number // kbps
+}

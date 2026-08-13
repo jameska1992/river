@@ -54,6 +54,8 @@ func serviceStatus(err error) int {
 		return http.StatusConflict
 	case errors.Is(err, services.ErrUnauthorized):
 		return http.StatusUnauthorized
+	case errors.Is(err, services.ErrInvalidInput):
+		return http.StatusBadRequest
 	default:
 		return http.StatusInternalServerError
 	}

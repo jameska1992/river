@@ -595,6 +595,23 @@ definitions:
     - library_id
     - title
     type: object
+  handlers.transcodingRequest:
+    properties:
+      audio_bitrate:
+        type: integer
+      force_cpu:
+        type: boolean
+      max_height:
+        type: integer
+      music_bitrate:
+        type: integer
+      nvenc_preset:
+        type: string
+      quality:
+        type: integer
+      x264_preset:
+        type: string
+    type: object
   handlers.tvShowRequest:
     properties:
       backdrop_path:
@@ -1269,6 +1286,30 @@ definitions:
       year:
         type: integer
     type: object
+  services.TranscodingSettings:
+    properties:
+      audio_bitrate:
+        description: kbps, river-video-trans audio path
+        type: integer
+      force_cpu:
+        description: skip the NVENC path even with a GPU
+        type: boolean
+      max_height:
+        description: 0 = no cap; else 720/1080/2160
+        type: integer
+      music_bitrate:
+        description: kbps, river-audio-trans
+        type: integer
+      nvenc_preset:
+        description: p1..p7
+        type: string
+      quality:
+        description: 0..51, mapped to NVENC -cq and x264 -crf
+        type: integer
+      x264_preset:
+        description: ultrafast..veryslow
+        type: string
+    type: object
 host: localhost:8080
 info:
   contact: {}
@@ -1672,6 +1713,48 @@ paths:
       security:
       - BearerAuth: []
       summary: Get the raw TMDB API key (service use)
+      tags:
+      - settings
+  /admin/settings/transcoding:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/services.TranscodingSettings'
+      security:
+      - BearerAuth: []
+      summary: Get transcoding settings
+      tags:
+      - settings
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Transcoding settings
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.transcodingRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/services.TranscodingSettings'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update transcoding settings
       tags:
       - settings
   /admin/stats:

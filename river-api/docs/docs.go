@@ -647,6 +647,75 @@ const docTemplate = `{
                 }
             }
         },
+        "/admin/settings/transcoding": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "settings"
+                ],
+                "summary": "Get transcoding settings",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/services.TranscodingSettings"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "settings"
+                ],
+                "summary": "Update transcoding settings",
+                "parameters": [
+                    {
+                        "description": "Transcoding settings",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.transcodingRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/services.TranscodingSettings"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/admin/stats": {
             "get": {
                 "security": [
@@ -8736,6 +8805,32 @@ const docTemplate = `{
                 }
             }
         },
+        "handlers.transcodingRequest": {
+            "type": "object",
+            "properties": {
+                "audio_bitrate": {
+                    "type": "integer"
+                },
+                "force_cpu": {
+                    "type": "boolean"
+                },
+                "max_height": {
+                    "type": "integer"
+                },
+                "music_bitrate": {
+                    "type": "integer"
+                },
+                "nvenc_preset": {
+                    "type": "string"
+                },
+                "quality": {
+                    "type": "integer"
+                },
+                "x264_preset": {
+                    "type": "string"
+                }
+            }
+        },
         "handlers.tvShowRequest": {
             "type": "object",
             "required": [
@@ -9660,6 +9755,39 @@ const docTemplate = `{
                 },
                 "year": {
                     "type": "integer"
+                }
+            }
+        },
+        "services.TranscodingSettings": {
+            "type": "object",
+            "properties": {
+                "audio_bitrate": {
+                    "description": "kbps, river-video-trans audio path",
+                    "type": "integer"
+                },
+                "force_cpu": {
+                    "description": "skip the NVENC path even with a GPU",
+                    "type": "boolean"
+                },
+                "max_height": {
+                    "description": "0 = no cap; else 720/1080/2160",
+                    "type": "integer"
+                },
+                "music_bitrate": {
+                    "description": "kbps, river-audio-trans",
+                    "type": "integer"
+                },
+                "nvenc_preset": {
+                    "description": "p1..p7",
+                    "type": "string"
+                },
+                "quality": {
+                    "description": "0..51, mapped to NVENC -cq and x264 -crf",
+                    "type": "integer"
+                },
+                "x264_preset": {
+                    "description": "ultrafast..veryslow",
+                    "type": "string"
                 }
             }
         }

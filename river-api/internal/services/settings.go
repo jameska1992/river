@@ -1,19 +1,57 @@
 package services
 
 import (
+	"fmt"
+	"strconv"
 	"strings"
 
+	"river-api/internal/apperrors"
 	"river-api/internal/repository"
 )
 
 // Setting keys. Namespaced so future config areas coexist in one table.
 const (
-	keyRadarrURL = "radarr.url"
-	keyRadarrKey = "radarr.api_key"
-	keySonarrURL = "sonarr.url"
-	keySonarrKey = "sonarr.api_key"
+	keyRadarrURL    = "radarr.url"
+	keyRadarrKey    = "radarr.api_key"
+	keySonarrURL    = "sonarr.url"
+	keySonarrKey    = "sonarr.api_key"
 	keyTMDBKey      = "tmdb.api_key"
 	keyScanInterval = "scan.interval"
+
+	keyTransMaxHeight    = "transcoding.max_height"
+	keyTransQuality      = "transcoding.quality"
+	keyTransNVENCPreset  = "transcoding.nvenc_preset"
+	keyTransX264Preset   = "transcoding.x264_preset"
+	keyTransForceCPU     = "transcoding.force_cpu"
+	keyTransAudioBitrate = "transcoding.audio_bitrate"
+	keyTransMusicBitrate = "transcoding.music_bitrate"
+)
+
+// Transcoding defaults. These must match the compiled-in constants the
+// transcoders use today, so an unconfigured install behaves identically
+// (river-video-trans: NVENC p3/cq23, libx264 medium/crf23, 1080p cap,
+// AAC 192k; river-audio-trans: AAC 256k).
+const (
+	defaultTransMaxHeight    = 1080
+	defaultTransQuality      = 23
+	defaultTransNVENCPreset  = "p3"
+	defaultTransX264Preset   = "medium"
+	defaultTransForceCPU     = false
+	defaultTransAudioBitrate = 192
+	defaultTransMusicBitrate = 256
+)
+
+// Allowed values for the structured transcoding knobs. Validation is
+// strictly enum/range based — no admin input is ever passed through as a
+// raw ffmpeg argument, so a bad value can't inject flags or break jobs.
+var (
+	transMaxHeights   = []int{0, 720, 1080, 2160} // 0 = no cap
+	transNVENCPresets = []string{"p1", "p2", "p3", "p4", "p5", "p6", "p7"}
+	transX264Presets  = []string{
+		"ultrafast", "superfast", "veryfast", "faster", "fast",
+		"medium", "slow", "slower", "veryslow",
+	}
+	transBitrates = []int{128, 192, 256, 320} // kbps
 )
 
 type SettingsService struct {
@@ -97,6 +135,133 @@ func (s *SettingsService) ScanInterval() string {
 // to have validated it as a parseable duration.
 func (s *SettingsService) UpdateScanning(scanInterval string) error {
 	return s.repo.Set(keyScanInterval, strings.TrimSpace(scanInterval))
+}
+
+// TranscodingSettings is the resolved transcoding configuration: every
+// field carries either the stored value or the compiled-in default, so
+// the same struct serves both the admin editor and the transcoders that
+// read it at job time. None of these are secrets, so nothing is masked.
+type TranscodingSettings struct {
+	MaxHeight    int    `json:"max_height"`    // 0 = no cap; else 720/1080/2160
+	Quality      int    `json:"quality"`       // 0..51, mapped to NVENC -cq and x264 -crf
+	NVENCPreset  string `json:"nvenc_preset"`  // p1..p7
+	X264Preset   string `json:"x264_preset"`   // ultrafast..veryslow
+	ForceCPU     bool   `json:"force_cpu"`     // skip the NVENC path even with a GPU
+	AudioBitrate int    `json:"audio_bitrate"` // kbps, river-video-trans audio path
+	MusicBitrate int    `json:"music_bitrate"` // kbps, river-audio-trans
+}
+
+// getInt returns the stored value for key parsed as an int, or def when
+// the key is unset or unparseable — an unreadable setting is treated as
+// unconfigured, same as get().
+func (s *SettingsService) getInt(key string, def int) int {
+	v := s.get(key)
+	if v == "" {
+		return def
+	}
+	n, err := strconv.Atoi(v)
+	if err != nil {
+		return def
+	}
+	return n
+}
+
+// getString returns the stored value for key, or def when unset.
+func (s *SettingsService) getString(key, def string) string {
+	if v := s.get(key); v != "" {
+		return v
+	}
+	return def
+}
+
+// getBool returns the stored value for key parsed as a bool, or def when
+// unset or unparseable.
+func (s *SettingsService) getBool(key string, def bool) bool {
+	v := s.get(key)
+	if v == "" {
+		return def
+	}
+	b, err := strconv.ParseBool(v)
+	if err != nil {
+		return def
+	}
+	return b
+}
+
+// Transcoding returns the effective transcoding config, filling any unset
+// (or corrupt) key with its default so callers never see a zero value
+// that wasn't deliberately configured.
+func (s *SettingsService) Transcoding() TranscodingSettings {
+	return TranscodingSettings{
+		MaxHeight:    s.getInt(keyTransMaxHeight, defaultTransMaxHeight),
+		Quality:      s.getInt(keyTransQuality, defaultTransQuality),
+		NVENCPreset:  s.getString(keyTransNVENCPreset, defaultTransNVENCPreset),
+		X264Preset:   s.getString(keyTransX264Preset, defaultTransX264Preset),
+		ForceCPU:     s.getBool(keyTransForceCPU, defaultTransForceCPU),
+		AudioBitrate: s.getInt(keyTransAudioBitrate, defaultTransAudioBitrate),
+		MusicBitrate: s.getInt(keyTransMusicBitrate, defaultTransMusicBitrate),
+	}
+}
+
+// UpdateTranscoding validates every field against its allowed enum/range
+// and, only if all pass, writes them. Validation failures wrap
+// ErrInvalidInput (→ 400) and nothing is persisted, so a rejected request
+// leaves the stored config untouched.
+func (s *SettingsService) UpdateTranscoding(in TranscodingSettings) error {
+	if !containsInt(transMaxHeights, in.MaxHeight) {
+		return fmt.Errorf("%w: max_height must be one of 0, 720, 1080, 2160", apperrors.ErrInvalidInput)
+	}
+	if in.Quality < 0 || in.Quality > 51 {
+		return fmt.Errorf("%w: quality must be between 0 and 51", apperrors.ErrInvalidInput)
+	}
+	if !containsString(transNVENCPresets, in.NVENCPreset) {
+		return fmt.Errorf("%w: nvenc_preset must be one of p1..p7", apperrors.ErrInvalidInput)
+	}
+	if !containsString(transX264Presets, in.X264Preset) {
+		return fmt.Errorf("%w: x264_preset must be a valid libx264 preset (ultrafast..veryslow)", apperrors.ErrInvalidInput)
+	}
+	if !containsInt(transBitrates, in.AudioBitrate) {
+		return fmt.Errorf("%w: audio_bitrate must be one of 128, 192, 256, 320", apperrors.ErrInvalidInput)
+	}
+	if !containsInt(transBitrates, in.MusicBitrate) {
+		return fmt.Errorf("%w: music_bitrate must be one of 128, 192, 256, 320", apperrors.ErrInvalidInput)
+	}
+
+	writes := []struct {
+		key, value string
+	}{
+		{keyTransMaxHeight, strconv.Itoa(in.MaxHeight)},
+		{keyTransQuality, strconv.Itoa(in.Quality)},
+		{keyTransNVENCPreset, in.NVENCPreset},
+		{keyTransX264Preset, in.X264Preset},
+		{keyTransForceCPU, strconv.FormatBool(in.ForceCPU)},
+		{keyTransAudioBitrate, strconv.Itoa(in.AudioBitrate)},
+		{keyTransMusicBitrate, strconv.Itoa(in.MusicBitrate)},
+	}
+	for _, w := range writes {
+		if err := s.repo.Set(w.key, w.value); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func containsInt(xs []int, v int) bool {
+	for _, x := range xs {
+		if x == v {
+			return true
+		}
+	}
+	return false
+}
+
+func containsString(xs []string, v string) bool {
+	for _, x := range xs {
+		if x == v {
+			return true
+		}
+	}
+	return false
 }
 
 // IntegrationSettings is the admin-facing view. Secrets are never

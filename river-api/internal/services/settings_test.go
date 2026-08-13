@@ -149,3 +149,88 @@ func TestSettingsService_Seed_IncludesScanInterval(t *testing.T) {
 	require.NoError(t, svc.SeedIntegrations("", "", "", "", "", "1h"))
 	assert.Equal(t, "1h", svc.ScanInterval())
 }
+
+func TestSettingsService_Transcoding_DefaultsMatchTodaysConstants(t *testing.T) {
+	repo := &memSettingRepo{m: map[string]string{}}
+	svc := NewSettingsService(repo)
+
+	// An unconfigured install must behave exactly like the compiled-in
+	// defaults so out-of-the-box transcoding is unchanged.
+	got := svc.Transcoding()
+	assert.Equal(t, TranscodingSettings{
+		MaxHeight:    1080,
+		Quality:      23,
+		NVENCPreset:  "p3",
+		X264Preset:   "medium",
+		ForceCPU:     false,
+		AudioBitrate: 192,
+		MusicBitrate: 256,
+	}, got)
+}
+
+func TestSettingsService_Transcoding_ReadsStoredValues(t *testing.T) {
+	repo := &memSettingRepo{m: map[string]string{}}
+	svc := NewSettingsService(repo)
+
+	in := TranscodingSettings{
+		MaxHeight:    2160,
+		Quality:      18,
+		NVENCPreset:  "p5",
+		X264Preset:   "slow",
+		ForceCPU:     true,
+		AudioBitrate: 320,
+		MusicBitrate: 128,
+	}
+	require.NoError(t, svc.UpdateTranscoding(in))
+	assert.Equal(t, in, svc.Transcoding())
+}
+
+func TestSettingsService_Transcoding_NoCapIsPersisted(t *testing.T) {
+	repo := &memSettingRepo{m: map[string]string{}}
+	svc := NewSettingsService(repo)
+
+	// 0 (no cap) is a valid, deliberate value — it must round-trip and not
+	// be re-defaulted to 1080 as an unset key would be.
+	in := svc.Transcoding()
+	in.MaxHeight = 0
+	require.NoError(t, svc.UpdateTranscoding(in))
+	assert.Equal(t, 0, svc.Transcoding().MaxHeight)
+}
+
+func TestSettingsService_Transcoding_CorruptValueFallsBackToDefault(t *testing.T) {
+	repo := &memSettingRepo{m: map[string]string{keyTransQuality: "not-a-number"}}
+	svc := NewSettingsService(repo)
+	assert.Equal(t, 23, svc.Transcoding().Quality, "unparseable stored value => default")
+}
+
+func TestSettingsService_UpdateTranscoding_RejectsInvalid(t *testing.T) {
+	valid := TranscodingSettings{
+		MaxHeight:    1080,
+		Quality:      23,
+		NVENCPreset:  "p3",
+		X264Preset:   "medium",
+		ForceCPU:     false,
+		AudioBitrate: 192,
+		MusicBitrate: 256,
+	}
+	cases := map[string]func(TranscodingSettings) TranscodingSettings{
+		"max_height off-enum":    func(s TranscodingSettings) TranscodingSettings { s.MaxHeight = 900; return s },
+		"quality below range":    func(s TranscodingSettings) TranscodingSettings { s.Quality = -1; return s },
+		"quality above range":    func(s TranscodingSettings) TranscodingSettings { s.Quality = 52; return s },
+		"nvenc preset off-enum":  func(s TranscodingSettings) TranscodingSettings { s.NVENCPreset = "p9"; return s },
+		"x264 preset off-enum":   func(s TranscodingSettings) TranscodingSettings { s.X264Preset = "turbo"; return s },
+		"audio bitrate off-enum": func(s TranscodingSettings) TranscodingSettings { s.AudioBitrate = 200; return s },
+		"music bitrate off-enum": func(s TranscodingSettings) TranscodingSettings { s.MusicBitrate = 999; return s },
+	}
+	for name, mutate := range cases {
+		t.Run(name, func(t *testing.T) {
+			repo := &memSettingRepo{m: map[string]string{}}
+			svc := NewSettingsService(repo)
+			err := svc.UpdateTranscoding(mutate(valid))
+			require.Error(t, err)
+			assert.ErrorIs(t, err, ErrInvalidInput)
+			// A rejected request must not persist any partial state.
+			assert.Empty(t, repo.m, "no keys written on validation failure")
+		})
+	}
+}

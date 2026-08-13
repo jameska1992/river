@@ -7,4 +7,5 @@ var (
 	ErrNotFound     = apperrors.ErrNotFound
 	ErrConflict     = apperrors.ErrConflict
 	ErrUnauthorized = apperrors.ErrUnauthorized
+	ErrInvalidInput = apperrors.ErrInvalidInput
 )

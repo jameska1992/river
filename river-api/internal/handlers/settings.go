@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"errors"
 	"net/http"
 	"time"
 
@@ -38,6 +39,19 @@ type metadataRequest struct {
 // scanningRequest is the write shape for scan settings.
 type scanningRequest struct {
 	ScanInterval string `json:"scan_interval" binding:"required"`
+}
+
+// transcodingRequest is the write shape for transcoding settings. The
+// full config is submitted at once; the service validates every field
+// (enum/range) before persisting anything.
+type transcodingRequest struct {
+	MaxHeight    int    `json:"max_height"`
+	Quality      int    `json:"quality"`
+	NVENCPreset  string `json:"nvenc_preset"`
+	X264Preset   string `json:"x264_preset"`
+	ForceCPU     bool   `json:"force_cpu"`
+	AudioBitrate int    `json:"audio_bitrate"`
+	MusicBitrate int    `json:"music_bitrate"`
 }
 
 // GetIntegrations returns the Radarr/Sonarr integration settings. Secrets
@@ -195,4 +209,58 @@ func (h *SettingsHandler) UpdateScanning(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, h.svc.Scanning())
+}
+
+// GetTranscoding returns the effective transcoding config (stored values
+// with defaults filled in). Registered both admin-only (for the settings
+// UI) and as an authenticated service read (for the transcoders), which
+// consume the same resolved shape.
+//
+// @Summary      Get transcoding settings
+// @Tags         settings
+// @Produce      json
+// @Success      200  {object}  services.TranscodingSettings
+// @Security     BearerAuth
+// @Router       /admin/settings/transcoding [get]
+func (h *SettingsHandler) GetTranscoding(c *gin.Context) {
+	c.JSON(http.StatusOK, h.svc.Transcoding())
+}
+
+// UpdateTranscoding validates and stores the transcoding config. Invalid
+// values (out-of-range/enum) are rejected with 400 and nothing is
+// persisted.
+//
+// @Summary      Update transcoding settings
+// @Tags         settings
+// @Accept       json
+// @Produce      json
+// @Param        body  body      transcodingRequest  true  "Transcoding settings"
+// @Success      200   {object}  services.TranscodingSettings
+// @Failure      400   {object}  map[string]string
+// @Security     BearerAuth
+// @Router       /admin/settings/transcoding [put]
+func (h *SettingsHandler) UpdateTranscoding(c *gin.Context) {
+	var req transcodingRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	err := h.svc.UpdateTranscoding(services.TranscodingSettings{
+		MaxHeight:    req.MaxHeight,
+		Quality:      req.Quality,
+		NVENCPreset:  req.NVENCPreset,
+		X264Preset:   req.X264Preset,
+		ForceCPU:     req.ForceCPU,
+		AudioBitrate: req.AudioBitrate,
+		MusicBitrate: req.MusicBitrate,
+	})
+	if err != nil {
+		if errors.Is(err, services.ErrInvalidInput) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to save settings"})
+		return
+	}
+	c.JSON(http.StatusOK, h.svc.Transcoding())
 }

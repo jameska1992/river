@@ -128,6 +128,37 @@ func TestSettingsHandler_Metadata(t *testing.T) {
 	assert.Equal(t, "k-abc", repo.m["tmdb.api_key"])
 }
 
+func TestSettingsHandler_Transcoding(t *testing.T) {
+	repo := &fakeSettingRepo{m: map[string]string{}}
+	gin.SetMode(gin.TestMode)
+	h := NewSettingsHandler(services.NewSettingsService(repo))
+	r := gin.New()
+	r.GET("/admin/settings/transcoding", h.GetTranscoding)
+	r.PUT("/admin/settings/transcoding", h.UpdateTranscoding)
+
+	// Unset install returns today's defaults.
+	w := doJSON(r, http.MethodGet, "/admin/settings/transcoding", "")
+	require.Equal(t, http.StatusOK, w.Code)
+	assert.Contains(t, w.Body.String(), `"nvenc_preset":"p3"`)
+	assert.Contains(t, w.Body.String(), `"music_bitrate":256`)
+
+	// Invalid value -> 400 with a descriptive message, nothing persisted.
+	w = doJSON(r, http.MethodPut, "/admin/settings/transcoding",
+		`{"max_height":1080,"quality":99,"nvenc_preset":"p3","x264_preset":"medium","force_cpu":false,"audio_bitrate":192,"music_bitrate":256}`)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	assert.Contains(t, w.Body.String(), "quality")
+	assert.Empty(t, repo.m, "no keys written on a rejected update")
+
+	// Valid update -> 200 + persisted, echoed back resolved.
+	w = doJSON(r, http.MethodPut, "/admin/settings/transcoding",
+		`{"max_height":2160,"quality":20,"nvenc_preset":"p5","x264_preset":"slow","force_cpu":true,"audio_bitrate":256,"music_bitrate":320}`)
+	require.Equal(t, http.StatusOK, w.Code)
+	assert.Equal(t, "2160", repo.m["transcoding.max_height"])
+	assert.Equal(t, "true", repo.m["transcoding.force_cpu"])
+	assert.Equal(t, "320", repo.m["transcoding.music_bitrate"])
+	assert.Contains(t, w.Body.String(), `"x264_preset":"slow"`)
+}
+
 func TestSettingsHandler_Scanning(t *testing.T) {
 	repo := &fakeSettingRepo{m: map[string]string{}}
 	gin.SetMode(gin.TestMode)

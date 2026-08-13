@@ -85,6 +85,13 @@ func Register(r *gin.Engine, secret string,
 		protected.GET("/admin/settings/tmdb", middleware.AdminOnly(), settings.GetTMDBKey)
 		protected.GET("/admin/settings/scanning", middleware.AdminOnly(), settings.GetScanning)
 		protected.PUT("/admin/settings/scanning", middleware.AdminOnly(), settings.UpdateScanning)
+		protected.GET("/admin/settings/transcoding", middleware.AdminOnly(), settings.GetTranscoding)
+		protected.PUT("/admin/settings/transcoding", middleware.AdminOnly(), settings.UpdateTranscoding)
+		// Resolved transcoding config for the transcoders. Authenticated
+		// but not admin-only: the transcode services read it at job time
+		// with their own service account, which need not be an admin. It
+		// exposes no secrets (structured knobs only), unlike the admin PUT.
+		protected.GET("/settings/transcoding", settings.GetTranscoding)
 		protected.GET("/admin/active-sessions", middleware.AdminOnly(), progress.ActiveSessions)
 		protected.POST("/admin/scan", middleware.AdminOnly(), admin.TriggerScan)
 		protected.POST("/admin/requeue-untranscoded", middleware.AdminOnly(), admin.RequeueUntranscoded)

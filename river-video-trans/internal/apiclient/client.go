@@ -113,6 +113,28 @@ func (c *Client) doWithRetry(method, path string, body interface{}, out interfac
 	return nil
 }
 
+// --- Transcoding settings ---
+
+// TranscodingSettings is the resolved transcoding config served by
+// river-api (GET /api/settings/transcoding). Every field is already
+// filled with a default server-side, so a successful fetch is always
+// complete. MusicBitrate is present for symmetry with the shared settings
+// area but unused here (it drives river-audio-trans).
+type TranscodingSettings struct {
+	MaxHeight    int    `json:"max_height"`
+	Quality      int    `json:"quality"`
+	NVENCPreset  string `json:"nvenc_preset"`
+	X264Preset   string `json:"x264_preset"`
+	ForceCPU     bool   `json:"force_cpu"`
+	AudioBitrate int    `json:"audio_bitrate"`
+	MusicBitrate int    `json:"music_bitrate"`
+}
+
+func (c *Client) GetTranscodingSettings() (*TranscodingSettings, error) {
+	var result TranscodingSettings
+	return &result, c.do("GET", "/api/settings/transcoding", nil, &result)
+}
+
 // --- Movies ---
 
 type Movie struct {
@@ -356,4 +378,3 @@ func paginateAll[T any](fetch func(page, limit int) ([]T, error)) ([]T, error) {
 	}
 	return all, nil
 }
-

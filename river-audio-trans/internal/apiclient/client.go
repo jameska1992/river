@@ -113,6 +113,25 @@ func (c *Client) doWithRetry(method, path string, body, out interface{}, retry b
 
 // --- Artists ---
 
+// TranscodingSettings is the resolved transcoding config served by
+// river-api (GET /api/settings/transcoding). Only MusicBitrate drives this
+// service; the video-side fields are present for symmetry with the shared
+// settings area and ignored here.
+type TranscodingSettings struct {
+	MaxHeight    int    `json:"max_height"`
+	Quality      int    `json:"quality"`
+	NVENCPreset  string `json:"nvenc_preset"`
+	X264Preset   string `json:"x264_preset"`
+	ForceCPU     bool   `json:"force_cpu"`
+	AudioBitrate int    `json:"audio_bitrate"`
+	MusicBitrate int    `json:"music_bitrate"`
+}
+
+func (c *Client) GetTranscodingSettings() (*TranscodingSettings, error) {
+	var result TranscodingSettings
+	return &result, c.do("GET", "/api/settings/transcoding", nil, &result)
+}
+
 type Artist struct {
 	ID        string `json:"id"`
 	LibraryID string `json:"library_id"`

@@ -20,13 +20,19 @@ type Processor struct {
 	api         *apiclient.Client
 	outputDir   string
 	concurrency int // max parallel transcode operations within one event
+	settings    *settingsCache
 }
 
 func New(api *apiclient.Client, outputDir string, concurrency int) *Processor {
 	if concurrency < 1 {
 		concurrency = 1
 	}
-	return &Processor{api: api, outputDir: outputDir, concurrency: concurrency}
+	return &Processor{
+		api:         api,
+		outputDir:   outputDir,
+		concurrency: concurrency,
+		settings:    newSettingsCache(api, settingsTTL),
+	}
 }
 
 func (p *Processor) Handle(event consumer.MediaDiscoveredEvent) error {
@@ -224,7 +230,7 @@ func (p *Processor) processFile(path, libraryType, libraryPath string) (finalPat
 	}
 	log.Printf("INFO transcoding %q → %q (codec=%s)", filepath.Base(path), filepath.Base(outPath), info.Codec)
 	p.api.Log("info", fmt.Sprintf("transcoding audio %s", filepath.Base(outPath)))
-	if err := transcoder.Transcode(path, outPath); err != nil {
+	if err := transcoder.Transcode(path, outPath, p.settings.musicBitrate()); err != nil {
 		p.api.Log("error", fmt.Sprintf("transcode failed for %s: %v", filepath.Base(outPath), err))
 		return "", 0, fmt.Errorf("transcode: %w", err)
 	}

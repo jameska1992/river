@@ -62,19 +62,51 @@ func TestNeedsTranscode(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			if got := NeedsTranscode(c.path, c.info); got != c.want {
+			if got := NeedsTranscode(c.path, c.info, DefaultConfig()); got != c.want {
 				t.Errorf("NeedsTranscode = %v, want %v", got, c.want)
 			}
 		})
 	}
 }
 
+func TestNeedsTranscode_ConfigurableCap(t *testing.T) {
+	// A 1440p h264/aac/mp4 file: compliant except for the resolution cap,
+	// so whether it needs a transcode depends entirely on the height cap.
+	f := &FileInfo{VideoCodec: "h264", PixFmt: "yuv420p", Width: 2560, Height: 1440,
+		AudioStreams: []AudioStream{{CodecName: "aac"}}}
+
+	if !NeedsTranscode("v.mp4", f, cfgWith(func(c *Config) { c.MaxHeight = 1080 })) {
+		t.Error("1440p over a 1080 cap should need transcode")
+	}
+	if NeedsTranscode("v.mp4", f, cfgWith(func(c *Config) { c.MaxHeight = 2160 })) {
+		t.Error("1440p under a 2160 cap should not need transcode")
+	}
+	if NeedsTranscode("v.mp4", f, cfgWith(func(c *Config) { c.MaxHeight = 0 })) {
+		t.Error("no cap (0) should not trigger a resolution transcode")
+	}
+}
+
+// cfgWith returns DefaultConfig with a mutation applied — keeps the test
+// cases focused on the single field under test.
+func cfgWith(mut func(*Config)) Config {
+	c := DefaultConfig()
+	mut(&c)
+	return c
+}
+
+// defaultEncoders returns the three fallback encoders built from the
+// historical default config — the values these tests assert against.
+func defaultEncoders() (nvHW, nvCPU, x264 videoEncoder) {
+	return encodersFor(DefaultConfig())
+}
+
 func TestBuildArgs_StreamCopy(t *testing.T) {
 	info := &FileInfo{VideoCodec: "h264", PixFmt: "yuv420p", Width: 1920, Height: 1080,
 		AudioStreams: []AudioStream{{CodecName: "aac"}}}
+	nvHW, _, _ := defaultEncoders()
 	// Even with a hwAccel encoder, a compliant input is stream-copied — no
 	// re-encode, so no -hwaccel decode setup and no filter chain.
-	args := buildArgs("in.mp4", "out.mp4", info, nvencHWEncoder)
+	args := buildArgs("in.mp4", "out.mp4", info, nvHW, DefaultConfig())
 
 	if !containsSeq(args, "-c:v", "copy") {
 		t.Errorf("expected stream copy, got %v", args)
@@ -99,7 +131,8 @@ func TestBuildArgs_StreamCopy(t *testing.T) {
 func TestBuildArgs_SoftwareResizeAndAudioEncode(t *testing.T) {
 	info := &FileInfo{VideoCodec: "h264", PixFmt: "yuv420p", Width: 3840, Height: 2160,
 		AudioStreams: []AudioStream{{CodecName: "ac3"}}}
-	args := buildArgs("in.mkv", "out.mp4", info, x264Encoder)
+	_, _, x264 := defaultEncoders()
+	args := buildArgs("in.mkv", "out.mp4", info, x264, DefaultConfig())
 
 	if !containsSeq(args, "-c:v", "libx264") || !containsSeq(args, "-preset", "medium") || !containsSeq(args, "-crf", "23") {
 		t.Errorf("expected libx264 CRF settings, got %v", args)
@@ -121,7 +154,8 @@ func TestBuildArgs_HardwarePipeline10Bit(t *testing.T) {
 	// 10-bit HEVC at 1080p: no resize, only a pixel-format downconvert.
 	info := &FileInfo{VideoCodec: "hevc", PixFmt: "yuv420p10le", Width: 1920, Height: 1080,
 		AudioStreams: []AudioStream{{CodecName: "aac"}}}
-	args := buildArgs("in.mkv", "out.mp4", info, nvencHWEncoder)
+	nvHW, _, _ := defaultEncoders()
+	args := buildArgs("in.mkv", "out.mp4", info, nvHW, DefaultConfig())
 
 	if !containsSeq(args, "-hwaccel", "cuda") || !containsSeq(args, "-hwaccel_output_format", "cuda") {
 		t.Errorf("expected CUDA decode pipeline, got %v", args)
@@ -148,7 +182,8 @@ func TestBuildArgs_HardwarePipeline10BitDownscale(t *testing.T) {
 	// 10-bit HEVC at 4K: resize on-GPU (scale_cuda) + CPU pixel-format convert.
 	info := &FileInfo{VideoCodec: "hevc", PixFmt: "yuv420p10le", Width: 3840, Height: 2160,
 		AudioStreams: []AudioStream{{CodecName: "aac"}}}
-	args := buildArgs("in.mkv", "out.mp4", info, nvencHWEncoder)
+	nvHW, _, _ := defaultEncoders()
+	args := buildArgs("in.mkv", "out.mp4", info, nvHW, DefaultConfig())
 
 	vf, ok := flagValue(args, "-vf")
 	if !ok {
@@ -171,7 +206,8 @@ func TestBuildArgs_HardwarePipeline10BitDownscale(t *testing.T) {
 func TestBuildArgs_MultipleAudioMapping(t *testing.T) {
 	info := &FileInfo{VideoCodec: "h264", PixFmt: "yuv420p", Width: 1920, Height: 1080,
 		AudioStreams: []AudioStream{{CodecName: "aac"}, {CodecName: "dts"}}}
-	args := buildArgs("in.mkv", "out.mp4", info, x264Encoder)
+	_, _, x264 := defaultEncoders()
+	args := buildArgs("in.mkv", "out.mp4", info, x264, DefaultConfig())
 
 	if !containsSeq(args, "-map", "0:a:0") || !containsSeq(args, "-map", "0:a:1") {
 		t.Errorf("both audio streams should be mapped, got %v", args)
@@ -181,6 +217,61 @@ func TestBuildArgs_MultipleAudioMapping(t *testing.T) {
 	}
 	if !containsSeq(args, "-c:a:1", "aac") { // dts encoded
 		t.Error("stream 1 (dts) should be encoded to aac")
+	}
+}
+
+func TestBuildArgs_ConfigDrivenQualityPresetBitrate(t *testing.T) {
+	cfg := Config{MaxHeight: 2160, Quality: 30, NVENCPreset: "p5", X264Preset: "slow", AudioBitrate: 320}
+	info := &FileInfo{VideoCodec: "hevc", PixFmt: "yuv420p", Width: 3840, Height: 2160,
+		AudioStreams: []AudioStream{{CodecName: "ac3"}}}
+	_, _, x264 := encodersFor(cfg)
+	args := buildArgs("in.mkv", "out.mp4", info, x264, cfg)
+
+	if !containsSeq(args, "-preset", "slow") || !containsSeq(args, "-crf", "30") {
+		t.Errorf("expected libx264 slow/crf30 from config, got %v", args)
+	}
+	if !containsSeq(args, "-b:a:0", "320k") {
+		t.Errorf("expected 320k audio from config, got %v", args)
+	}
+	// A 2160-tall source under a 2160 cap is not over the cap, so the scale
+	// filter must be absent — the source stays at its native resolution.
+	if vf, ok := flagValue(args, "-vf"); ok && strings.Contains(vf, "scale") {
+		t.Errorf("4K under a 4K cap must not be resized, got -vf %q", vf)
+	}
+}
+
+func TestBuildArgs_ConfigDrivenResizeTarget(t *testing.T) {
+	// A 4K source under a 720 cap resizes down to the 720 ceiling (1280×720).
+	cfg := Config{MaxHeight: 720, Quality: 23, NVENCPreset: "p3", X264Preset: "medium", AudioBitrate: 192}
+	info := &FileInfo{VideoCodec: "h264", PixFmt: "yuv420p", Width: 3840, Height: 2160,
+		AudioStreams: []AudioStream{{CodecName: "aac"}}}
+	_, _, x264 := encodersFor(cfg)
+	args := buildArgs("in.mp4", "out.mp4", info, x264, cfg)
+
+	vf, ok := flagValue(args, "-vf")
+	if !ok || !strings.Contains(vf, "min(iw,1280)") || !strings.Contains(vf, "min(ih,720)") {
+		t.Errorf("expected a 1280x720 scale target from a 720 cap, got -vf %q", vf)
+	}
+}
+
+func TestEncodersFor_QualityMapsToBothCodecs(t *testing.T) {
+	cfg := Config{Quality: 19, NVENCPreset: "p6", X264Preset: "veryslow"}
+	nvHW, nvCPU, x264 := encodersFor(cfg)
+
+	// The single quality knob drives NVENC -cq and libx264 -crf alike.
+	for _, enc := range []videoEncoder{nvHW, nvCPU} {
+		if v, ok := flagValue(enc.quality, "-cq"); !ok || v != "19" {
+			t.Errorf("nvenc -cq = %q, want 19", v)
+		}
+		if enc.preset != "p6" {
+			t.Errorf("nvenc preset = %q, want p6", enc.preset)
+		}
+	}
+	if v, ok := flagValue(x264.quality, "-crf"); !ok || v != "19" {
+		t.Errorf("x264 -crf = %q, want 19", v)
+	}
+	if x264.preset != "veryslow" {
+		t.Errorf("x264 preset = %q, want veryslow", x264.preset)
 	}
 }
 

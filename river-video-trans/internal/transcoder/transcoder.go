@@ -9,11 +9,58 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 )
 
+// Config is the resolved, admin-tunable transcoding profile. It's fetched
+// from river-api at job time; DefaultConfig() reproduces the values that
+// were compiled-in before the setting existed, so an install that has
+// never configured transcoding behaves exactly as before.
+type Config struct {
+	MaxHeight    int    // 0 = no cap; else the vertical resolution ceiling (e.g. 1080)
+	Quality      int    // 0..51, used as NVENC -cq and libx264 -crf
+	NVENCPreset  string // p1..p7
+	X264Preset   string // ultrafast..veryslow
+	ForceCPU     bool   // skip the NVENC attempts even when a GPU is present
+	AudioBitrate int    // kbps for re-encoded (non-AAC) audio streams
+}
+
+// DefaultConfig returns the historical hardcoded profile: H.264/AAC/MP4,
+// 1080p cap, NVENC p3/cq23, libx264 medium/crf23, AAC 192k. Used as the
+// fallback whenever the settings fetch fails.
+func DefaultConfig() Config {
+	return Config{
+		MaxHeight:    1080,
+		Quality:      23,
+		NVENCPreset:  "p3",
+		X264Preset:   "medium",
+		ForceCPU:     false,
+		AudioBitrate: 192,
+	}
+}
+
+// maxDims returns the width/height ceiling implied by MaxHeight, assuming
+// 16:9 (1080 → 1920×1080, 2160 → 3840×2160). Both zero means "no cap".
+func (c Config) maxDims() (w, h int) {
+	if c.MaxHeight <= 0 {
+		return 0, 0
+	}
+	return c.MaxHeight * 16 / 9, c.MaxHeight
+}
+
+// overCap reports whether the source exceeds the resolution ceiling and
+// therefore needs downscaling. Always false when no cap is configured.
+func (c Config) overCap(info *FileInfo) bool {
+	maxW, maxH := c.maxDims()
+	if maxH == 0 {
+		return false
+	}
+	return info.Width > maxW || info.Height > maxH
+}
+
 type FileInfo struct {
-	VideoCodec   string
+	VideoCodec string
 	// VideoProfile is the codec profile reported by ffprobe (e.g. "High",
 	// "Main 10", "Rext"). Used in fallback diagnostics so we can tell
 	// *why* NVDEC bailed out — Turing's NVDEC handles HEVC Main 10 fine
@@ -24,7 +71,7 @@ type FileInfo struct {
 	PixFmt       string // e.g. "yuv420p", "yuv420p10le"
 	Width        int
 	Height       int
-	AudioStreams  []AudioStream
+	AudioStreams []AudioStream
 	Subtitles    []SubtitleStream
 }
 
@@ -152,10 +199,10 @@ func ExtractSubtitle(inputPath string, streamIndex int, outputPath string) error
 	return nil
 }
 
-func NeedsTranscode(path string, info *FileInfo) bool {
+func NeedsTranscode(path string, info *FileInfo, cfg Config) bool {
 	ext := strings.ToLower(filepath.Ext(path))
 	is10bit := strings.Contains(info.PixFmt, "10")
-	if ext != ".mp4" || info.VideoCodec != "h264" || is10bit || info.Width > 1920 || info.Height > 1080 {
+	if ext != ".mp4" || info.VideoCodec != "h264" || is10bit || cfg.overCap(info) {
 		return true
 	}
 	for _, a := range info.AudioStreams {
@@ -165,7 +212,6 @@ func NeedsTranscode(path string, info *FileInfo) bool {
 	}
 	return false
 }
-
 
 // Transcode produces an h.264 + AAC mp4 at most 1080p, attempting (in order):
 //
@@ -190,7 +236,7 @@ type Logger interface {
 	Log(level, message string)
 }
 
-func Transcode(inputPath, outputPath, tmpDir string, info *FileInfo, logger Logger) error {
+func Transcode(inputPath, outputPath, tmpDir string, info *FileInfo, cfg Config, logger Logger) error {
 	if err := os.MkdirAll(filepath.Dir(outputPath), 0o755); err != nil {
 		return fmt.Errorf("create output dir: %w", err)
 	}
@@ -208,9 +254,10 @@ func Transcode(inputPath, outputPath, tmpDir string, info *FileInfo, logger Logg
 	tmpFile.Close() // ffmpeg reopens via -y; we just needed a unique name
 	defer os.Remove(tmpPath)
 
+	nvHW, nvCPU, x264 := encodersFor(cfg)
 	attempts := []struct {
-		enc       videoEncoder
-		name      string
+		enc  videoEncoder
+		name string
 		// cpuDecode tagging is the cheap way to log a one-line warning the
 		// moment we drop off the GPU decode path — useful when triaging why
 		// per-stream throughput is below expected (CPU decode roughly halves
@@ -218,9 +265,15 @@ func Transcode(inputPath, outputPath, tmpDir string, info *FileInfo, logger Logg
 		// appears in both GPU and CPU-decode paths.
 		cpuDecode bool
 	}{
-		{nvencHWEncoder, "h264_nvenc + cuda decode", false},
-		{nvencEncoder, "h264_nvenc (cpu decode)", true},
-		{x264Encoder, "libx264 (cpu decode + cpu encode)", true},
+		{nvHW, "h264_nvenc + cuda decode", false},
+		{nvCPU, "h264_nvenc (cpu decode)", true},
+		{x264, "libx264 (cpu decode + cpu encode)", true},
+	}
+	// force_cpu skips both NVENC paths — for GPU-less hosts, or to keep a
+	// shared GPU free. The libx264 path is always the last attempt, so we
+	// just drop the two NVENC ones ahead of it.
+	if cfg.ForceCPU {
+		attempts = attempts[len(attempts)-1:]
 	}
 	// sourceDesc summarizes the input in a "codec/profile pixfmt WxH" shape
 	// for diagnostic logs. Profile + pixfmt are the most common reasons
@@ -250,7 +303,7 @@ func Transcode(inputPath, outputPath, tmpDir string, info *FileInfo, logger Logg
 	var lastErr error
 	var lastStderr string
 	for i, a := range attempts {
-		stderr, err := runFFmpeg(buildArgs(inputPath, tmpPath, info, a.enc))
+		stderr, err := runFFmpeg(buildArgs(inputPath, tmpPath, info, a.enc, cfg))
 		if err == nil {
 			if a.cpuDecode {
 				// One-line, grep-friendly. The earlier WARN logged WHY the
@@ -295,34 +348,41 @@ type videoEncoder struct {
 	hwAccel bool     // when true, decode frames into CUDA memory and use scale_cuda
 }
 
-var (
-	// nvencHWEncoder: NVENC encode with full-GPU pipeline (CUDA decode +
+// encodersFor builds the three fallback encoders from the resolved config.
+// NVENC (HW and CPU-decode) and libx264 all share the single Quality knob,
+// mapped to -cq for NVENC and -crf for libx264, plus their own preset.
+func encodersFor(cfg Config) (nvencHW, nvencCPU, x264 videoEncoder) {
+	q := strconv.Itoa(cfg.Quality)
+	nvencQuality := []string{"-rc", "vbr", "-cq", q, "-b:v", "0"}
+	// nvencHW: NVENC encode with full-GPU pipeline (CUDA decode +
 	// scale_cuda). Fastest path; requires NVDEC support for the input codec.
-	nvencHWEncoder = videoEncoder{
+	nvencHW = videoEncoder{
 		codec:   "h264_nvenc",
-		preset:  "p3",
-		quality: []string{"-rc", "vbr", "-cq", "23", "-b:v", "0"},
+		preset:  cfg.NVENCPreset,
+		quality: nvencQuality,
 		hwAccel: true,
 	}
-	// nvencEncoder: NVENC encode with CPU decode — used when NVDEC can't
-	// handle the input. Same VBR constant-quality knobs as the HW path.
-	nvencEncoder = videoEncoder{
+	// nvencCPU: NVENC encode with CPU decode — used when NVDEC can't handle
+	// the input. Same VBR constant-quality knobs as the HW path.
+	nvencCPU = videoEncoder{
 		codec:   "h264_nvenc",
-		preset:  "p3",
-		quality: []string{"-rc", "vbr", "-cq", "23", "-b:v", "0"},
+		preset:  cfg.NVENCPreset,
+		quality: nvencQuality,
 	}
-	// x264Encoder: software CRF 23, medium preset. Final fallback.
-	x264Encoder = videoEncoder{
+	// x264: software fallback for hosts without NVENC (or when force_cpu).
+	x264 = videoEncoder{
 		codec:   "libx264",
-		preset:  "medium",
-		quality: []string{"-crf", "23"},
+		preset:  cfg.X264Preset,
+		quality: []string{"-crf", q},
 	}
-)
+	return nvencHW, nvencCPU, x264
+}
 
-func buildArgs(inputPath, outputPath string, info *FileInfo, enc videoEncoder) []string {
+func buildArgs(inputPath, outputPath string, info *FileInfo, enc videoEncoder, cfg Config) []string {
 	is10bit := strings.Contains(info.PixFmt, "10")
-	needsResize := info.Width > 1920 || info.Height > 1080
+	needsResize := cfg.overCap(info)
 	needsVideoEncode := info.VideoCodec != "h264" || is10bit || needsResize
+	maxW, maxH := cfg.maxDims()
 
 	var args []string
 	// Hardware-decoded frames land in GPU memory and stay there through
@@ -365,7 +425,7 @@ func buildArgs(inputPath, outputPath string, info *FileInfo, enc videoEncoder) [
 			// h264_nvenc re-uploads the frames itself. Pure resize stays on-GPU.
 			var vf []string
 			if needsResize {
-				vf = append(vf, "scale_cuda=w='min(iw,1920)':h='min(ih,1080)':force_original_aspect_ratio=decrease")
+				vf = append(vf, fmt.Sprintf("scale_cuda=w='min(iw,%d)':h='min(ih,%d)':force_original_aspect_ratio=decrease", maxW, maxH))
 			}
 			if is10bit {
 				vf = append(vf, "hwdownload", "format=p010le", "format=yuv420p")
@@ -379,7 +439,7 @@ func buildArgs(inputPath, outputPath string, info *FileInfo, enc videoEncoder) [
 			// here, and explicit beats encoder-side auto-negotiation.
 			var filters []string
 			if needsResize {
-				filters = append(filters, "scale=w='min(iw,1920)':h='min(ih,1080)':force_original_aspect_ratio=decrease")
+				filters = append(filters, fmt.Sprintf("scale=w='min(iw,%d)':h='min(ih,%d)':force_original_aspect_ratio=decrease", maxW, maxH))
 			}
 			filters = append(filters, "format=yuv420p")
 			args = append(args, "-vf", strings.Join(filters, ","))
@@ -395,7 +455,7 @@ func buildArgs(inputPath, outputPath string, info *FileInfo, enc videoEncoder) [
 		} else {
 			args = append(args,
 				fmt.Sprintf("-c:a:%d", i), "aac",
-				fmt.Sprintf("-b:a:%d", i), "192k",
+				fmt.Sprintf("-b:a:%d", i), fmt.Sprintf("%dk", cfg.AudioBitrate),
 			)
 		}
 	}

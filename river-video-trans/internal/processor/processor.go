@@ -57,10 +57,15 @@ var videoExts = map[string]bool{
 type Processor struct {
 	api       *apiclient.Client
 	outputDir string
+	settings  *settingsCache
 }
 
 func New(api *apiclient.Client, outputDir string) *Processor {
-	return &Processor{api: api, outputDir: outputDir}
+	return &Processor{
+		api:       api,
+		outputDir: outputDir,
+		settings:  newSettingsCache(api, settingsTTL),
+	}
 }
 
 // tmpDir returns the scratch directory for in-flight transcodes. It lives
@@ -355,6 +360,7 @@ func (p *Processor) processMovieFile(path, title string, year int, force bool) (
 	}
 
 	outPath := movieOutputPath(path, title, year, p.outputDir)
+	cfg := p.settings.get()
 
 	// Always check for an existing output first — even if the source happens to
 	// be a compatible format and would otherwise short-circuit before this check.
@@ -367,7 +373,7 @@ func (p *Processor) processMovieFile(path, title string, year int, force bool) (
 		}
 	}
 
-	if !transcoder.NeedsTranscode(path, info) {
+	if !transcoder.NeedsTranscode(path, info, cfg) {
 		if filepath.Clean(path) == filepath.Clean(outPath) {
 			log.Printf("INFO %q is already at output path, no copy needed", filepath.Base(path))
 			return info, outPath, nil
@@ -388,7 +394,7 @@ func (p *Processor) processMovieFile(path, title string, year int, force bool) (
 		info.VideoCodec, info.AudioCodec, info.Width, info.Height)
 	p.api.Log("info", fmt.Sprintf("transcoding movie %s", filepath.Base(outPath)))
 
-	if err := transcoder.Transcode(path, outPath, p.tmpDir(), info, p.api); err != nil {
+	if err := transcoder.Transcode(path, outPath, p.tmpDir(), info, cfg, p.api); err != nil {
 		p.api.Log("error", fmt.Sprintf("transcode failed for %s: %v", filepath.Base(outPath), err))
 		return nil, "", fmt.Errorf("transcode: %w", err)
 	}
@@ -414,6 +420,8 @@ func (p *Processor) processEpisodeFileTo(path, outPath string, force bool) (*tra
 		return nil, "", fmt.Errorf("probe: %w", err)
 	}
 
+	cfg := p.settings.get()
+
 	// A forced re-transcode skips the exists short-circuit and overwrites.
 	if !force {
 		if _, err := os.Stat(outPath); err == nil {
@@ -423,7 +431,7 @@ func (p *Processor) processEpisodeFileTo(path, outPath string, force bool) (*tra
 		}
 	}
 
-	if !transcoder.NeedsTranscode(path, info) {
+	if !transcoder.NeedsTranscode(path, info, cfg) {
 		if filepath.Clean(path) == filepath.Clean(outPath) {
 			log.Printf("INFO %q is already at output path, no copy needed", filepath.Base(path))
 			return info, outPath, nil
@@ -444,7 +452,7 @@ func (p *Processor) processEpisodeFileTo(path, outPath string, force bool) (*tra
 		info.VideoCodec, info.AudioCodec, info.Width, info.Height)
 	p.api.Log("info", fmt.Sprintf("transcoding episode %s", filepath.Base(outPath)))
 
-	if err := transcoder.Transcode(path, outPath, p.tmpDir(), info, p.api); err != nil {
+	if err := transcoder.Transcode(path, outPath, p.tmpDir(), info, cfg, p.api); err != nil {
 		p.api.Log("error", fmt.Sprintf("transcode failed for %s: %v", filepath.Base(outPath), err))
 		return nil, "", fmt.Errorf("transcode: %w", err)
 	}
@@ -486,7 +494,6 @@ func copyFile(src, dst string) error {
 	}
 	return nil
 }
-
 
 // registerAudioTracks creates per-language variant MP4 files (video + one audio
 // track, streams copied) and registers AudioTrack records in river-api.
@@ -760,9 +767,9 @@ func parseSeasonNumber(name string) int {
 
 // episodePatterns are tried in order; the first match wins.
 var episodePatterns = []*regexp.Regexp{
-	regexp.MustCompile(`(?i)[Ss]\d+[Ee](\d+)`),   // S01E03
-	regexp.MustCompile(`(?i)\d+[xX](\d+)`),        // 1x03
-	regexp.MustCompile(`(?i)episode\s*(\d+)`),      // Episode 03
+	regexp.MustCompile(`(?i)[Ss]\d+[Ee](\d+)`),        // S01E03
+	regexp.MustCompile(`(?i)\d+[xX](\d+)`),            // 1x03
+	regexp.MustCompile(`(?i)episode\s*(\d+)`),         // Episode 03
 	regexp.MustCompile(`(?:^|\D)0*(\d{1,3})(?:\D|$)`), // leading/isolated number
 }
 
@@ -778,4 +785,3 @@ func parseEpisodeNumber(path string) int {
 	}
 	return 0
 }
-

@@ -21,6 +21,25 @@ go run ./cmd/server     # run the service
 
 There is no root-level Makefile or build script; run commands from within each service directory.
 
+## Releasing
+
+The repo is versioned with a single top-level `VERSION` file (semver `X.Y.Z`, e.g. `0.3.0`) — the single source of truth. Releases are marked by an annotated `v<VERSION>` tag and a long-lived `release-v<VERSION>` branch, all pointing at the same commit on `main`.
+
+CI (`.github/workflows/ci.yml`) has a `version` job that validates `VERSION` is semver on every build, and on a tag push (`refs/tags/v*`) enforces that the tag equals `v<VERSION>` — so the tag and the file can never drift.
+
+To cut a release (all from `main`, once it's green):
+
+```bash
+# 1. Bump the version (edit VERSION, e.g. 0.3.0 → 0.4.0), commit via PR, merge to main.
+# 2. From the merge commit on main:
+git tag -a v0.4.0 -m "Release v0.4.0 …"   # annotated; summarize notable PRs in the message
+git branch release-v0.4.0                  # cut the release branch from the same commit
+git push origin v0.4.0                      # tag push → CI verifies tag == v<VERSION>
+git push -u origin release-v0.4.0
+```
+
+Conventions: tags are `v0.3.0` (with `v` prefix); release branches are `release-v0.3.0` (with `v` prefix); the `VERSION` file itself holds the bare `0.3.0` (no `v`). `river-api` deliberately has no RabbitMQ dependency, but every other service does — keep shared dependency bumps (e.g. `amqp091-go`) in sync across all affected `go.mod` files in one release.
+
 ## Architecture
 
 ### Services and Data Flow

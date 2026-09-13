@@ -234,6 +234,12 @@
   flex-direction: column;
   gap: 2px;
   z-index: 10;
+  /* Cap height so a file with many subtitle/audio tracks scrolls inside
+     the menu instead of growing off the top of the viewport (the list is
+     anchored above the control bar and grows upward). */
+  max-height: min(50vh, 320px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .subMenuOption {

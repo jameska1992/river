@@ -3,6 +3,7 @@ name: CI
 on:
   push:
     branches: [main]
+    tags: ['v*']
   pull_request:
     branches: [main]
 
@@ -14,6 +15,35 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Single source of truth for the repo version lives in the top-level
+  # VERSION file. This job validates it is semver, and on a tag push
+  # (refs/tags/v*) enforces that the tag equals "v<VERSION>" so the tag
+  # and the file can never drift. Cut a release by bumping VERSION on
+  # main, then tagging that commit v<VERSION>.
+  version:
+    name: version
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: validate VERSION is semver
+        run: |
+          version="$(tr -d '[:space:]' < VERSION)"
+          echo "declared version: ${version}"
+          if ! printf '%s' "$version" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "::error file=VERSION::VERSION must be semver X.Y.Z, got '${version}'"
+            exit 1
+          fi
+      - name: tag matches VERSION
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          tag="${GITHUB_REF#refs/tags/}"
+          expected="v$(tr -d '[:space:]' < VERSION)"
+          echo "tag: ${tag}  expected: ${expected}"
+          if [ "$tag" != "$expected" ]; then
+            echo "::error::tag '${tag}' does not match VERSION file ('${expected}'). Bump VERSION on main before tagging."
+            exit 1
+          fi
+
   go:
     name: go (${{ matrix.service }})
     runs-on: ubuntu-latest

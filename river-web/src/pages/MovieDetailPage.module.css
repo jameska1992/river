@@ -270,6 +270,13 @@
   color: var(--color-on-surface);
 }
 
+.editCastBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: var(--space-1);
+}
+
 .castGrid {
   display: flex;
   flex-wrap: wrap;

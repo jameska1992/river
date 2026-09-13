@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
-import { RiArrowLeftLine, RiFilmLine, RiPlayFill, RiRewindStartLine, RiArrowDownSLine, RiStarLine, RiTimeLine, RiDownloadLine, RiUserLine, RiBookmarkLine, RiBookmarkFill, RiGroupLine, RiAlertFill, RiEyeLine, RiEyeOffLine, RiHdLine } from 'react-icons/ri'
+import { RiArrowLeftLine, RiFilmLine, RiPlayFill, RiRewindStartLine, RiArrowDownSLine, RiStarLine, RiTimeLine, RiDownloadLine, RiUserLine, RiBookmarkLine, RiBookmarkFill, RiGroupLine, RiAlertFill, RiEyeLine, RiEyeOffLine, RiHdLine, RiEditLine } from 'react-icons/ri'
 import { useMovies } from '../context/MoviesContext'
 import { useAuth } from '../context/AuthContext'
 import { imageUrl } from '../util/imageUrl'
@@ -12,6 +12,7 @@ import { MetadataModal } from '../components/MetadataModal'
 import { IdentifyMovieModal } from '../components/IdentifyMovieModal'
 import { MediaDetailsModal } from '../components/MediaDetailsModal'
 import { DeleteMediaModal } from '../components/DeleteMediaModal'
+import { CastEditorModal } from '../components/CastEditorModal'
 import { SimilarCarousel } from '../components/SimilarCarousel'
 import { DropdownMenu } from '../components/DropdownMenu'
 import dropdownStyles from '../components/DropdownMenu.module.css'
@@ -55,6 +56,7 @@ export function MovieDetailPage() {
   const [identifyOpen, setIdentifyOpen] = useState(false)
   const [detailsOpen, setDetailsOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
+  const [castEditOpen, setCastEditOpen] = useState(false)
   const [progress, setProgress] = useState<WatchProgress | null>(null)
   const [watchedSaving, setWatchedSaving] = useState(false)
 
@@ -331,8 +333,12 @@ export function MovieDetailPage() {
                     </a>
                   )}
                 </div>
-                {credits && (credits.cast.length > 0 || credits.crew.length > 0) && (
-                  <CreditsSection credits={credits} />
+                {credits && (isAdmin || credits.cast.length > 0 || credits.crew.length > 0) && (
+                  <CreditsSection
+                    credits={credits}
+                    isAdmin={isAdmin}
+                    onEditCast={() => setCastEditOpen(true)}
+                  />
                 )}
               </div>
               {movie.trailer_url && (
@@ -375,6 +381,16 @@ export function MovieDetailPage() {
         />
       )}
 
+      {castEditOpen && movie && credits && (
+        <CastEditorModal
+          type="movie"
+          mediaId={movie.id}
+          credits={credits}
+          onSaved={setCredits}
+          onClose={() => setCastEditOpen(false)}
+        />
+      )}
+
       {detailsOpen && movie && (
         <MediaDetailsModal
           title="Movie details"
@@ -401,7 +417,9 @@ export function MovieDetailPage() {
   )
 }
 
-function CreditsSection({ credits }: { credits: Credits }) {
+function CreditsSection({ credits, isAdmin, onEditCast }: {
+  credits: Credits; isAdmin?: boolean; onEditCast?: () => void
+}) {
   const directors = credits.crew.filter(c => c.job === 'Director')
   const writers = credits.crew.filter(c => c.department === 'Writing')
 
@@ -418,6 +436,12 @@ function CreditsSection({ credits }: { credits: Credits }) {
           <dt className="label-sm">Writers</dt>
           <dd className="body-md">{writers.map(c => c.name).join(', ')}</dd>
         </dl>
+      )}
+      {isAdmin && (
+        <button className={`btn ${styles.editCastBtn}`} onClick={onEditCast}>
+          <RiEditLine size={14} />
+          <span>{credits.cast.length > 0 ? 'Edit cast' : 'Add cast'}</span>
+        </button>
       )}
       {credits.cast.length > 0 && (
         <div className={styles.castGrid}>

@@ -9,7 +9,7 @@ import type {
   CreateAlbumRequest, UpdateAlbumRequest, CreateTrackRequest,
   Audiobook, AudiobookChapter, CreateAudiobookRequest, UpdateAudiobookRequest,
   CreateChapterRequest,
-  Credits, Person,
+  Credits, SetCreditsRequest, Person,
   SearchResult,
   Subtitle, AudioTrack,
   Collection, CollectionDetail, CollectionItem,
@@ -507,6 +507,19 @@ export class RiverClient {
 
   async getTVShowCredits(id: string): Promise<Credits> {
     return this.request<Credits>('GET', `/tvshows/${id}/credits`)
+  }
+
+  // setMovieCredits / setTVShowCredits replace the ENTIRE cast + crew list
+  // (delete-all-then-insert on the server). Send the complete list every
+  // time — anything omitted is deleted. The PUT returns 204, so callers
+  // should re-fetch via getMovieCredits/getTVShowCredits to render the
+  // canonical result (resolved person ids, deduped TMDB people, etc.).
+  async setMovieCredits(id: string, credits: SetCreditsRequest): Promise<void> {
+    return this.request('PUT', `/movies/${id}/credits`, credits)
+  }
+
+  async setTVShowCredits(id: string, credits: SetCreditsRequest): Promise<void> {
+    return this.request('PUT', `/tvshows/${id}/credits`, credits)
   }
 
   async getPerson(id: string): Promise<Person> {

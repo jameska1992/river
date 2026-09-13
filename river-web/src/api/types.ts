@@ -96,6 +96,36 @@ export interface Credits {
   crew: CrewCredit[]
 }
 
+// --- Credits editing (PUT /movies|tvshows/{id}/credits) ---
+//
+// The PUT endpoint is full-replace: it deletes the entire cast + crew and
+// re-inserts whatever is sent. Callers must therefore submit the complete
+// list, not a delta. tmdb_id is optional — omit it (or send 0) for a
+// manually-added person and the backend creates a fresh Person rather than
+// deduping on a TMDB id.
+export interface SetCastCredit {
+  tmdb_id?: number
+  name: string
+  profile_path?: string
+  biography?: string
+  character?: string
+  order?: number
+}
+
+export interface SetCrewCredit {
+  tmdb_id?: number
+  name: string
+  profile_path?: string
+  biography?: string
+  job?: string
+  department?: string
+}
+
+export interface SetCreditsRequest {
+  cast: SetCastCredit[]
+  crew: SetCrewCredit[]
+}
+
 // --- People ---
 
 export interface PersonMovieCastItem {

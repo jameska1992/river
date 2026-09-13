@@ -21,6 +21,7 @@ import { SeasonMetadataModal } from '../components/SeasonMetadataModal'
 import { MediaDetailsModal } from '../components/MediaDetailsModal'
 import { SimilarCarousel } from '../components/SimilarCarousel'
 import { DeleteMediaModal } from '../components/DeleteMediaModal'
+import { CastEditorModal } from '../components/CastEditorModal'
 import { useBackTo } from '../hooks/useBackTo'
 import styles from './TVShowDetailPage.module.css'
 
@@ -45,6 +46,7 @@ export function TVShowDetailPage() {
   const [identifyOpen, setIdentifyOpen] = useState(false)
   const [detailsOpen, setDetailsOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
+  const [castEditOpen, setCastEditOpen] = useState(false)
   // editingSeason / editingEpisode hold the row currently being edited; we
   // pass them to the modal as a prop rather than threading callbacks down.
   // When set, the corresponding modal renders.
@@ -296,8 +298,12 @@ export function TVShowDetailPage() {
                   {isWatched ? <RiEyeOffLine size={18} /> : <RiEyeLine size={18} />}
                 </button>
               </div>
-              {credits && (credits.cast.length > 0 || credits.crew.length > 0) && (
-                <TVShowCreditsSection credits={credits} />
+              {credits && (isAdmin || credits.cast.length > 0 || credits.crew.length > 0) && (
+                <TVShowCreditsSection
+                  credits={credits}
+                  isAdmin={isAdmin}
+                  onEditCast={() => setCastEditOpen(true)}
+                />
               )}
             </div>
             {show.trailer_url && (
@@ -381,6 +387,16 @@ export function TVShowDetailPage() {
         />
       )}
 
+      {castEditOpen && show && credits && (
+        <CastEditorModal
+          type="tvshow"
+          mediaId={show.id}
+          credits={credits}
+          onSaved={setCredits}
+          onClose={() => setCastEditOpen(false)}
+        />
+      )}
+
       {detailsOpen && show && (
         <MediaDetailsModal
           title="Series details"
@@ -455,7 +471,9 @@ export function TVShowDetailPage() {
 
 // ── Credits section ──────────────────────────────────────
 
-function TVShowCreditsSection({ credits }: { credits: Credits }) {
+function TVShowCreditsSection({ credits, isAdmin, onEditCast }: {
+  credits: Credits; isAdmin?: boolean; onEditCast?: () => void
+}) {
   const creators = credits.crew.filter(c => c.job === 'Creator' || c.job === 'Executive Producer')
 
   return (
@@ -465,6 +483,12 @@ function TVShowCreditsSection({ credits }: { credits: Credits }) {
           <dt className="label-sm">Created by</dt>
           <dd className="body-md">{creators.map(c => c.name).join(', ')}</dd>
         </dl>
+      )}
+      {isAdmin && (
+        <button className={`btn ${styles.editCastBtn}`} onClick={onEditCast}>
+          <RiEditLine size={14} />
+          <span>{credits.cast.length > 0 ? 'Edit cast' : 'Add cast'}</span>
+        </button>
       )}
       {credits.cast.length > 0 && (
         <div className={styles.castGrid}>

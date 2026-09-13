@@ -8,6 +8,7 @@ export type {
   WatchParty, WatchPartyMember,
   ServiceLog, LogsResponse,
   CastCredit, CrewCredit, Credits,
+  SetCastCredit, SetCrewCredit, SetCreditsRequest,
   Person, PersonMovieCastItem, PersonMovieCrewItem, PersonTVShowCastItem, PersonTVShowCrewItem,
   Artist, Album, Track, Audiobook, AudiobookChapter,
   RecentlyAddedItem, WatchProgress, ContinueWatchingItem, NextUpItem, ShowWatchState,

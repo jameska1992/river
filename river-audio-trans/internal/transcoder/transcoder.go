@@ -113,28 +113,67 @@ func OutputPath(inputPath, libraryType, libraryPath, outputDir string) string {
 // fetched, so behavior is unchanged out of the box.
 const DefaultMusicBitrate = 256
 
-// Transcode converts inputPath to AAC in an M4A container at outputPath at
-// the given bitrate (kbps). A non-positive bitrate falls back to the
-// historical default rather than emitting an invalid "-b:a 0k".
-func Transcode(inputPath, outputPath string, bitrateKbps int) error {
+// Options controls a single audio transcode.
+type Options struct {
+	BitrateKbps int // AAC bitrate; non-positive falls back to DefaultMusicBitrate
+	// Validate gates the post-transcode output check (AAC present, duration
+	// within tolerance of the source, non-trivial size). SourceDuration is
+	// the source length in seconds (0 = unknown, skips the duration check);
+	// DurationTolerancePct is the allowed drift.
+	Validate             bool
+	SourceDuration       int
+	DurationTolerancePct int
+}
+
+// Transcode converts inputPath to AAC in an M4A container at outputPath.
+//
+// The transcode is written to a scratch file in the output directory and
+// only renamed into place after it passes validation, so ffmpeg exiting 0
+// with unusable output (or a validation failure) never leaves a bad file at
+// the canonical path — the caller's error surfaces to the DLQ instead.
+func Transcode(inputPath, outputPath string, opts Options) error {
 	if err := os.MkdirAll(filepath.Dir(outputPath), 0o755); err != nil {
 		return fmt.Errorf("create output dir: %w", err)
 	}
-	if bitrateKbps <= 0 {
-		bitrateKbps = DefaultMusicBitrate
+	bitrate := opts.BitrateKbps
+	if bitrate <= 0 {
+		bitrate = DefaultMusicBitrate
 	}
+
+	// Scratch file in the output dir so the final move is an atomic rename on
+	// the same filesystem. Removed on any early return.
+	tmp, err := os.CreateTemp(filepath.Dir(outputPath), "transcode-*.m4a")
+	if err != nil {
+		return fmt.Errorf("create tmp file: %w", err)
+	}
+	tmpPath := tmp.Name()
+	tmp.Close() // ffmpeg reopens via -y; we just needed a unique name
+	defer os.Remove(tmpPath)
 
 	cmd := exec.Command(
 		"ffmpeg",
 		"-i", inputPath,
 		"-vn",
 		"-c:a", "aac",
-		"-b:a", fmt.Sprintf("%dk", bitrateKbps),
+		"-b:a", fmt.Sprintf("%dk", bitrate),
 		"-movflags", "+faststart",
 		"-y",
-		outputPath,
+		tmpPath,
 	)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	return cmd.Run()
+	if err := cmd.Run(); err != nil {
+		return err
+	}
+
+	if opts.Validate {
+		if err := validateAttempt(tmpPath, opts.SourceDuration, opts.DurationTolerancePct); err != nil {
+			return fmt.Errorf("output validation failed: %w", err)
+		}
+	}
+
+	if err := os.Rename(tmpPath, outputPath); err != nil {
+		return fmt.Errorf("move tmp into output: %w", err)
+	}
+	return nil
 }

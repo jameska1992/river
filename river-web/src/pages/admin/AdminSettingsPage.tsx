@@ -1,5 +1,5 @@
 import { type FormEvent, useEffect, useState } from 'react'
-import { RiCheckLine, RiCloseLine, RiExchangeFundsLine, RiFilmLine, RiMusic2Line, RiTimeLine } from 'react-icons/ri'
+import { RiCheckLine, RiCloseLine, RiExchangeFundsLine, RiFilmLine, RiMusic2Line, RiTimeLine, RiShieldCheckLine } from 'react-icons/ri'
 import { api, ApiError } from '../../api'
 import type { IntegrationSettings, TranscodingSettings } from '../../api'
 import styles from './AdminSettingsPage.module.css'
@@ -197,6 +197,48 @@ function TranscodingTab() {
           >
             {BITRATES.map(b => <option key={b} value={b}>{b} kbps</option>)}
           </select>
+        </label>
+      </div>
+
+      <div className={`card ${styles.card}`} style={{ maxWidth: 460 }}>
+        <div className={styles.cardHead}>
+          <span className={styles.cardIcon} aria-hidden><RiShieldCheckLine size={18} /></span>
+          <div>
+            <h2 className={`label-lg ${styles.cardTitle}`}>Output validation</h2>
+            <p className={`label-sm ${styles.cardSubtitle}`}>Reject broken transcodes instead of shipping them</p>
+          </div>
+        </div>
+
+        <label className={styles.checkbox}>
+          <input
+            type="checkbox"
+            checked={settings.validate_output}
+            onChange={e => set('validate_output', e.target.checked)}
+          />
+          <span className="label-sm">Validate output (streams, duration, size) before accepting a transcode</span>
+        </label>
+
+        <label className={styles.checkbox}>
+          <input
+            type="checkbox"
+            checked={settings.validate_content}
+            disabled={!settings.validate_output}
+            onChange={e => set('validate_content', e.target.checked)}
+          />
+          <span className="label-sm">Sample frames to reject solid-colour video (green-frame class)</span>
+        </label>
+
+        <label className={styles.field}>
+          <span className="label-sm">Duration tolerance (% drift from source)</span>
+          <input
+            className="input"
+            type="number"
+            min={0}
+            max={50}
+            value={settings.duration_tolerance_pct}
+            disabled={!settings.validate_output}
+            onChange={e => set('duration_tolerance_pct', Number(e.target.value))}
+          />
         </label>
       </div>
 

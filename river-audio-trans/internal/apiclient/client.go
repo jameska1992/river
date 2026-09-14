@@ -114,9 +114,10 @@ func (c *Client) doWithRetry(method, path string, body, out interface{}, retry b
 // --- Artists ---
 
 // TranscodingSettings is the resolved transcoding config served by
-// river-api (GET /api/settings/transcoding). Only MusicBitrate drives this
-// service; the video-side fields are present for symmetry with the shared
-// settings area and ignored here.
+// river-api (GET /api/settings/transcoding). MusicBitrate plus the output
+// validation fields drive this service; the remaining video-side fields are
+// present for symmetry with the shared settings area and ignored here
+// (ValidateContent is video-only).
 type TranscodingSettings struct {
 	MaxHeight    int    `json:"max_height"`
 	Quality      int    `json:"quality"`
@@ -125,6 +126,10 @@ type TranscodingSettings struct {
 	ForceCPU     bool   `json:"force_cpu"`
 	AudioBitrate int    `json:"audio_bitrate"`
 	MusicBitrate int    `json:"music_bitrate"`
+
+	ValidateOutput       bool `json:"validate_output"`
+	ValidateContent      bool `json:"validate_content"`
+	DurationTolerancePct int  `json:"duration_tolerance_pct"`
 }
 
 func (c *Client) GetTranscodingSettings() (*TranscodingSettings, error) {

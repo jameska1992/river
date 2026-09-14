@@ -128,6 +128,10 @@ type TranscodingSettings struct {
 	ForceCPU     bool   `json:"force_cpu"`
 	AudioBitrate int    `json:"audio_bitrate"`
 	MusicBitrate int    `json:"music_bitrate"`
+
+	ValidateOutput       bool `json:"validate_output"`
+	ValidateContent      bool `json:"validate_content"`
+	DurationTolerancePct int  `json:"duration_tolerance_pct"`
 }
 
 func (c *Client) GetTranscodingSettings() (*TranscodingSettings, error) {

@@ -8811,6 +8811,9 @@ const docTemplate = `{
                 "audio_bitrate": {
                     "type": "integer"
                 },
+                "duration_tolerance_pct": {
+                    "type": "integer"
+                },
                 "force_cpu": {
                     "type": "boolean"
                 },
@@ -8825,6 +8828,12 @@ const docTemplate = `{
                 },
                 "quality": {
                     "type": "integer"
+                },
+                "validate_content": {
+                    "type": "boolean"
+                },
+                "validate_output": {
+                    "type": "boolean"
                 },
                 "x264_preset": {
                     "type": "string"
@@ -9765,6 +9774,9 @@ const docTemplate = `{
                     "description": "kbps, river-video-trans audio path",
                     "type": "integer"
                 },
+                "duration_tolerance_pct": {
+                    "type": "integer"
+                },
                 "force_cpu": {
                     "description": "skip the NVENC path even with a GPU",
                     "type": "boolean"
@@ -9784,6 +9796,13 @@ const docTemplate = `{
                 "quality": {
                     "description": "0..51, mapped to NVENC -cq and x264 -crf",
                     "type": "integer"
+                },
+                "validate_content": {
+                    "type": "boolean"
+                },
+                "validate_output": {
+                    "description": "Output validation. ValidateOutput gates the structural ffprobe checks\n(expected streams, duration within tolerance, non-trivial size).\nValidateContent additionally samples frames to reject solid-colour\noutput (the green-frame class); it only applies to video and is a\nno-op unless ValidateOutput is also on. DurationTolerancePct is the\nallowed output-vs-source duration drift, in percent.",
+                    "type": "boolean"
                 },
                 "x264_preset": {
                     "description": "ultrafast..veryslow",

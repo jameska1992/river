@@ -25,6 +25,10 @@ const (
 	keyTransForceCPU     = "transcoding.force_cpu"
 	keyTransAudioBitrate = "transcoding.audio_bitrate"
 	keyTransMusicBitrate = "transcoding.music_bitrate"
+
+	keyTransValidateOutput    = "transcoding.validate_output"
+	keyTransValidateContent   = "transcoding.validate_content"
+	keyTransDurationTolerance = "transcoding.duration_tolerance_pct"
 )
 
 // Transcoding defaults. These must match the compiled-in constants the
@@ -39,7 +43,20 @@ const (
 	defaultTransForceCPU     = false
 	defaultTransAudioBitrate = 192
 	defaultTransMusicBitrate = 256
+
+	// Output validation defaults. On by default so a fresh install rejects
+	// broken transcodes (missing streams, wrong duration, solid-colour
+	// frames) out of the box rather than shipping them. Tolerance is the
+	// allowed output-vs-source duration drift, in percent.
+	defaultTransValidateOutput    = true
+	defaultTransValidateContent   = true
+	defaultTransDurationTolerance = 2
 )
+
+// maxTransDurationTolerance caps the configurable duration drift. Anything
+// above this defeats the point of the check (a half-length file would pass),
+// so the range is clamped rather than free-form.
+const maxTransDurationTolerance = 50
 
 // Allowed values for the structured transcoding knobs. Validation is
 // strictly enum/range based — no admin input is ever passed through as a
@@ -149,6 +166,16 @@ type TranscodingSettings struct {
 	ForceCPU     bool   `json:"force_cpu"`     // skip the NVENC path even with a GPU
 	AudioBitrate int    `json:"audio_bitrate"` // kbps, river-video-trans audio path
 	MusicBitrate int    `json:"music_bitrate"` // kbps, river-audio-trans
+
+	// Output validation. ValidateOutput gates the structural ffprobe checks
+	// (expected streams, duration within tolerance, non-trivial size).
+	// ValidateContent additionally samples frames to reject solid-colour
+	// output (the green-frame class); it only applies to video and is a
+	// no-op unless ValidateOutput is also on. DurationTolerancePct is the
+	// allowed output-vs-source duration drift, in percent.
+	ValidateOutput       bool `json:"validate_output"`
+	ValidateContent      bool `json:"validate_content"`
+	DurationTolerancePct int  `json:"duration_tolerance_pct"`
 }
 
 // getInt returns the stored value for key parsed as an int, or def when
@@ -200,6 +227,10 @@ func (s *SettingsService) Transcoding() TranscodingSettings {
 		ForceCPU:     s.getBool(keyTransForceCPU, defaultTransForceCPU),
 		AudioBitrate: s.getInt(keyTransAudioBitrate, defaultTransAudioBitrate),
 		MusicBitrate: s.getInt(keyTransMusicBitrate, defaultTransMusicBitrate),
+
+		ValidateOutput:       s.getBool(keyTransValidateOutput, defaultTransValidateOutput),
+		ValidateContent:      s.getBool(keyTransValidateContent, defaultTransValidateContent),
+		DurationTolerancePct: s.getInt(keyTransDurationTolerance, defaultTransDurationTolerance),
 	}
 }
 
@@ -226,6 +257,9 @@ func (s *SettingsService) UpdateTranscoding(in TranscodingSettings) error {
 	if !containsInt(transBitrates, in.MusicBitrate) {
 		return fmt.Errorf("%w: music_bitrate must be one of 128, 192, 256, 320", apperrors.ErrInvalidInput)
 	}
+	if in.DurationTolerancePct < 0 || in.DurationTolerancePct > maxTransDurationTolerance {
+		return fmt.Errorf("%w: duration_tolerance_pct must be between 0 and %d", apperrors.ErrInvalidInput, maxTransDurationTolerance)
+	}
 
 	writes := []struct {
 		key, value string
@@ -237,6 +271,9 @@ func (s *SettingsService) UpdateTranscoding(in TranscodingSettings) error {
 		{keyTransForceCPU, strconv.FormatBool(in.ForceCPU)},
 		{keyTransAudioBitrate, strconv.Itoa(in.AudioBitrate)},
 		{keyTransMusicBitrate, strconv.Itoa(in.MusicBitrate)},
+		{keyTransValidateOutput, strconv.FormatBool(in.ValidateOutput)},
+		{keyTransValidateContent, strconv.FormatBool(in.ValidateContent)},
+		{keyTransDurationTolerance, strconv.Itoa(in.DurationTolerancePct)},
 	}
 	for _, w := range writes {
 		if err := s.repo.Set(w.key, w.value); err != nil {

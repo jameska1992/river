@@ -755,4 +755,7 @@ export interface TranscodingSettings {
   force_cpu: boolean
   audio_bitrate: number // kbps
   music_bitrate: number // kbps
+  validate_output: boolean // reject transcodes with missing streams / wrong duration / trivial size
+  validate_content: boolean // video only: reject solid-colour output (green-frame class)
+  duration_tolerance_pct: number // allowed output-vs-source duration drift, 0–50
 }

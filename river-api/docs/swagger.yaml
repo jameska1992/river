@@ -599,6 +599,8 @@ definitions:
     properties:
       audio_bitrate:
         type: integer
+      duration_tolerance_pct:
+        type: integer
       force_cpu:
         type: boolean
       max_height:
@@ -609,6 +611,10 @@ definitions:
         type: string
       quality:
         type: integer
+      validate_content:
+        type: boolean
+      validate_output:
+        type: boolean
       x264_preset:
         type: string
     type: object
@@ -1291,6 +1297,8 @@ definitions:
       audio_bitrate:
         description: kbps, river-video-trans audio path
         type: integer
+      duration_tolerance_pct:
+        type: integer
       force_cpu:
         description: skip the NVENC path even with a GPU
         type: boolean
@@ -1306,6 +1314,17 @@ definitions:
       quality:
         description: 0..51, mapped to NVENC -cq and x264 -crf
         type: integer
+      validate_content:
+        type: boolean
+      validate_output:
+        description: |-
+          Output validation. ValidateOutput gates the structural ffprobe checks
+          (expected streams, duration within tolerance, non-trivial size).
+          ValidateContent additionally samples frames to reject solid-colour
+          output (the green-frame class); it only applies to video and is a
+          no-op unless ValidateOutput is also on. DurationTolerancePct is the
+          allowed output-vs-source duration drift, in percent.
+        type: boolean
       x264_preset:
         description: ultrafast..veryslow
         type: string

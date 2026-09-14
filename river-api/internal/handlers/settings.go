@@ -52,6 +52,10 @@ type transcodingRequest struct {
 	ForceCPU     bool   `json:"force_cpu"`
 	AudioBitrate int    `json:"audio_bitrate"`
 	MusicBitrate int    `json:"music_bitrate"`
+
+	ValidateOutput       bool `json:"validate_output"`
+	ValidateContent      bool `json:"validate_content"`
+	DurationTolerancePct int  `json:"duration_tolerance_pct"`
 }
 
 // GetIntegrations returns the Radarr/Sonarr integration settings. Secrets
@@ -253,6 +257,10 @@ func (h *SettingsHandler) UpdateTranscoding(c *gin.Context) {
 		ForceCPU:     req.ForceCPU,
 		AudioBitrate: req.AudioBitrate,
 		MusicBitrate: req.MusicBitrate,
+
+		ValidateOutput:       req.ValidateOutput,
+		ValidateContent:      req.ValidateContent,
+		DurationTolerancePct: req.DurationTolerancePct,
 	})
 	if err != nil {
 		if errors.Is(err, services.ErrInvalidInput) {

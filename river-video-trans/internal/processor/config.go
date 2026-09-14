@@ -57,12 +57,15 @@ func (s *settingsCache) get() transcoder.Config {
 	}
 
 	s.cached = transcoder.Config{
-		MaxHeight:    ts.MaxHeight,
-		Quality:      ts.Quality,
-		NVENCPreset:  ts.NVENCPreset,
-		X264Preset:   ts.X264Preset,
-		ForceCPU:     ts.ForceCPU,
-		AudioBitrate: ts.AudioBitrate,
+		MaxHeight:            ts.MaxHeight,
+		Quality:              ts.Quality,
+		NVENCPreset:          ts.NVENCPreset,
+		X264Preset:           ts.X264Preset,
+		ForceCPU:             ts.ForceCPU,
+		AudioBitrate:         ts.AudioBitrate,
+		ValidateOutput:       ts.ValidateOutput,
+		ValidateContent:      ts.ValidateContent,
+		DurationTolerancePct: ts.DurationTolerancePct,
 	}
 	s.have = true
 	s.fetchedAt = time.Now()

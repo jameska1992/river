@@ -24,6 +24,15 @@ type Config struct {
 	X264Preset   string // ultrafast..veryslow
 	ForceCPU     bool   // skip the NVENC attempts even when a GPU is present
 	AudioBitrate int    // kbps for re-encoded (non-AAC) audio streams
+
+	// ValidateOutput gates the structural post-transcode checks (expected
+	// streams, duration within tolerance, non-trivial size). ValidateContent
+	// additionally samples frames to reject solid-colour output (the
+	// green-frame class); it's a no-op unless ValidateOutput is also set.
+	// DurationTolerancePct is the allowed output-vs-source duration drift.
+	ValidateOutput       bool
+	ValidateContent      bool
+	DurationTolerancePct int
 }
 
 // DefaultConfig returns the historical hardcoded profile: H.264/AAC/MP4,
@@ -31,12 +40,15 @@ type Config struct {
 // fallback whenever the settings fetch fails.
 func DefaultConfig() Config {
 	return Config{
-		MaxHeight:    1080,
-		Quality:      23,
-		NVENCPreset:  "p3",
-		X264Preset:   "medium",
-		ForceCPU:     false,
-		AudioBitrate: 192,
+		MaxHeight:            1080,
+		Quality:              23,
+		NVENCPreset:          "p3",
+		X264Preset:           "medium",
+		ForceCPU:             false,
+		AudioBitrate:         192,
+		ValidateOutput:       true,
+		ValidateContent:      true,
+		DurationTolerancePct: 2,
 	}
 }
 
@@ -71,6 +83,7 @@ type FileInfo struct {
 	PixFmt       string // e.g. "yuv420p", "yuv420p10le"
 	Width        int
 	Height       int
+	Duration     float64 // container duration in seconds (0 if unknown)
 	AudioStreams []AudioStream
 	Subtitles    []SubtitleStream
 }
@@ -102,6 +115,9 @@ type ffprobeOutput struct {
 			Title    string `json:"title"`
 		} `json:"tags"`
 	} `json:"streams"`
+	Format struct {
+		Duration string `json:"duration"`
+	} `json:"format"`
 }
 
 func Probe(path string) (*FileInfo, error) {
@@ -109,6 +125,7 @@ func Probe(path string) (*FileInfo, error) {
 		"ffprobe", "-v", "quiet",
 		"-print_format", "json",
 		"-show_streams",
+		"-show_format",
 		path,
 	).Output()
 	if err != nil {
@@ -119,6 +136,9 @@ func Probe(path string) (*FileInfo, error) {
 		return nil, fmt.Errorf("parse ffprobe output: %w", err)
 	}
 	info := &FileInfo{}
+	if d, err := strconv.ParseFloat(result.Format.Duration, 64); err == nil {
+		info.Duration = d
+	}
 	audioIdx := 0
 	for _, s := range result.Streams {
 		switch s.CodecType {
@@ -303,8 +323,21 @@ func Transcode(inputPath, outputPath, tmpDir string, info *FileInfo, cfg Config,
 	var lastErr error
 	var lastStderr string
 	for i, a := range attempts {
-		stderr, err := runFFmpeg(buildArgs(inputPath, tmpPath, info, a.enc, cfg))
-		if err == nil {
+		stderr, runErr := runFFmpeg(buildArgs(inputPath, tmpPath, info, a.enc, cfg))
+
+		// An attempt succeeds only if ffmpeg exits 0 AND the output passes
+		// validation. ffmpeg can exit 0 while producing unusable output
+		// (missing streams, wrong duration, solid-colour frames), so a bare
+		// exit code isn't enough — validate before accepting, else fall
+		// through to the next encoder just like a hard failure.
+		var attemptErr error
+		if runErr != nil {
+			attemptErr = runErr
+			lastStderr = stderr
+		} else if verr := validateAttempt(info, tmpPath, cfg); verr != nil {
+			attemptErr = fmt.Errorf("output validation failed: %w", verr)
+			lastStderr = ""
+		} else {
 			if a.cpuDecode {
 				// One-line, grep-friendly. The earlier WARN logged WHY the
 				// GPU path failed; this confirms which fallback path won.
@@ -319,8 +352,8 @@ func Transcode(inputPath, outputPath, tmpDir string, info *FileInfo, cfg Config,
 			}
 			return nil
 		}
-		lastErr = err
-		lastStderr = stderr
+
+		lastErr = attemptErr
 		if i == len(attempts)-1 {
 			break
 		}
@@ -331,8 +364,10 @@ func Transcode(inputPath, outputPath, tmpDir string, info *FileInfo, cfg Config,
 		// API log gets the concise reason; the full ffmpeg stderr is only
 		// dumped to docker logs since it'd otherwise drown the admin feed.
 		emit("warn", fmt.Sprintf("%s failed (%v), falling back to %s (%s); source: %s",
-			a.name, err, nextPath, attempts[i+1].name, sourceDesc))
-		log.Printf("ffmpeg stderr: %s", stderr)
+			a.name, attemptErr, nextPath, attempts[i+1].name, sourceDesc))
+		if stderr != "" {
+			log.Printf("ffmpeg stderr: %s", stderr)
+		}
 		// No need to remove tmpPath; the next attempt's ffmpeg -y overwrites it.
 	}
 	if lastStderr != "" {

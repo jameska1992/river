@@ -165,6 +165,11 @@ func TestSettingsService_Transcoding_DefaultsMatchTodaysConstants(t *testing.T) 
 		ForceCPU:     false,
 		AudioBitrate: 192,
 		MusicBitrate: 256,
+		// Output validation defaults on so broken transcodes are rejected
+		// out of the box.
+		ValidateOutput:       true,
+		ValidateContent:      true,
+		DurationTolerancePct: 2,
 	}, got)
 }
 
@@ -180,6 +185,11 @@ func TestSettingsService_Transcoding_ReadsStoredValues(t *testing.T) {
 		ForceCPU:     true,
 		AudioBitrate: 320,
 		MusicBitrate: 128,
+		// Non-default validation values to prove they round-trip (and that
+		// a stored false isn't re-defaulted to true).
+		ValidateOutput:       false,
+		ValidateContent:      false,
+		DurationTolerancePct: 10,
 	}
 	require.NoError(t, svc.UpdateTranscoding(in))
 	assert.Equal(t, in, svc.Transcoding())
@@ -212,6 +222,10 @@ func TestSettingsService_UpdateTranscoding_RejectsInvalid(t *testing.T) {
 		ForceCPU:     false,
 		AudioBitrate: 192,
 		MusicBitrate: 256,
+
+		ValidateOutput:       true,
+		ValidateContent:      true,
+		DurationTolerancePct: 2,
 	}
 	cases := map[string]func(TranscodingSettings) TranscodingSettings{
 		"max_height off-enum":    func(s TranscodingSettings) TranscodingSettings { s.MaxHeight = 900; return s },
@@ -221,6 +235,8 @@ func TestSettingsService_UpdateTranscoding_RejectsInvalid(t *testing.T) {
 		"x264 preset off-enum":   func(s TranscodingSettings) TranscodingSettings { s.X264Preset = "turbo"; return s },
 		"audio bitrate off-enum": func(s TranscodingSettings) TranscodingSettings { s.AudioBitrate = 200; return s },
 		"music bitrate off-enum": func(s TranscodingSettings) TranscodingSettings { s.MusicBitrate = 999; return s },
+		"tolerance below range":  func(s TranscodingSettings) TranscodingSettings { s.DurationTolerancePct = -1; return s },
+		"tolerance above range":  func(s TranscodingSettings) TranscodingSettings { s.DurationTolerancePct = 51; return s },
 	}
 	for name, mutate := range cases {
 		t.Run(name, func(t *testing.T) {

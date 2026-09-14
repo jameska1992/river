@@ -20,16 +20,35 @@ type settingsSource interface {
 	GetTranscodingSettings() (*apiclient.TranscodingSettings, error)
 }
 
-// settingsCache serves the music AAC bitrate with a short TTL. A fetch
-// failure never breaks a job: it serves the last good value if it has one,
-// otherwise the compiled-in default — so a transient river-api outage
-// leaves transcoding running on the previous (or default) bitrate.
+// audioSettings is the subset of the shared transcoding config this service
+// uses: the AAC bitrate plus the output-validation knobs.
+type audioSettings struct {
+	musicBitrate         int
+	validateOutput       bool
+	durationTolerancePct int
+}
+
+// defaultAudioSettings mirrors the river-api defaults, used when no config
+// has ever been fetched — validation on so broken transcodes are rejected
+// out of the box.
+func defaultAudioSettings() audioSettings {
+	return audioSettings{
+		musicBitrate:         transcoder.DefaultMusicBitrate,
+		validateOutput:       true,
+		durationTolerancePct: 2,
+	}
+}
+
+// settingsCache serves the audio transcoding config with a short TTL. A
+// fetch failure never breaks a job: it serves the last good value if it has
+// one, otherwise the compiled-in defaults — so a transient river-api outage
+// leaves transcoding running on the previous (or default) config.
 type settingsCache struct {
 	src settingsSource
 	ttl time.Duration
 
 	mu        sync.Mutex
-	cached    int
+	cached    audioSettings
 	have      bool
 	fetchedAt time.Time
 }
@@ -38,9 +57,9 @@ func newSettingsCache(src settingsSource, ttl time.Duration) *settingsCache {
 	return &settingsCache{src: src, ttl: ttl}
 }
 
-// musicBitrate returns the effective AAC bitrate (kbps), refreshing from
-// river-api when the cached value is missing or older than the TTL.
-func (s *settingsCache) musicBitrate() int {
+// get returns the effective config, refreshing from river-api when the
+// cached value is missing or older than the TTL.
+func (s *settingsCache) get() audioSettings {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -53,11 +72,20 @@ func (s *settingsCache) musicBitrate() int {
 		if s.have {
 			return s.cached // serve the last good value on a transient failure
 		}
-		return transcoder.DefaultMusicBitrate
+		return defaultAudioSettings()
 	}
 
-	s.cached = ts.MusicBitrate
+	s.cached = audioSettings{
+		musicBitrate:         ts.MusicBitrate,
+		validateOutput:       ts.ValidateOutput,
+		durationTolerancePct: ts.DurationTolerancePct,
+	}
 	s.have = true
 	s.fetchedAt = time.Now()
 	return s.cached
+}
+
+// musicBitrate returns the effective AAC bitrate (kbps).
+func (s *settingsCache) musicBitrate() int {
+	return s.get().musicBitrate
 }

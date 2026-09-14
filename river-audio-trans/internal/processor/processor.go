@@ -230,7 +230,13 @@ func (p *Processor) processFile(path, libraryType, libraryPath string) (finalPat
 	}
 	log.Printf("INFO transcoding %q → %q (codec=%s)", filepath.Base(path), filepath.Base(outPath), info.Codec)
 	p.api.Log("info", fmt.Sprintf("transcoding audio %s", filepath.Base(outPath)))
-	if err := transcoder.Transcode(path, outPath, p.settings.musicBitrate()); err != nil {
+	cfg := p.settings.get()
+	if err := transcoder.Transcode(path, outPath, transcoder.Options{
+		BitrateKbps:          cfg.musicBitrate,
+		Validate:             cfg.validateOutput,
+		SourceDuration:       info.Duration,
+		DurationTolerancePct: cfg.durationTolerancePct,
+	}); err != nil {
 		p.api.Log("error", fmt.Sprintf("transcode failed for %s: %v", filepath.Base(outPath), err))
 		return "", 0, fmt.Errorf("transcode: %w", err)
 	}

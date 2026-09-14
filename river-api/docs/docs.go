@@ -9405,11 +9405,13 @@ const docTemplate = `{
             "type": "string",
             "enum": [
                 "admin",
-                "user"
+                "user",
+                "service"
             ],
             "x-enum-varnames": [
                 "RoleAdmin",
-                "RoleUser"
+                "RoleUser",
+                "RoleService"
             ]
         },
         "models.Season": {

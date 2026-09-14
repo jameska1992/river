@@ -54,6 +54,13 @@ services:
       JWT_ACCESS_EXPIRY_MINUTES: ${JWT_ACCESS_EXPIRY_MINUTES:-15}
       JWT_REFRESH_EXPIRY_DAYS: ${JWT_REFRESH_EXPIRY_DAYS:-7}
       MEDIA_BASE_PATH: /media
+      # Least-privilege service account for the internal services. Seeded
+      # (create-if-absent) on boot; the media services below authenticate
+      # with it instead of the admin account. Defaults to the admin password
+      # so existing deployments upgrade with no .env change; set SERVICE_PASSWORD
+      # to give it a distinct secret.
+      RIVER_SERVICE_USERNAME: ${SERVICE_USERNAME:-river-service}
+      RIVER_SERVICE_PASSWORD: ${SERVICE_PASSWORD:-${ADMIN_PASSWORD:?ADMIN_PASSWORD is required}}
       RIVER_SCAN_URL: http://river-scan:8081
       RIVER_META_MOVIE_URL: http://river-meta-movie:8081
       RIVER_META_TV_URL: http://river-meta-tv:8082
@@ -134,8 +141,8 @@ services:
     restart: unless-stopped
     environment:
       RIVER_API_URL: http://river-api:8080
-      RIVER_API_USERNAME: ${ADMIN_USERNAME:-admin}
-      RIVER_API_PASSWORD: ${ADMIN_PASSWORD:?ADMIN_PASSWORD is required}
+      RIVER_API_USERNAME: ${SERVICE_USERNAME:-river-service}
+      RIVER_API_PASSWORD: ${SERVICE_PASSWORD:-${ADMIN_PASSWORD:?ADMIN_PASSWORD is required}}
       RABBITMQ_URL: amqp://${RABBITMQ_USER:-river}:${RABBITMQ_PASSWORD:-river}@rabbitmq:5672/
       RABBITMQ_EXCHANGE: river.media
       # SCAN_INTERVAL now lives in river-api's settings store (seeded by
@@ -158,8 +165,8 @@ services:
     restart: unless-stopped
     environment:
       RIVER_API_URL: http://river-api:8080
-      RIVER_API_USERNAME: ${ADMIN_USERNAME:-admin}
-      RIVER_API_PASSWORD: ${ADMIN_PASSWORD:?ADMIN_PASSWORD is required}
+      RIVER_API_USERNAME: ${SERVICE_USERNAME:-river-service}
+      RIVER_API_PASSWORD: ${SERVICE_PASSWORD:-${ADMIN_PASSWORD:?ADMIN_PASSWORD is required}}
       RABBITMQ_URL: amqp://${RABBITMQ_USER:-river}:${RABBITMQ_PASSWORD:-river}@rabbitmq:5672/
       RABBITMQ_EXCHANGE: river.media
       OUTPUT_DIR: /output
@@ -186,8 +193,8 @@ services:
     restart: unless-stopped
     environment:
       RIVER_API_URL: http://river-api:8080
-      RIVER_API_USERNAME: ${ADMIN_USERNAME:-admin}
-      RIVER_API_PASSWORD: ${ADMIN_PASSWORD:?ADMIN_PASSWORD is required}
+      RIVER_API_USERNAME: ${SERVICE_USERNAME:-river-service}
+      RIVER_API_PASSWORD: ${SERVICE_PASSWORD:-${ADMIN_PASSWORD:?ADMIN_PASSWORD is required}}
       RABBITMQ_URL: amqp://${RABBITMQ_USER:-river}:${RABBITMQ_PASSWORD:-river}@rabbitmq:5672/
       RABBITMQ_EXCHANGE: river.media
       OUTPUT_DIR: /output
@@ -209,8 +216,8 @@ services:
     restart: unless-stopped
     environment:
       RIVER_API_URL: http://river-api:8080
-      RIVER_API_USERNAME: ${ADMIN_USERNAME:-admin}
-      RIVER_API_PASSWORD: ${ADMIN_PASSWORD:?ADMIN_PASSWORD is required}
+      RIVER_API_USERNAME: ${SERVICE_USERNAME:-river-service}
+      RIVER_API_PASSWORD: ${SERVICE_PASSWORD:-${ADMIN_PASSWORD:?ADMIN_PASSWORD is required}}
       RABBITMQ_URL: amqp://${RABBITMQ_USER:-river}:${RABBITMQ_PASSWORD:-river}@rabbitmq:5672/
       RABBITMQ_EXCHANGE: river.media
       # TMDB key is fetched from river-api's settings store (seeded by the
@@ -230,8 +237,8 @@ services:
     restart: unless-stopped
     environment:
       RIVER_API_URL: http://river-api:8080
-      RIVER_API_USERNAME: ${ADMIN_USERNAME:-admin}
-      RIVER_API_PASSWORD: ${ADMIN_PASSWORD:?ADMIN_PASSWORD is required}
+      RIVER_API_USERNAME: ${SERVICE_USERNAME:-river-service}
+      RIVER_API_PASSWORD: ${SERVICE_PASSWORD:-${ADMIN_PASSWORD:?ADMIN_PASSWORD is required}}
       RABBITMQ_URL: amqp://${RABBITMQ_USER:-river}:${RABBITMQ_PASSWORD:-river}@rabbitmq:5672/
       RABBITMQ_EXCHANGE: river.media
       # TMDB key is fetched from river-api's settings store (seeded by the
@@ -251,8 +258,8 @@ services:
     restart: unless-stopped
     environment:
       RIVER_API_URL: http://river-api:8080
-      RIVER_API_USERNAME: ${ADMIN_USERNAME:-admin}
-      RIVER_API_PASSWORD: ${ADMIN_PASSWORD:?ADMIN_PASSWORD is required}
+      RIVER_API_USERNAME: ${SERVICE_USERNAME:-river-service}
+      RIVER_API_PASSWORD: ${SERVICE_PASSWORD:-${ADMIN_PASSWORD:?ADMIN_PASSWORD is required}}
       RABBITMQ_URL: amqp://${RABBITMQ_USER:-river}:${RABBITMQ_PASSWORD:-river}@rabbitmq:5672/
       RABBITMQ_EXCHANGE: river.media
       WORKER_COUNT: ${META_WORKERS:-2}
@@ -270,8 +277,8 @@ services:
     restart: unless-stopped
     environment:
       RIVER_API_URL: http://river-api:8080
-      RIVER_API_USERNAME: ${ADMIN_USERNAME:-admin}
-      RIVER_API_PASSWORD: ${ADMIN_PASSWORD:?ADMIN_PASSWORD is required}
+      RIVER_API_USERNAME: ${SERVICE_USERNAME:-river-service}
+      RIVER_API_PASSWORD: ${SERVICE_PASSWORD:-${ADMIN_PASSWORD:?ADMIN_PASSWORD is required}}
       RABBITMQ_URL: amqp://${RABBITMQ_USER:-river}:${RABBITMQ_PASSWORD:-river}@rabbitmq:5672/
       RABBITMQ_EXCHANGE: river.media
       WORKER_COUNT: ${META_WORKERS:-2}

@@ -29,6 +29,44 @@ func TestRegister_FirstUserBecomesAdmin(t *testing.T) {
 	assert.Equal(t, models.RoleUser, second.Role, "subsequent users should be plain users")
 }
 
+func TestSeedServiceUser_CreatesOnceThenIdempotent(t *testing.T) {
+	users := &memUserRepo{}
+	svc := newTestAuthService(users, &memRefreshRepo{})
+
+	require.NoError(t, svc.SeedServiceUser("river-service", "svc-pw"))
+	require.Len(t, users.users, 1)
+	seeded := users.users[0]
+	assert.Equal(t, models.RoleService, seeded.Role, "seeded account gets the service role")
+	assert.NoError(t, bcrypt.CompareHashAndPassword([]byte(seeded.PasswordHash), []byte("svc-pw")))
+
+	// Re-seeding is a no-op: no duplicate, existing password untouched even
+	// when a different one is passed (mirrors an upgrade re-run).
+	require.NoError(t, svc.SeedServiceUser("river-service", "different-pw"))
+	require.Len(t, users.users, 1, "re-seed must not create a duplicate")
+	assert.NoError(t, bcrypt.CompareHashAndPassword([]byte(users.users[0].PasswordHash), []byte("svc-pw")),
+		"re-seed must not rotate the existing password")
+}
+
+func TestSeedServiceUser_NoopWhenUnset(t *testing.T) {
+	users := &memUserRepo{}
+	svc := newTestAuthService(users, &memRefreshRepo{})
+	require.NoError(t, svc.SeedServiceUser("", ""))
+	require.NoError(t, svc.SeedServiceUser("river-service", ""))
+	assert.Empty(t, users.users, "no account seeded when username or password is empty")
+}
+
+func TestRegister_ServiceSeedDoesNotStealAdminBootstrap(t *testing.T) {
+	users := &memUserRepo{}
+	svc := newTestAuthService(users, &memRefreshRepo{})
+
+	// Service account is seeded first (as it is at boot, before river-init
+	// registers the admin). The first *human* must still become admin.
+	require.NoError(t, svc.SeedServiceUser("river-service", "svc-pw"))
+	first, err := svc.Register("admin", "admin@x.com", "pw")
+	require.NoError(t, err)
+	assert.Equal(t, models.RoleAdmin, first.Role, "first human is admin despite a pre-seeded service account")
+}
+
 func TestRegister_HashesPassword(t *testing.T) {
 	svc := newTestAuthService(&memUserRepo{}, &memRefreshRepo{})
 

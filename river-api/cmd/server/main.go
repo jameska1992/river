@@ -76,6 +76,12 @@ func main() {
 
 	// Services
 	authSvc := services.NewAuthService(userRepo, refreshTokenRepo, cfg.JWTSecret, cfg.JWTAccessExpiry, cfg.JWTRefreshExpiry, cfg.JWTStreamExpiry)
+	// Idempotently ensure the least-privilege service account exists so the
+	// internal services authenticate without admin credentials. Safe on every
+	// boot: create-if-absent, never overwrites or deletes an existing account.
+	if err := authSvc.SeedServiceUser(cfg.ServiceUsername, cfg.ServicePassword); err != nil {
+		log.Fatalf("failed to seed service account: %v", err)
+	}
 	librarySvc := services.NewLibraryService(libraryRepo)
 	movieSvc := services.NewMovieService(movieRepo, mediaCleanupRepo)
 	tvShowSvc := services.NewTVShowService(tvShowRepo, seasonRepo, episodeRepo, mediaCleanupRepo, tvShowMergeRepo)

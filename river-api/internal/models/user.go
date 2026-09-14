@@ -11,6 +11,11 @@ type Role string
 const (
 	RoleAdmin Role = "admin"
 	RoleUser  Role = "user"
+	// RoleService is a non-human, least-privilege role for the internal
+	// services (scan / trans / meta). It can create and update media records
+	// but not touch users, settings writes, deletes, or other admin surface.
+	// Provisioned only by boot-time seeding, never assignable via the API.
+	RoleService Role = "service"
 )
 
 type User struct {

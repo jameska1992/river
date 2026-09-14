@@ -21,6 +21,16 @@ type memUserRepo struct {
 
 func (m *memUserRepo) Count() (int64, error) { return int64(len(m.users)), nil }
 
+func (m *memUserRepo) CountByRole(role models.Role) (int64, error) {
+	var n int64
+	for _, u := range m.users {
+		if u.Role == role {
+			n++
+		}
+	}
+	return n, nil
+}
+
 func (m *memUserRepo) Create(u *models.User) error {
 	if m.createErr != nil {
 		return m.createErr

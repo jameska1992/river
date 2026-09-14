@@ -97,7 +97,8 @@ handlers → services → repository → database (GORM/Postgres)
 
 - Access tokens: short-lived JWTs (HS256)
 - Refresh tokens: opaque UUIDs stored in DB, rotated on use
-- First registered user becomes `admin`; write operations require `admin` role
+- First registered user becomes `admin` (the bootstrap keys off "no admin exists yet", so a seeded service account doesn't consume it)
+- Roles: `admin` (full), `user` (read), `service` (least-privilege, non-human). Media create/update endpoints require `admin` or `service` (`AdminOrService`); the destructive/admin surface (user management, deletes, settings writes, scan control) stays `admin`-only. The `service` role is provisioned only by boot-time seeding (`RIVER_SERVICE_USERNAME`/`RIVER_SERVICE_PASSWORD`, create-if-absent) — not assignable via the API — and is what the internal services authenticate with
 
 ### Media Streaming (river-api)
 
@@ -105,7 +106,7 @@ Uses `http.ServeContent` for HTTP Range header support (enables seeking without 
 
 ## Environment Variables
 
-**river-api**: `PORT`, `DATABASE_URL`, `JWT_SECRET`, `JWT_ACCESS_EXPIRY_MINUTES`, `JWT_REFRESH_EXPIRY_DAYS`, `MEDIA_BASE_PATH`
+**river-api**: `PORT`, `DATABASE_URL`, `JWT_SECRET`, `JWT_ACCESS_EXPIRY_MINUTES`, `JWT_REFRESH_EXPIRY_DAYS`, `MEDIA_BASE_PATH`, `RIVER_SERVICE_USERNAME`, `RIVER_SERVICE_PASSWORD`
 
 **river-scan**: `RIVER_API_USERNAME`, `RIVER_API_PASSWORD`, `RIVER_API_URL`, `RABBITMQ_URL`, `RABBITMQ_EXCHANGE`, `SCAN_INTERVAL`, `STATE_PATH`
 

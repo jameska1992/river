@@ -92,6 +92,14 @@ func Register(r *gin.Engine, secret string,
 		// with their own service account, which need not be an admin. It
 		// exposes no secrets (structured knobs only), unlike the admin PUT.
 		protected.GET("/settings/transcoding", settings.GetTranscoding)
+		// Service-scoped reads: the scanner needs the scan interval and the
+		// metadata services need the TMDB key at job time. Gated to
+		// admin-or-service so the least-privilege service account can reach
+		// them without the full admin surface. The scanning value is
+		// non-secret; the TMDB key is a secret the meta services legitimately
+		// need (and only admin+service can read it here).
+		protected.GET("/settings/scanning", middleware.AdminOrService(), settings.GetScanning)
+		protected.GET("/settings/tmdb", middleware.AdminOrService(), settings.GetTMDBKey)
 		protected.GET("/admin/active-sessions", middleware.AdminOnly(), progress.ActiveSessions)
 		protected.POST("/admin/scan", middleware.AdminOnly(), admin.TriggerScan)
 		protected.POST("/admin/requeue-untranscoded", middleware.AdminOnly(), admin.RequeueUntranscoded)
@@ -139,13 +147,13 @@ func Register(r *gin.Engine, secret string,
 			movies.GET("/:id/stream", movie.Stream)
 			movies.GET("/:id/download", movie.Download)
 			movies.GET("/:id/credits", credits.GetMovieCredits)
-			movies.PUT("/:id/credits", middleware.AdminOnly(), credits.SetMovieCredits)
+			movies.PUT("/:id/credits", middleware.AdminOrService(), credits.SetMovieCredits)
 			movies.GET("/:id/subtitles", subtitle.ListMovieSubtitles)
 			movies.GET("/:id/audio-tracks", audioTrack.ListMovieAudioTracks)
-			movies.POST("", middleware.AdminOnly(), movie.Create)
-			movies.PUT("/:id", middleware.AdminOnly(), movie.Update)
-			movies.PATCH("/:id/file-path", middleware.AdminOnly(), movie.UpdateFilePath)
-			movies.PATCH("/:id/source-path", middleware.AdminOnly(), movie.UpdateSourcePath)
+			movies.POST("", middleware.AdminOrService(), movie.Create)
+			movies.PUT("/:id", middleware.AdminOrService(), movie.Update)
+			movies.PATCH("/:id/file-path", middleware.AdminOrService(), movie.UpdateFilePath)
+			movies.PATCH("/:id/source-path", middleware.AdminOrService(), movie.UpdateSourcePath)
 			movies.DELETE("/:id", middleware.AdminOnly(), movie.Delete)
 		}
 
@@ -157,21 +165,21 @@ func Register(r *gin.Engine, secret string,
 			shows.GET("/:id/similar", tvshow.Similar)
 			shows.GET("/:id/next-episode", progress.NextEpisode)
 			shows.GET("/:id/credits", credits.GetTVShowCredits)
-			shows.PUT("/:id/credits", middleware.AdminOnly(), credits.SetTVShowCredits)
-			shows.POST("", middleware.AdminOnly(), tvshow.CreateShow)
-			shows.PUT("/:id", middleware.AdminOnly(), tvshow.UpdateShow)
-			shows.PATCH("/:id/folder-path", middleware.AdminOnly(), tvshow.UpdateFolderPath)
+			shows.PUT("/:id/credits", middleware.AdminOrService(), credits.SetTVShowCredits)
+			shows.POST("", middleware.AdminOrService(), tvshow.CreateShow)
+			shows.PUT("/:id", middleware.AdminOrService(), tvshow.UpdateShow)
+			shows.PATCH("/:id/folder-path", middleware.AdminOrService(), tvshow.UpdateFolderPath)
 			shows.DELETE("/:id", middleware.AdminOnly(), tvshow.DeleteShow)
 
 			shows.GET("/:id/seasons", tvshow.ListSeasons)
-			shows.POST("/:id/seasons", middleware.AdminOnly(), tvshow.CreateSeason)
+			shows.POST("/:id/seasons", middleware.AdminOrService(), tvshow.CreateSeason)
 			shows.PUT("/:id/seasons/:seasonId", middleware.AdminOnly(), tvshow.UpdateSeason)
 
 			shows.GET("/:id/seasons/:seasonId/episodes", tvshow.ListEpisodes)
-			shows.POST("/:id/seasons/:seasonId/episodes", middleware.AdminOnly(), tvshow.CreateEpisode)
-			shows.PUT("/:id/seasons/:seasonId/episodes/:episodeId", middleware.AdminOnly(), tvshow.UpdateEpisode)
+			shows.POST("/:id/seasons/:seasonId/episodes", middleware.AdminOrService(), tvshow.CreateEpisode)
+			shows.PUT("/:id/seasons/:seasonId/episodes/:episodeId", middleware.AdminOrService(), tvshow.UpdateEpisode)
 			shows.DELETE("/:id/seasons/:seasonId/episodes/:episodeId", middleware.AdminOnly(), tvshow.DeleteEpisode)
-			shows.PATCH("/:id/seasons/:seasonId/episodes/:episodeId/source-path", middleware.AdminOnly(), tvshow.UpdateEpisodeSourcePath)
+			shows.PATCH("/:id/seasons/:seasonId/episodes/:episodeId/source-path", middleware.AdminOrService(), tvshow.UpdateEpisodeSourcePath)
 			shows.GET("/:id/seasons/:seasonId/episodes/:episodeId/stream", tvshow.StreamEpisode)
 			shows.GET("/:id/seasons/:seasonId/episodes/:episodeId/download", tvshow.DownloadEpisode)
 			shows.GET("/:id/seasons/:seasonId/episodes/:episodeId/subtitles", subtitle.ListEpisodeSubtitles)
@@ -184,8 +192,8 @@ func Register(r *gin.Engine, secret string,
 			artists.GET("", music.ListArtists)
 			artists.GET("/:id", music.GetArtist)
 			artists.GET("/:id/albums", music.ListArtistAlbums)
-			artists.POST("", middleware.AdminOnly(), music.CreateArtist)
-			artists.PUT("/:id", middleware.AdminOnly(), music.UpdateArtist)
+			artists.POST("", middleware.AdminOrService(), music.CreateArtist)
+			artists.PUT("/:id", middleware.AdminOrService(), music.UpdateArtist)
 			artists.DELETE("/:id", middleware.AdminOnly(), music.DeleteArtist)
 		}
 
@@ -195,8 +203,8 @@ func Register(r *gin.Engine, secret string,
 			albums.GET("", music.ListAlbums)
 			albums.GET("/:id", music.GetAlbum)
 			albums.GET("/:id/tracks", music.ListAlbumTracks)
-			albums.POST("", middleware.AdminOnly(), music.CreateAlbum)
-			albums.PUT("/:id", middleware.AdminOnly(), music.UpdateAlbum)
+			albums.POST("", middleware.AdminOrService(), music.CreateAlbum)
+			albums.PUT("/:id", middleware.AdminOrService(), music.UpdateAlbum)
 			albums.DELETE("/:id", middleware.AdminOnly(), music.DeleteAlbum)
 		}
 
@@ -205,18 +213,18 @@ func Register(r *gin.Engine, secret string,
 		{
 			tracks.GET("/:id", music.GetTrack)
 			tracks.GET("/:id/stream", music.StreamTrack)
-			tracks.POST("", middleware.AdminOnly(), music.CreateTrack)
+			tracks.POST("", middleware.AdminOrService(), music.CreateTrack)
 			tracks.DELETE("/:id", middleware.AdminOnly(), music.DeleteTrack)
 		}
 
 		// Subtitles
 		protected.GET("/subtitles/:id/stream", subtitle.Stream)
-		protected.POST("/subtitles", middleware.AdminOnly(), subtitle.Create)
+		protected.POST("/subtitles", middleware.AdminOrService(), subtitle.Create)
 		protected.DELETE("/subtitles/:id", middleware.AdminOnly(), subtitle.Delete)
 
 		// Audio tracks
 		protected.GET("/audio-tracks/:id/stream", audioTrack.Stream)
-		protected.POST("/audio-tracks", middleware.AdminOnly(), audioTrack.Create)
+		protected.POST("/audio-tracks", middleware.AdminOrService(), audioTrack.Create)
 		protected.DELETE("/audio-tracks/:id", middleware.AdminOnly(), audioTrack.Delete)
 
 		// People
@@ -266,10 +274,10 @@ func Register(r *gin.Engine, secret string,
 			audiobooks.GET("/:id/similar", audiobook.Similar)
 			audiobooks.GET("/:id/chapters", audiobook.ListChapters)
 			audiobooks.GET("/:id/chapters/:chapterId/stream", audiobook.StreamChapter)
-			audiobooks.POST("", middleware.AdminOnly(), audiobook.Create)
-			audiobooks.PUT("/:id", middleware.AdminOnly(), audiobook.Update)
+			audiobooks.POST("", middleware.AdminOrService(), audiobook.Create)
+			audiobooks.PUT("/:id", middleware.AdminOrService(), audiobook.Update)
 			audiobooks.DELETE("/:id", middleware.AdminOnly(), audiobook.Delete)
-			audiobooks.POST("/:id/chapters", middleware.AdminOnly(), audiobook.CreateChapter)
+			audiobooks.POST("/:id/chapters", middleware.AdminOrService(), audiobook.CreateChapter)
 			audiobooks.DELETE("/:id/chapters/:chapterId", middleware.AdminOnly(), audiobook.DeleteChapter)
 		}
 

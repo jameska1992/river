@@ -88,6 +88,22 @@ func AdminOnly() gin.HandlerFunc {
 	}
 }
 
+// AdminOrService gates media-write endpoints that both human admins and the
+// internal services (scan / trans / meta, role "service") legitimately call.
+// It deliberately does NOT cover the destructive/sensitive surface (user
+// management, settings writes, deletes, scan control) — those stay AdminOnly,
+// so a compromised service can't escalate beyond writing media records.
+func AdminOrService() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		claims, ok := c.MustGet(claimsKey).(*Claims)
+		if !ok || (claims.Role != "admin" && claims.Role != "service") {
+			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "admin or service access required"})
+			return
+		}
+		c.Next()
+	}
+}
+
 func GetClaims(c *gin.Context) *Claims {
 	v, _ := c.Get(claimsKey)
 	claims, _ := v.(*Claims)

@@ -326,7 +326,7 @@ func (c *Client) ScanInterval() (time.Duration, error) {
 	var result struct {
 		ScanInterval string `json:"scan_interval"`
 	}
-	if err := c.do("GET", "/api/admin/settings/scanning", nil, &result); err != nil {
+	if err := c.do("GET", "/api/settings/scanning", nil, &result); err != nil {
 		return 0, err
 	}
 	if result.ScanInterval == "" {

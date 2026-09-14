@@ -1,6 +1,7 @@
 package services
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
@@ -58,13 +59,17 @@ func (s *AuthService) Register(username, email, password string) (*models.User, 
 		return nil, fmt.Errorf("hash password: %w", err)
 	}
 
-	count, err := s.users.Count()
+	// The first human to register becomes admin. Key this off "no admin
+	// exists yet" rather than "no users at all", so a boot-seeded service
+	// account (role=service) doesn't consume the admin bootstrap and leave
+	// the first real user as a plain user.
+	adminCount, err := s.users.CountByRole(models.RoleAdmin)
 	if err != nil {
 		return nil, err
 	}
 
 	role := models.RoleUser
-	if count == 0 {
+	if adminCount == 0 {
 		role = models.RoleAdmin
 	}
 
@@ -78,6 +83,39 @@ func (s *AuthService) Register(username, email, password string) (*models.User, 
 		return nil, ErrConflict
 	}
 	return &user, nil
+}
+
+// SeedServiceUser idempotently ensures a least-privilege service account
+// (role=service) exists for the internal services to authenticate with.
+// Create-if-absent: an existing account (matched by username) is left
+// untouched, so re-running on every boot / upgrade never rotates a changed
+// password or destroys anything. A no-op when username or password is empty
+// (service auth not configured — services fall back to their admin creds).
+func (s *AuthService) SeedServiceUser(username, password string) error {
+	if username == "" || password == "" {
+		return nil
+	}
+	if _, err := s.users.FindByUsername(username); err == nil {
+		return nil // already exists — leave it as-is
+	} else if !errors.Is(err, ErrNotFound) {
+		return err
+	}
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return fmt.Errorf("hash service password: %w", err)
+	}
+	// Synthetic unique email satisfies the not-null/unique email constraint
+	// without colliding with a human account.
+	user := models.User{
+		Username:     username,
+		Email:        username + "@service.river.local",
+		PasswordHash: string(hash),
+		Role:         models.RoleService,
+	}
+	if err := s.users.Create(&user); err != nil {
+		return ErrConflict
+	}
+	return nil
 }
 
 func (s *AuthService) Login(username, password string) (*LoginResult, error) {

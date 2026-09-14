@@ -8,18 +8,24 @@ import (
 )
 
 type Config struct {
-	Port               string
-	DatabaseURL        string
-	JWTSecret          string
-	JWTAccessExpiry    time.Duration
-	JWTRefreshExpiry   time.Duration
+	Port             string
+	DatabaseURL      string
+	JWTSecret        string
+	JWTAccessExpiry  time.Duration
+	JWTRefreshExpiry time.Duration
 	// JWTStreamExpiry sets the lifetime of the media-stream JWT embedded
 	// in <video> src URLs. Has to comfortably exceed the longest movie /
 	// episode the user might watch in one sitting, because the browser
 	// can't refresh a token mid-playback. Default 8h — covers any single
 	// feature-length viewing session.
-	JWTStreamExpiry    time.Duration
-	MediaBasePath     string
+	JWTStreamExpiry time.Duration
+	MediaBasePath   string
+	// ServiceUsername / ServicePassword provision the least-privilege
+	// service account the internal services authenticate with. Seeded
+	// (create-if-absent) at boot; empty means "not configured" so seeding
+	// is skipped and services fall back to their admin credentials.
+	ServiceUsername   string
+	ServicePassword   string
 	RiverScanURL      string
 	RiverMetaMovieURL string
 	RiverMetaTVURL    string
@@ -35,18 +41,20 @@ type Config struct {
 
 func Load() *Config {
 	return &Config{
-		Port:              getEnv("PORT", "8080"),
-		DatabaseURL:       getEnv("DATABASE_URL", "postgres://river:river@localhost:5432/river?sslmode=disable"),
-		JWTSecret:         getEnv("JWT_SECRET", "change-me-in-production"),
-		JWTAccessExpiry:   time.Duration(getIntEnv("JWT_ACCESS_EXPIRY_MINUTES", 15)) * time.Minute,
-		JWTRefreshExpiry:  time.Duration(getIntEnv("JWT_REFRESH_EXPIRY_DAYS", 7)) * 24 * time.Hour,
-		JWTStreamExpiry:   time.Duration(getIntEnv("JWT_STREAM_EXPIRY_HOURS", 8)) * time.Hour,
-		MediaBasePath:     getEnv("MEDIA_BASE_PATH", "/media"),
-		RiverScanURL:      getEnv("RIVER_SCAN_URL", ""),
-		RiverMetaMovieURL: getEnv("RIVER_META_MOVIE_URL", ""),
-		RiverMetaTVURL:    getEnv("RIVER_META_TV_URL", ""),
-		RiverMetaBookURL:  getEnv("RIVER_META_BOOK_URL", ""),
-		RiverMetaMusicURL: getEnv("RIVER_META_MUSIC_URL", ""),
+		Port:               getEnv("PORT", "8080"),
+		DatabaseURL:        getEnv("DATABASE_URL", "postgres://river:river@localhost:5432/river?sslmode=disable"),
+		JWTSecret:          getEnv("JWT_SECRET", "change-me-in-production"),
+		JWTAccessExpiry:    time.Duration(getIntEnv("JWT_ACCESS_EXPIRY_MINUTES", 15)) * time.Minute,
+		JWTRefreshExpiry:   time.Duration(getIntEnv("JWT_REFRESH_EXPIRY_DAYS", 7)) * 24 * time.Hour,
+		JWTStreamExpiry:    time.Duration(getIntEnv("JWT_STREAM_EXPIRY_HOURS", 8)) * time.Hour,
+		MediaBasePath:      getEnv("MEDIA_BASE_PATH", "/media"),
+		ServiceUsername:    getEnv("RIVER_SERVICE_USERNAME", ""),
+		ServicePassword:    getEnv("RIVER_SERVICE_PASSWORD", ""),
+		RiverScanURL:       getEnv("RIVER_SCAN_URL", ""),
+		RiverMetaMovieURL:  getEnv("RIVER_META_MOVIE_URL", ""),
+		RiverMetaTVURL:     getEnv("RIVER_META_TV_URL", ""),
+		RiverMetaBookURL:   getEnv("RIVER_META_BOOK_URL", ""),
+		RiverMetaMusicURL:  getEnv("RIVER_META_MUSIC_URL", ""),
 		CORSAllowedOrigins: parseCSV(getEnv("CORS_ALLOWED_ORIGINS", "*")),
 	}
 }

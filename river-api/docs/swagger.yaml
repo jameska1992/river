@@ -1026,10 +1026,12 @@ definitions:
     enum:
     - admin
     - user
+    - service
     type: string
     x-enum-varnames:
     - RoleAdmin
     - RoleUser
+    - RoleService
   models.Season:
     properties:
       created_at:

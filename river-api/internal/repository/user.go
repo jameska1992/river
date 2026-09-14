@@ -11,6 +11,7 @@ import (
 
 type UserRepository interface {
 	Count() (int64, error)
+	CountByRole(role models.Role) (int64, error)
 	Create(user *models.User) error
 	FindByUsername(username string) (*models.User, error)
 	FindByID(id string) (*models.User, error)
@@ -27,6 +28,11 @@ func NewUserRepository(db *gorm.DB) UserRepository { return &userRepository{db} 
 func (r *userRepository) Count() (int64, error) {
 	var n int64
 	return n, r.db.Model(&models.User{}).Count(&n).Error
+}
+
+func (r *userRepository) CountByRole(role models.Role) (int64, error) {
+	var n int64
+	return n, r.db.Model(&models.User{}).Where("role = ?", role).Count(&n).Error
 }
 
 func (r *userRepository) Create(user *models.User) error {

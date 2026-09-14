@@ -18,6 +18,15 @@ import (
 type fakeUserRepo struct{ users []*models.User }
 
 func (f *fakeUserRepo) Count() (int64, error) { return int64(len(f.users)), nil }
+func (f *fakeUserRepo) CountByRole(role models.Role) (int64, error) {
+	var n int64
+	for _, u := range f.users {
+		if u.Role == role {
+			n++
+		}
+	}
+	return n, nil
+}
 func (f *fakeUserRepo) Create(u *models.User) error {
 	for _, e := range f.users {
 		if e.Username == u.Username || e.Email == u.Email {

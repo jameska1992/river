@@ -4535,6 +4535,28 @@ paths:
       summary: Continue Watching list
       tags:
       - progress
+  /progress/history:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              type: object
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Watch history
+      tags:
+      - progress
   /progress/next-up:
     get:
       parameters:

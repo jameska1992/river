@@ -240,6 +240,7 @@ func Register(r *gin.Engine, secret string,
 		protected.GET("/progress/show-states", progress.ShowStates)
 		protected.GET("/progress/show-state", progress.ShowState)
 		protected.GET("/progress/continue-watching", progress.ContinueWatching)
+		protected.GET("/progress/history", progress.History)
 		protected.GET("/progress/next-up", progress.NextUp)
 		protected.POST("/progress/next-up/:episode_id/dismiss", progress.DismissNextUp)
 		protected.DELETE("/progress/next-up/:episode_id/dismiss", progress.UndismissNextUp)

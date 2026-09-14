@@ -8,6 +8,7 @@ import {
   RiHeadphoneLine,
   RiFoldersLine,
   RiBookmarkLine,
+  RiHistoryLine,
   RiAddCircleLine,
   RiCalendarEventLine,
   RiSearchLine,
@@ -132,6 +133,15 @@ export function NavBar() {
       >
         <span className={styles.libraryIcon} aria-hidden><RiBookmarkLine /></span>
         Watchlist
+      </NavLink>
+      <NavLink
+        to="/history"
+        className={({ isActive }) =>
+          `${styles.libraryLink} ${isActive ? styles.libraryLinkActive : ''}`
+        }
+      >
+        <span className={styles.libraryIcon} aria-hidden><RiHistoryLine /></span>
+        History
       </NavLink>
       {requestsEnabled && (
         <>

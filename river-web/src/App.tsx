@@ -26,6 +26,7 @@ import { SearchPage } from './pages/SearchPage'
 import { CollectionsPage } from './pages/CollectionsPage'
 import { CollectionDetailPage } from './pages/CollectionDetailPage'
 import { WatchlistPage } from './pages/WatchlistPage'
+import { HistoryPage } from './pages/HistoryPage'
 import { AdminLayout } from './pages/admin/AdminLayout'
 import { MergeTVShowsPage } from './pages/admin/MergeTVShowsPage'
 import { OverviewPage } from './pages/admin/OverviewPage'
@@ -110,6 +111,7 @@ export default function App() {
             <Route path="/collections" element={<CollectionsPage />} />
             <Route path="/collections/:id" element={<CollectionDetailPage />} />
             <Route path="/watchlist" element={<WatchlistPage />} />
+            <Route path="/history" element={<HistoryPage />} />
             <Route path="/request" element={<RequestPage />} />
             <Route path="/calendar" element={<CalendarPage />} />
             <Route path="/settings" element={<SettingsPage />} />

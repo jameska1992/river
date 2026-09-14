@@ -859,6 +859,13 @@ export class RiverClient {
     return this.request<ContinueWatchingItem[]>('GET', '/progress/continue-watching')
   }
 
+  // getHistory returns the full watch history (in-progress and completed,
+  // all media types), most recent first, resolved with display metadata.
+  // Reuses the ContinueWatchingItem shape.
+  async getHistory(): Promise<ContinueWatchingItem[]> {
+    return this.request<ContinueWatchingItem[]>('GET', '/progress/history')
+  }
+
   async getNextUp(limit = 16): Promise<NextUpItem[]> {
     return this.request<NextUpItem[]>('GET', `/progress/next-up?limit=${limit}`)
   }

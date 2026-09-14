@@ -13,15 +13,15 @@ import (
 const completedThreshold = 0.9
 
 type ProgressService struct {
-	repo           repository.ProgressRepository
-	movies         repository.MovieRepository
-	episodes       repository.EpisodeRepository
-	seasons        repository.SeasonRepository
-	shows          repository.TVShowRepository
-	users          repository.UserRepository
-	audiobooks     repository.AudiobookRepository
-	chapters       repository.ChapterRepository
-	dismissedNext  repository.DismissedNextUpRepository
+	repo          repository.ProgressRepository
+	movies        repository.MovieRepository
+	episodes      repository.EpisodeRepository
+	seasons       repository.SeasonRepository
+	shows         repository.TVShowRepository
+	users         repository.UserRepository
+	audiobooks    repository.AudiobookRepository
+	chapters      repository.ChapterRepository
+	dismissedNext repository.DismissedNextUpRepository
 }
 
 func NewProgressService(
@@ -95,81 +95,116 @@ func (s *ProgressService) ContinueWatching(userID string) ([]ContinueWatchingIte
 	if err != nil {
 		return nil, err
 	}
+	return s.resolveItems(records), nil
+}
+
+// historyLimit caps how many recent progress rows the watch-history view
+// returns. Generous enough to cover real usage without an unbounded query.
+const historyLimit = 200
+
+// History returns the user's full watch history — every progress row (in
+// progress AND completed, all media types), most recent first, resolved with
+// display metadata. Unlike ContinueWatching it isn't filtered to in-progress
+// items, but it shares the same audiobook dedup so a book doesn't surface one
+// row per chapter touched.
+func (s *ProgressService) History(userID string) ([]ContinueWatchingItem, error) {
+	records, err := s.repo.FindByUser(userID, historyLimit)
+	if err != nil {
+		return nil, err
+	}
+	return s.resolveItems(records), nil
+}
+
+// resolveItems turns raw progress rows into display items, dropping rows
+// whose media no longer exists and collapsing an audiobook to a single
+// (most-recent) row. Input is assumed ordered by recency, so the first match
+// per book is the one kept.
+func (s *ProgressService) resolveItems(records []models.WatchProgress) []ContinueWatchingItem {
 	items := make([]ContinueWatchingItem, 0, len(records))
-	// seenAudiobook tracks which audiobook IDs we've already emitted a row
-	// for in this response, so a single book in progress doesn't dominate
-	// the carousel by surfacing every chapter the user touched. Records
-	// arrive ordered by recency, so the first match per book is kept.
 	seenAudiobook := make(map[string]bool)
 	for _, p := range records {
-		switch p.MediaType {
-		case "movie":
-			m, err := s.movies.FindByID(p.MediaID)
-			if err != nil {
-				continue // stale reference
-			}
-			items = append(items, ContinueWatchingItem{
-				WatchProgress: p,
-				Title:         m.Title,
-				PosterPath:    m.PosterPath,
-				BackdropPath:  m.BackdropPath,
-			})
-		case "episode":
-			ep, err := s.episodes.FindByID(p.MediaID)
-			if err != nil {
-				continue
-			}
-			season, err := s.seasons.FindByID(ep.SeasonID.String())
-			if err != nil {
-				continue
-			}
-			show, err := s.shows.FindByID(ep.TVShowID.String())
-			if err != nil {
-				continue
-			}
-			title := ep.Title
-			if title == "" {
-				title = fmt.Sprintf("Episode %d", ep.Number)
-			}
-			items = append(items, ContinueWatchingItem{
-				WatchProgress: p,
-				Title:         title,
-				PosterPath:    show.PosterPath,
-				BackdropPath:  show.BackdropPath,
-				ShowTitle:     show.Title,
-				ShowID:        show.ID.String(),
-				SeasonID:      season.ID.String(),
-				SeasonNumber:  season.Number,
-				EpisodeNumber: ep.Number,
-			})
-		case "chapter":
-			ch, err := s.chapters.FindByID(p.MediaID)
-			if err != nil {
-				continue
-			}
-			bookID := ch.AudiobookID.String()
-			if seenAudiobook[bookID] {
-				continue
-			}
-			seenAudiobook[bookID] = true
-			book, err := s.audiobooks.FindByID(bookID)
-			if err != nil {
-				continue
-			}
-			items = append(items, ContinueWatchingItem{
-				WatchProgress: p,
-				// Top-level Title = audiobook title so the card shows the
-				// book at a glance; chapter info lives in the dedicated
-				// chapter fields below. Mirrors the show/episode shape.
-				Title:         book.Title,
-				PosterPath:    book.CoverPath,
-				AudiobookID:   bookID,
-				ChapterNumber: ch.Number,
-				ChapterTitle:  ch.Title,
-			})
+		item, ok := s.resolveProgressItem(p)
+		if !ok {
+			continue // stale reference — media was deleted
 		}
+		if p.MediaType == "chapter" {
+			if seenAudiobook[item.AudiobookID] {
+				continue
+			}
+			seenAudiobook[item.AudiobookID] = true
+		}
+		items = append(items, item)
 	}
-	return items, nil
+	return items
+}
+
+// resolveProgressItem enriches one progress row with the title/poster/parent
+// context needed to render a card. Returns ok=false when the referenced
+// media has since been deleted.
+func (s *ProgressService) resolveProgressItem(p models.WatchProgress) (ContinueWatchingItem, bool) {
+	switch p.MediaType {
+	case "movie":
+		m, err := s.movies.FindByID(p.MediaID)
+		if err != nil {
+			return ContinueWatchingItem{}, false
+		}
+		return ContinueWatchingItem{
+			WatchProgress: p,
+			Title:         m.Title,
+			PosterPath:    m.PosterPath,
+			BackdropPath:  m.BackdropPath,
+		}, true
+	case "episode":
+		ep, err := s.episodes.FindByID(p.MediaID)
+		if err != nil {
+			return ContinueWatchingItem{}, false
+		}
+		season, err := s.seasons.FindByID(ep.SeasonID.String())
+		if err != nil {
+			return ContinueWatchingItem{}, false
+		}
+		show, err := s.shows.FindByID(ep.TVShowID.String())
+		if err != nil {
+			return ContinueWatchingItem{}, false
+		}
+		title := ep.Title
+		if title == "" {
+			title = fmt.Sprintf("Episode %d", ep.Number)
+		}
+		return ContinueWatchingItem{
+			WatchProgress: p,
+			Title:         title,
+			PosterPath:    show.PosterPath,
+			BackdropPath:  show.BackdropPath,
+			ShowTitle:     show.Title,
+			ShowID:        show.ID.String(),
+			SeasonID:      season.ID.String(),
+			SeasonNumber:  season.Number,
+			EpisodeNumber: ep.Number,
+		}, true
+	case "chapter":
+		ch, err := s.chapters.FindByID(p.MediaID)
+		if err != nil {
+			return ContinueWatchingItem{}, false
+		}
+		bookID := ch.AudiobookID.String()
+		book, err := s.audiobooks.FindByID(bookID)
+		if err != nil {
+			return ContinueWatchingItem{}, false
+		}
+		return ContinueWatchingItem{
+			WatchProgress: p,
+			// Top-level Title = audiobook title so the card shows the book
+			// at a glance; chapter info lives in the dedicated chapter
+			// fields below. Mirrors the show/episode shape.
+			Title:         book.Title,
+			PosterPath:    book.CoverPath,
+			AudiobookID:   bookID,
+			ChapterNumber: ch.Number,
+			ChapterTitle:  ch.Title,
+		}, true
+	}
+	return ContinueWatchingItem{}, false
 }
 
 func (s *ProgressService) GetAllByType(userID, mediaType string) ([]models.WatchProgress, error) {
@@ -305,10 +340,10 @@ type NextEpisodeResult struct {
 }
 
 type ActiveSessionItem struct {
-	UserID    string  `json:"user_id"`
-	Username  string  `json:"username"`
-	MediaType string  `json:"media_type"`
-	Title     string  `json:"title"`
+	UserID    string `json:"user_id"`
+	Username  string `json:"username"`
+	MediaType string `json:"media_type"`
+	Title     string `json:"title"`
 	// ShowTitle doubles as "parent title" — used for the TV show name on
 	// episode sessions and the audiobook title on chapter sessions, so
 	// the admin UI can render "<Title> (<ShowTitle>)" uniformly.
@@ -462,16 +497,16 @@ func (s *ProgressService) GetUserActivity(userID string) ([]ActivityItem, error)
 // component — the meaningful difference is that Next Up refers to an
 // episode the user hasn't started (Position/Duration are always 0).
 type NextUpItem struct {
-	MediaType     string    `json:"media_type"` // always "episode" in v1
-	MediaID       string    `json:"media_id"`   // the next episode's ID
-	Title         string    `json:"title"`      // "Sxx Eyy" or the episode title
-	PosterPath    string    `json:"poster_path"`
-	BackdropPath  string    `json:"backdrop_path,omitempty"`
-	ShowTitle     string    `json:"show_title"`
-	ShowID        string    `json:"show_id"`
-	SeasonID      string    `json:"season_id"`
-	SeasonNumber  int       `json:"season_number"`
-	EpisodeNumber int       `json:"episode_number"`
+	MediaType     string `json:"media_type"` // always "episode" in v1
+	MediaID       string `json:"media_id"`   // the next episode's ID
+	Title         string `json:"title"`      // "Sxx Eyy" or the episode title
+	PosterPath    string `json:"poster_path"`
+	BackdropPath  string `json:"backdrop_path,omitempty"`
+	ShowTitle     string `json:"show_title"`
+	ShowID        string `json:"show_id"`
+	SeasonID      string `json:"season_id"`
+	SeasonNumber  int    `json:"season_number"`
+	EpisodeNumber int    `json:"episode_number"`
 	// UpdatedAt is the timestamp of the *last-completed* episode of the
 	// show — that's the anchor for recency ordering across the row.
 	UpdatedAt time.Time `json:"updated_at"`
@@ -484,11 +519,11 @@ type NextUpItem struct {
 // Semantics:
 //   - Anchor = the most-recently-completed episode of each show.
 //   - Next   = the next episode in canonical order (same season, higher
-//              number; else earliest episode of the next non-special
-//              season with any episodes). Season 0 / specials are
-//              excluded from the ordering.
+//     number; else earliest episode of the next non-special
+//     season with any episodes). Season 0 / specials are
+//     excluded from the ordering.
 //   - Skip   = next is itself completed, has any watch_progress row
-//              (would live in Continue Watching), or is dismissed.
+//     (would live in Continue Watching), or is dismissed.
 //
 // If a show has no eligible "next" (e.g. finale watched, or the next
 // episode is dismissed) it drops out of the row entirely — the user

@@ -100,6 +100,27 @@ func (h *ProgressHandler) ContinueWatching(c *gin.Context) {
 	c.JSON(http.StatusOK, items)
 }
 
+// History returns the user's full watch history — all progress rows (in
+// progress and completed, every media type), most recent first, resolved
+// with display metadata. Shares the Continue Watching item shape.
+//
+// @Summary      Watch history
+// @Tags         progress
+// @Produce      json
+// @Success      200  {array}   object
+// @Failure      500  {object}  map[string]string
+// @Security     BearerAuth
+// @Router       /progress/history [get]
+func (h *ProgressHandler) History(c *gin.Context) {
+	claims := middleware.GetClaims(c)
+	items, err := h.svc.History(claims.UserID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch history"})
+		return
+	}
+	c.JSON(http.StatusOK, items)
+}
+
 // NextUp returns the "next episode to start" for shows the user has
 // recently completed an episode of, ordered by recency, capped at
 // limit (default 16, max 50).

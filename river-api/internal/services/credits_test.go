@@ -21,6 +21,7 @@ type memCreditsRepo struct {
 	setCrew   []models.MovieCrew
 	setTVCast []models.TVShowCast
 	setTVCrew []models.TVShowCrew
+	setLocked *bool
 	// Person lookup + filmography, seeded per GetPerson test.
 	person     *models.Person
 	personErr  error
@@ -60,14 +61,16 @@ func (m *memCreditsRepo) FindPersonByID(uuid.UUID) (*models.Person, error) {
 func (m *memCreditsRepo) GetPersonFilmography(uuid.UUID) ([]repository.PersonMovieCastRow, []repository.PersonMovieCrewRow, []repository.PersonTVShowCastRow, []repository.PersonTVShowCrewRow, error) {
 	return m.filmMovieC, m.filmMovieW, m.filmTVC, m.filmTVW, nil
 }
-func (m *memCreditsRepo) SetMovieCredits(id uuid.UUID, cast []models.MovieCast, crew []models.MovieCrew) error {
+func (m *memCreditsRepo) SetMovieCredits(id uuid.UUID, cast []models.MovieCast, crew []models.MovieCrew, locked *bool) error {
 	m.setCast = cast
 	m.setCrew = crew
+	m.setLocked = locked
 	return nil
 }
-func (m *memCreditsRepo) SetTVShowCredits(_ uuid.UUID, cast []models.TVShowCast, crew []models.TVShowCrew) error {
+func (m *memCreditsRepo) SetTVShowCredits(_ uuid.UUID, cast []models.TVShowCast, crew []models.TVShowCrew, locked *bool) error {
 	m.setTVCast = cast
 	m.setTVCrew = crew
+	m.setLocked = locked
 	return nil
 }
 func (m *memCreditsRepo) GetTVShowCredits(uuid.UUID) ([]models.TVShowCast, []models.TVShowCrew, error) {
@@ -116,7 +119,7 @@ func TestCreditsService_GetMovieCredits_MapsCastAndCrew(t *testing.T) {
 
 func TestCreditsService_SetMovieCredits_InvalidID(t *testing.T) {
 	svc := NewCreditsService(&memCreditsRepo{})
-	err := svc.SetMovieCredits("not-a-uuid", nil, nil)
+	err := svc.SetMovieCredits("not-a-uuid", nil, nil, nil)
 	assert.ErrorIs(t, err, ErrNotFound)
 }
 
@@ -127,12 +130,15 @@ func TestCreditsService_SetMovieCredits_ResolvesPersonsAndPersists(t *testing.T)
 	cast := []CastInput{{TmdbID: 100, Name: "Boris Karloff", Character: "The Monster", Order: 1}}
 	crew := []CrewInput{{TmdbID: 0, Name: "James Whale", Job: "Director", Department: "Directing"}}
 
-	require.NoError(t, svc.SetMovieCredits(uuid.New().String(), cast, crew))
+	lock := true
+	require.NoError(t, svc.SetMovieCredits(uuid.New().String(), cast, crew, &lock))
 
 	// tmdb-backed cast member is resolved via the tmdb lookup; the
 	// tmdb-less crew member is created fresh.
 	assert.Equal(t, 1, repo.tmdbLookups, "cast with a TMDB id uses FindOrCreatePersonByTmdbID")
 	assert.Equal(t, 1, repo.creates, "crew without a TMDB id uses CreatePerson")
+	require.NotNil(t, repo.setLocked, "locked flag threaded to the repo")
+	assert.True(t, *repo.setLocked, "manual save passes locked=true through")
 
 	require.Len(t, repo.setCast, 1)
 	assert.Equal(t, "The Monster", repo.setCast[0].Character)
@@ -153,7 +159,7 @@ func TestCreditsService_SetMovieCredits_SameTmdbIDReusesPerson(t *testing.T) {
 		{TmdbID: 42, Name: "Actor", Character: "A", Order: 1},
 		{TmdbID: 42, Name: "Actor", Character: "B", Order: 2},
 	}
-	require.NoError(t, svc.SetMovieCredits(uuid.New().String(), cast, nil))
+	require.NoError(t, svc.SetMovieCredits(uuid.New().String(), cast, nil, nil))
 	require.Len(t, repo.setCast, 2)
 	assert.Equal(t, repo.setCast[0].PersonID, repo.setCast[1].PersonID, "same TMDB id => one person")
 }
@@ -221,7 +227,7 @@ func TestCreditsService_GetPerson_MapsFilmography(t *testing.T) {
 
 func TestCreditsService_SetTVShowCredits_InvalidID(t *testing.T) {
 	svc := NewCreditsService(&memCreditsRepo{})
-	err := svc.SetTVShowCredits("not-a-uuid", nil, nil)
+	err := svc.SetTVShowCredits("not-a-uuid", nil, nil, nil)
 	assert.ErrorIs(t, err, ErrNotFound)
 }
 
@@ -232,7 +238,7 @@ func TestCreditsService_SetTVShowCredits_ResolvesPersonsAndPersists(t *testing.T
 	cast := []CastInput{{TmdbID: 100, Name: "Gillian Anderson", Character: "Scully", Order: 1}}
 	crew := []CrewInput{{TmdbID: 0, Name: "Chris Carter", Job: "Creator", Department: "Writing"}}
 
-	require.NoError(t, svc.SetTVShowCredits(uuid.New().String(), cast, crew))
+	require.NoError(t, svc.SetTVShowCredits(uuid.New().String(), cast, crew, nil))
 
 	assert.Equal(t, 1, repo.tmdbLookups, "cast with a TMDB id uses FindOrCreatePersonByTmdbID")
 	assert.Equal(t, 1, repo.creates, "crew without a TMDB id uses CreatePerson")

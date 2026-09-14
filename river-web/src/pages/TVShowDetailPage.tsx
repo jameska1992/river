@@ -4,7 +4,7 @@ import {
   RiArrowLeftLine, RiTv2Line, RiStarLine, RiPlayFill,
   RiArrowDownSLine, RiTimeLine, RiUserLine,
   RiBookmarkLine, RiBookmarkFill, RiAlertFill, RiEditLine,
-  RiEyeLine, RiEyeOffLine, RiCheckLine,
+  RiEyeLine, RiEyeOffLine, RiCheckLine, RiLockLine,
 } from 'react-icons/ri'
 import { useTVShows } from '../context/TVShowsContext'
 import { useAuth } from '../context/AuthContext'
@@ -22,6 +22,7 @@ import { MediaDetailsModal } from '../components/MediaDetailsModal'
 import { SimilarCarousel } from '../components/SimilarCarousel'
 import { DeleteMediaModal } from '../components/DeleteMediaModal'
 import { CastEditorModal } from '../components/CastEditorModal'
+import { creditsToRequest } from '../util/credits'
 import { useBackTo } from '../hooks/useBackTo'
 import styles from './TVShowDetailPage.module.css'
 
@@ -62,6 +63,14 @@ export function TVShowDetailPage() {
   // Per-episode completion for the current user: the set of episode ids marked
   // watched, driving the row indicator + the ⋯ menu's toggle label.
   const [watchedEpisodes, setWatchedEpisodes] = useState<Set<string>>(new Set())
+
+  // Unlock hands credits back to TMDB: resends current cast/crew with
+  // locked=false so a subsequent metadata refresh may repopulate them.
+  const unlockCredits = async () => {
+    if (!show || !credits) return
+    await api.setTVShowCredits(show.id, creditsToRequest(credits, false))
+    setShow(s => (s ? { ...s, credits_locked: false } : s))
+  }
 
   const playNext = async () => {
     if (!id) return
@@ -302,7 +311,9 @@ export function TVShowDetailPage() {
                 <TVShowCreditsSection
                   credits={credits}
                   isAdmin={isAdmin}
+                  locked={show.credits_locked}
                   onEditCast={() => setCastEditOpen(true)}
+                  onUnlock={unlockCredits}
                 />
               )}
             </div>
@@ -392,7 +403,10 @@ export function TVShowDetailPage() {
           type="tvshow"
           mediaId={show.id}
           credits={credits}
-          onSaved={setCredits}
+          onSaved={updated => {
+            setCredits(updated)
+            setShow(s => (s ? { ...s, credits_locked: true } : s))
+          }}
           onClose={() => setCastEditOpen(false)}
         />
       )}
@@ -471,8 +485,9 @@ export function TVShowDetailPage() {
 
 // ── Credits section ──────────────────────────────────────
 
-function TVShowCreditsSection({ credits, isAdmin, onEditCast }: {
-  credits: Credits; isAdmin?: boolean; onEditCast?: () => void
+function TVShowCreditsSection({ credits, isAdmin, locked, onEditCast, onUnlock }: {
+  credits: Credits; isAdmin?: boolean; locked?: boolean
+  onEditCast?: () => void; onUnlock?: () => void
 }) {
   const creators = credits.crew.filter(c => c.job === 'Creator' || c.job === 'Executive Producer')
 
@@ -485,10 +500,19 @@ function TVShowCreditsSection({ credits, isAdmin, onEditCast }: {
         </dl>
       )}
       {isAdmin && (
-        <button className={`btn ${styles.editCastBtn}`} onClick={onEditCast}>
-          <RiEditLine size={14} />
-          <span>{credits.cast.length > 0 || credits.crew.length > 0 ? 'Edit credits' : 'Add credits'}</span>
-        </button>
+        <div className={styles.creditsActions}>
+          <button className={`btn ${styles.editCastBtn}`} onClick={onEditCast}>
+            <RiEditLine size={14} />
+            <span>{credits.cast.length > 0 || credits.crew.length > 0 ? 'Edit credits' : 'Add credits'}</span>
+          </button>
+          {locked && (
+            <span className={styles.creditsLock}>
+              <RiLockLine size={13} />
+              <span>Manual credits — won’t be overwritten by refresh</span>
+              <button className={styles.unlockBtn} onClick={onUnlock}>Unlock</button>
+            </span>
+          )}
+        </div>
       )}
       {credits.cast.length > 0 && (
         <div className={styles.castGrid}>

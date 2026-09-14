@@ -142,7 +142,10 @@ func (s *CreditsService) GetPerson(personID string) (*PersonResult, error) {
 	return res, nil
 }
 
-func (s *CreditsService) SetMovieCredits(movieID string, cast []CastInput, crew []CrewInput) error {
+// SetMovieCredits replaces a movie's cast + crew. locked controls the
+// manual-edit lock: nil leaves it unchanged, true/false set it (the web
+// editor passes true on save so a later TMDB refresh won't overwrite).
+func (s *CreditsService) SetMovieCredits(movieID string, cast []CastInput, crew []CrewInput, locked *bool) error {
 	id, err := uuid.Parse(movieID)
 	if err != nil {
 		return ErrNotFound
@@ -159,7 +162,7 @@ func (s *CreditsService) SetMovieCredits(movieID string, cast []CastInput, crew 
 	for i, c := range mcrw {
 		crewModels[i] = models.MovieCrew{MovieID: id, PersonID: c.personID, Job: c.job, Department: c.department}
 	}
-	return s.repo.SetMovieCredits(id, castModels, crewModels)
+	return s.repo.SetMovieCredits(id, castModels, crewModels, locked)
 }
 
 func (s *CreditsService) GetMovieCredits(movieID string) (*CreditsResult, error) {
@@ -192,7 +195,9 @@ func (s *CreditsService) GetMovieCredits(movieID string) (*CreditsResult, error)
 	return res, nil
 }
 
-func (s *CreditsService) SetTVShowCredits(showID string, cast []CastInput, crew []CrewInput) error {
+// SetTVShowCredits replaces a show's cast + crew. locked controls the
+// manual-edit lock (see SetMovieCredits).
+func (s *CreditsService) SetTVShowCredits(showID string, cast []CastInput, crew []CrewInput, locked *bool) error {
 	id, err := uuid.Parse(showID)
 	if err != nil {
 		return ErrNotFound
@@ -209,7 +214,7 @@ func (s *CreditsService) SetTVShowCredits(showID string, cast []CastInput, crew 
 	for i, c := range mcrw {
 		crewModels[i] = models.TVShowCrew{TVShowID: id, PersonID: c.personID, Job: c.job, Department: c.department}
 	}
-	return s.repo.SetTVShowCredits(id, castModels, crewModels)
+	return s.repo.SetTVShowCredits(id, castModels, crewModels, locked)
 }
 
 func (s *CreditsService) GetTVShowCredits(showID string) (*CreditsResult, error) {

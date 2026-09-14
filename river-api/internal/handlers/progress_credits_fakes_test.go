@@ -56,13 +56,13 @@ func (f *fakeCreditsRepo) FindPersonByID(uuid.UUID) (*models.Person, error) {
 func (f *fakeCreditsRepo) GetPersonFilmography(uuid.UUID) ([]repository.PersonMovieCastRow, []repository.PersonMovieCrewRow, []repository.PersonTVShowCastRow, []repository.PersonTVShowCrewRow, error) {
 	return nil, nil, nil, nil, nil
 }
-func (f *fakeCreditsRepo) SetMovieCredits(uuid.UUID, []models.MovieCast, []models.MovieCrew) error {
+func (f *fakeCreditsRepo) SetMovieCredits(uuid.UUID, []models.MovieCast, []models.MovieCrew, *bool) error {
 	return nil
 }
 func (f *fakeCreditsRepo) GetMovieCredits(uuid.UUID) ([]models.MovieCast, []models.MovieCrew, error) {
 	return f.movieCast, f.movieCrew, nil
 }
-func (f *fakeCreditsRepo) SetTVShowCredits(uuid.UUID, []models.TVShowCast, []models.TVShowCrew) error {
+func (f *fakeCreditsRepo) SetTVShowCredits(uuid.UUID, []models.TVShowCast, []models.TVShowCrew, *bool) error {
 	return nil
 }
 func (f *fakeCreditsRepo) GetTVShowCredits(uuid.UUID) ([]models.TVShowCast, []models.TVShowCrew, error) {

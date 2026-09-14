@@ -129,6 +129,10 @@ type TVShow struct {
 	BackdropPath  string  `json:"backdrop_path"`
 	TrailerURL    string  `json:"trailer_url"`
 	TMDBID        int     `json:"tmdb_id"`
+	// CreditsLocked is set when an admin has manually edited the cast/crew.
+	// When true we skip replacing credits on enrichment so those edits
+	// survive a refresh.
+	CreditsLocked bool `json:"credits_locked"`
 }
 
 type TVShowRequest struct {

@@ -37,6 +37,11 @@ type crewEntryRequest struct {
 type creditsRequest struct {
 	Cast []castEntryRequest `json:"cast"`
 	Crew []crewEntryRequest `json:"crew"`
+	// Locked controls the manual-edit lock on the record's credits. nil
+	// leaves it unchanged; true locks (so a TMDB refresh won't overwrite);
+	// false unlocks (hand control back to TMDB). The web editor sends true
+	// on save; the metadata services omit it.
+	Locked *bool `json:"locked"`
 }
 
 func (r creditsRequest) toCastInputs() []services.CastInput {
@@ -112,7 +117,7 @@ func (h *CreditsHandler) SetMovieCredits(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	if err := h.svc.SetMovieCredits(c.Param("id"), req.toCastInputs(), req.toCrewInputs()); err != nil {
+	if err := h.svc.SetMovieCredits(c.Param("id"), req.toCastInputs(), req.toCrewInputs(), req.Locked); err != nil {
 		c.JSON(serviceStatus(err), gin.H{"error": err.Error()})
 		return
 	}
@@ -157,7 +162,7 @@ func (h *CreditsHandler) SetTVShowCredits(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	if err := h.svc.SetTVShowCredits(c.Param("id"), req.toCastInputs(), req.toCrewInputs()); err != nil {
+	if err := h.svc.SetTVShowCredits(c.Param("id"), req.toCastInputs(), req.toCrewInputs(), req.Locked); err != nil {
 		c.JSON(serviceStatus(err), gin.H{"error": err.Error()})
 		return
 	}

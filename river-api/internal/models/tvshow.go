@@ -14,7 +14,7 @@ type TVShow struct {
 	OriginalTitle string    `json:"original_title"`
 	Description   string    `json:"description"`
 	Year          int       `json:"year"`
-	Status        string    `json:"status"` // e.g. "Ended", "Continuing"
+	Status        string    `json:"status"`                     // e.g. "Ended", "Continuing"
 	Genres        string    `gorm:"default:'[]'" json:"genres"` // JSON-encoded []string
 	Rating        float32   `json:"rating"`
 	PosterPath    string    `json:"poster_path"`
@@ -30,8 +30,12 @@ type TVShow struct {
 	// river-scan when it first discovers (or resolves) the show. The admin
 	// "identify" flow uses this to trigger a targeted re-scan that picks
 	// up episodes added after the initial scan.
-	FolderPath string   `json:"folder_path"`
-	Seasons    []Season `gorm:"foreignKey:TVShowID" json:"seasons,omitempty"`
+	FolderPath string `json:"folder_path"`
+	// CreditsLocked marks the cast/crew as manually edited. When set, the
+	// metadata services skip replacing credits on a TMDB re-enrichment so
+	// admin edits survive a refresh. Cleared to hand control back to TMDB.
+	CreditsLocked bool     `gorm:"default:false" json:"credits_locked"`
+	Seasons       []Season `gorm:"foreignKey:TVShowID" json:"seasons,omitempty"`
 }
 
 type Season struct {

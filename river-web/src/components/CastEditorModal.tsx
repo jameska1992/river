@@ -128,6 +128,8 @@ export function CastEditorModal({ type, mediaId, credits, onSaved, onClose }: Pr
         job: r.job.trim(),
         department: r.department.trim(),
       })),
+      // A manual save locks credits so a later TMDB refresh won't overwrite.
+      locked: true,
     }
 
     setSaving(true)

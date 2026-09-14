@@ -128,6 +128,10 @@ type Movie struct {
 	TrailerURL    string  `json:"trailer_url"`
 	FilePath      string  `json:"file_path"`
 	TMDBID        int     `json:"tmdb_id"`
+	// CreditsLocked is set when an admin has manually edited the cast/crew.
+	// When true we skip replacing credits on enrichment so those edits
+	// survive a refresh.
+	CreditsLocked bool `json:"credits_locked"`
 }
 
 type MovieRequest struct {

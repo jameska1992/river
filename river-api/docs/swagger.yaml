@@ -340,6 +340,13 @@ definitions:
         items:
           $ref: '#/definitions/handlers.crewEntryRequest'
         type: array
+      locked:
+        description: |-
+          Locked controls the manual-edit lock on the record's credits. nil
+          leaves it unchanged; true locks (so a TMDB refresh won't overwrite);
+          false unlocks (hand control back to TMDB). The web editor sends true
+          on save; the metadata services omit it.
+        type: boolean
     type: object
   handlers.crewEntryRequest:
     properties:
@@ -963,6 +970,12 @@ definitions:
         type: string
       created_at:
         type: string
+      credits_locked:
+        description: |-
+          CreditsLocked marks the cast/crew as manually edited. When set, the
+          metadata services skip replacing credits on a TMDB re-enrichment so
+          admin edits survive a refresh. Cleared to hand control back to TMDB.
+        type: boolean
       description:
         type: string
       file_path:
@@ -1070,6 +1083,12 @@ definitions:
         type: string
       created_at:
         type: string
+      credits_locked:
+        description: |-
+          CreditsLocked marks the cast/crew as manually edited. When set, the
+          metadata services skip replacing credits on a TMDB re-enrichment so
+          admin edits survive a refresh. Cleared to hand control back to TMDB.
+        type: boolean
       description:
         type: string
       folder_path:

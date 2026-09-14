@@ -71,6 +71,7 @@ export interface Movie extends BaseModel {
   trailer_url: string
   file_path: string
   source_path: string
+  credits_locked: boolean // cast/crew manually edited; refresh won't overwrite
 }
 
 export interface CastCredit {
@@ -124,6 +125,9 @@ export interface SetCrewCredit {
 export interface SetCreditsRequest {
   cast: SetCastCredit[]
   crew: SetCrewCredit[]
+  // Manual-edit lock: true locks (a TMDB refresh won't overwrite), false
+  // unlocks. Omit to leave the current lock state unchanged.
+  locked?: boolean
 }
 
 // --- People ---
@@ -189,6 +193,7 @@ export interface TVShow extends BaseModel {
   backdrop_path: string
   trailer_url: string
   folder_path: string
+  credits_locked: boolean // cast/crew manually edited; refresh won't overwrite
   seasons?: Season[]
 }
 

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
-import { RiArrowLeftLine, RiFilmLine, RiPlayFill, RiRewindStartLine, RiArrowDownSLine, RiStarLine, RiTimeLine, RiDownloadLine, RiUserLine, RiBookmarkLine, RiBookmarkFill, RiGroupLine, RiAlertFill, RiEyeLine, RiEyeOffLine, RiHdLine, RiEditLine } from 'react-icons/ri'
+import { RiArrowLeftLine, RiFilmLine, RiPlayFill, RiRewindStartLine, RiArrowDownSLine, RiStarLine, RiTimeLine, RiDownloadLine, RiUserLine, RiBookmarkLine, RiBookmarkFill, RiGroupLine, RiAlertFill, RiEyeLine, RiEyeOffLine, RiHdLine, RiEditLine, RiLockLine } from 'react-icons/ri'
 import { useMovies } from '../context/MoviesContext'
 import { useAuth } from '../context/AuthContext'
 import { imageUrl } from '../util/imageUrl'
@@ -13,6 +13,7 @@ import { IdentifyMovieModal } from '../components/IdentifyMovieModal'
 import { MediaDetailsModal } from '../components/MediaDetailsModal'
 import { DeleteMediaModal } from '../components/DeleteMediaModal'
 import { CastEditorModal } from '../components/CastEditorModal'
+import { creditsToRequest } from '../util/credits'
 import { SimilarCarousel } from '../components/SimilarCarousel'
 import { DropdownMenu } from '../components/DropdownMenu'
 import dropdownStyles from '../components/DropdownMenu.module.css'
@@ -64,6 +65,14 @@ export function MovieDetailPage() {
     if (!movie) return
     const room = await api.createWatchParty({ media_type: 'movie', media_id: movie.id })
     navigate(`/movie/${movie.id}/watch?party=${room.id}`)
+  }
+
+  // Unlock hands credits back to TMDB: resends the current cast/crew with
+  // locked=false so a subsequent metadata refresh may repopulate them.
+  const unlockCredits = async () => {
+    if (!movie || !credits) return
+    await api.setMovieCredits(movie.id, creditsToRequest(credits, false))
+    setMovie(m => (m ? { ...m, credits_locked: false } : m))
   }
 
   useEffect(() => {
@@ -337,7 +346,9 @@ export function MovieDetailPage() {
                   <CreditsSection
                     credits={credits}
                     isAdmin={isAdmin}
+                    locked={movie.credits_locked}
                     onEditCast={() => setCastEditOpen(true)}
+                    onUnlock={unlockCredits}
                   />
                 )}
               </div>
@@ -386,7 +397,11 @@ export function MovieDetailPage() {
           type="movie"
           mediaId={movie.id}
           credits={credits}
-          onSaved={setCredits}
+          onSaved={updated => {
+            setCredits(updated)
+            // A manual save auto-locks; reflect it without a movie refetch.
+            setMovie(m => (m ? { ...m, credits_locked: true } : m))
+          }}
           onClose={() => setCastEditOpen(false)}
         />
       )}
@@ -417,8 +432,9 @@ export function MovieDetailPage() {
   )
 }
 
-function CreditsSection({ credits, isAdmin, onEditCast }: {
-  credits: Credits; isAdmin?: boolean; onEditCast?: () => void
+function CreditsSection({ credits, isAdmin, locked, onEditCast, onUnlock }: {
+  credits: Credits; isAdmin?: boolean; locked?: boolean
+  onEditCast?: () => void; onUnlock?: () => void
 }) {
   const directors = credits.crew.filter(c => c.job === 'Director')
   const writers = credits.crew.filter(c => c.department === 'Writing')
@@ -438,10 +454,19 @@ function CreditsSection({ credits, isAdmin, onEditCast }: {
         </dl>
       )}
       {isAdmin && (
-        <button className={`btn ${styles.editCastBtn}`} onClick={onEditCast}>
-          <RiEditLine size={14} />
-          <span>{credits.cast.length > 0 || credits.crew.length > 0 ? 'Edit credits' : 'Add credits'}</span>
-        </button>
+        <div className={styles.creditsActions}>
+          <button className={`btn ${styles.editCastBtn}`} onClick={onEditCast}>
+            <RiEditLine size={14} />
+            <span>{credits.cast.length > 0 || credits.crew.length > 0 ? 'Edit credits' : 'Add credits'}</span>
+          </button>
+          {locked && (
+            <span className={styles.creditsLock}>
+              <RiLockLine size={13} />
+              <span>Manual credits — won’t be overwritten by refresh</span>
+              <button className={styles.unlockBtn} onClick={onUnlock}>Unlock</button>
+            </span>
+          )}
+        </div>
       )}
       {credits.cast.length > 0 && (
         <div className={styles.castGrid}>

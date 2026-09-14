@@ -20,7 +20,7 @@ func newCreditsTestDB(t *testing.T) *gorm.DB {
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
 	require.NoError(t, err)
 	require.NoError(t, db.AutoMigrate(
-		&models.Person{},
+		&models.Person{}, &models.Movie{}, &models.TVShow{},
 		&models.MovieCast{}, &models.MovieCrew{},
 		&models.TVShowCast{}, &models.TVShowCrew{},
 	))
@@ -49,14 +49,14 @@ func TestSetMovieCredits_ReapsOrphanedPersonOnReEdit(t *testing.T) {
 	a := models.Person{Name: "Manual A"}
 	require.NoError(t, db.Create(&a).Error)
 	require.NoError(t, repo.SetMovieCredits(movieID,
-		[]models.MovieCast{{MovieID: movieID, PersonID: a.ID, Character: "Hero"}}, nil))
+		[]models.MovieCast{{MovieID: movieID, PersonID: a.ID, Character: "Hero"}}, nil, nil))
 
 	// Re-edit the cast, replacing A with a new manual person B (the shape the
 	// credits PUT produces for manual entries — a fresh Person every save).
 	b := models.Person{Name: "Manual B"}
 	require.NoError(t, db.Create(&b).Error)
 	require.NoError(t, repo.SetMovieCredits(movieID,
-		[]models.MovieCast{{MovieID: movieID, PersonID: b.ID, Character: "Hero"}}, nil))
+		[]models.MovieCast{{MovieID: movieID, PersonID: b.ID, Character: "Hero"}}, nil, nil))
 
 	assert.Equal(t, int64(1), personCount(t, db), "A should be reaped, only B remains")
 	assert.False(t, exists(db, a.ID), "orphaned person A should be deleted")
@@ -72,15 +72,15 @@ func TestSetMovieCredits_KeepsPersonStillUsedElsewhere(t *testing.T) {
 	shared := models.Person{Name: "Shared", TmdbID: &tmdbID}
 	require.NoError(t, db.Create(&shared).Error)
 	require.NoError(t, repo.SetMovieCredits(movie1,
-		[]models.MovieCast{{MovieID: movie1, PersonID: shared.ID}}, nil))
+		[]models.MovieCast{{MovieID: movie1, PersonID: shared.ID}}, nil, nil))
 	require.NoError(t, repo.SetMovieCredits(movie2,
-		[]models.MovieCast{{MovieID: movie2, PersonID: shared.ID}}, nil))
+		[]models.MovieCast{{MovieID: movie2, PersonID: shared.ID}}, nil, nil))
 
 	// Drop `shared` from movie1; it's still on movie2, so it must survive.
 	other := models.Person{Name: "Other"}
 	require.NoError(t, db.Create(&other).Error)
 	require.NoError(t, repo.SetMovieCredits(movie1,
-		[]models.MovieCast{{MovieID: movie1, PersonID: other.ID}}, nil))
+		[]models.MovieCast{{MovieID: movie1, PersonID: other.ID}}, nil, nil))
 
 	assert.True(t, exists(db, shared.ID), "person still used by movie2 must not be reaped")
 	assert.True(t, exists(db, other.ID))
@@ -94,14 +94,45 @@ func TestSetTVShowCredits_ReapsOrphanedPersonOnReEdit(t *testing.T) {
 	a := models.Person{Name: "Manual A"}
 	require.NoError(t, db.Create(&a).Error)
 	require.NoError(t, repo.SetTVShowCredits(showID,
-		[]models.TVShowCast{{TVShowID: showID, PersonID: a.ID}}, nil))
+		[]models.TVShowCast{{TVShowID: showID, PersonID: a.ID}}, nil, nil))
 
 	b := models.Person{Name: "Manual B"}
 	require.NoError(t, db.Create(&b).Error)
 	require.NoError(t, repo.SetTVShowCredits(showID,
-		[]models.TVShowCast{{TVShowID: showID, PersonID: b.ID}}, nil))
+		[]models.TVShowCast{{TVShowID: showID, PersonID: b.ID}}, nil, nil))
 
 	assert.Equal(t, int64(1), personCount(t, db))
 	assert.False(t, exists(db, a.ID))
 	assert.True(t, exists(db, b.ID))
+}
+
+func TestSetMovieCredits_LockFlag(t *testing.T) {
+	db := newCreditsTestDB(t)
+	repo := NewCreditsRepository(db)
+	movie := models.Movie{Title: "Nosferatu"}
+	require.NoError(t, db.Create(&movie).Error)
+
+	locked := func() bool {
+		var m models.Movie
+		require.NoError(t, db.First(&m, "id = ?", movie.ID).Error)
+		return m.CreditsLocked
+	}
+	yes := true
+	no := false
+
+	// nil leaves the flag unchanged (default false).
+	require.NoError(t, repo.SetMovieCredits(movie.ID, nil, nil, nil))
+	assert.False(t, locked(), "nil locked leaves it unchanged")
+
+	// true locks it, in the same write.
+	require.NoError(t, repo.SetMovieCredits(movie.ID, nil, nil, &yes))
+	assert.True(t, locked(), "locked=true sets the flag")
+
+	// A subsequent nil write (e.g. a metadata refresh) must not clear it.
+	require.NoError(t, repo.SetMovieCredits(movie.ID, nil, nil, nil))
+	assert.True(t, locked(), "nil must not clear an existing lock")
+
+	// false clears it (unlock / reset to TMDB).
+	require.NoError(t, repo.SetMovieCredits(movie.ID, nil, nil, &no))
+	assert.False(t, locked(), "locked=false clears the flag")
 }

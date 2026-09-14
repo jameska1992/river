@@ -136,16 +136,22 @@ func (p *Processor) enrich(movie *apiclient.Movie, hintTMDB int, hintIMDB, paren
 		return fmt.Errorf("update movie %s: %w", movie.ID, err)
 	}
 
-	cast := make([]apiclient.CastCredit, len(meta.Cast))
-	for i, c := range meta.Cast {
-		cast[i] = apiclient.CastCredit{TmdbID: c.TmdbID, Name: c.Name, ProfilePath: c.ProfilePath, Biography: c.Biography, Character: c.Character, Order: c.Order}
-	}
-	crew := make([]apiclient.CrewCredit, len(meta.Crew))
-	for i, c := range meta.Crew {
-		crew[i] = apiclient.CrewCredit{TmdbID: c.TmdbID, Name: c.Name, ProfilePath: c.ProfilePath, Biography: c.Biography, Job: c.Job, Department: c.Department}
-	}
-	if err := p.api.SetMovieCredits(movie.ID, apiclient.CreditsRequest{Cast: cast, Crew: crew}); err != nil {
-		log.Printf("WARN failed to set credits for movie %s: %v", movie.ID, err)
+	// Respect a manual credits lock: if an admin has hand-edited the cast/crew,
+	// don't overwrite their edits on enrichment.
+	if movie.CreditsLocked {
+		log.Printf("INFO credits locked for movie %s; skipping TMDB credits replacement", movie.ID)
+	} else {
+		cast := make([]apiclient.CastCredit, len(meta.Cast))
+		for i, c := range meta.Cast {
+			cast[i] = apiclient.CastCredit{TmdbID: c.TmdbID, Name: c.Name, ProfilePath: c.ProfilePath, Biography: c.Biography, Character: c.Character, Order: c.Order}
+		}
+		crew := make([]apiclient.CrewCredit, len(meta.Crew))
+		for i, c := range meta.Crew {
+			crew[i] = apiclient.CrewCredit{TmdbID: c.TmdbID, Name: c.Name, ProfilePath: c.ProfilePath, Biography: c.Biography, Job: c.Job, Department: c.Department}
+		}
+		if err := p.api.SetMovieCredits(movie.ID, apiclient.CreditsRequest{Cast: cast, Crew: crew}); err != nil {
+			log.Printf("WARN failed to set credits for movie %s: %v", movie.ID, err)
+		}
 	}
 
 	log.Printf("INFO enriched movie %q (id=%s) from TMDB", movie.Title, movie.ID)

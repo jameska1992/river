@@ -8467,6 +8467,10 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/handlers.crewEntryRequest"
                     }
+                },
+                "locked": {
+                    "description": "Locked controls the manual-edit lock on the record's credits. nil\nleaves it unchanged; true locks (so a TMDB refresh won't overwrite);\nfalse unlocks (hand control back to TMDB). The web editor sends true\non save; the metadata services omit it.",
+                    "type": "boolean"
                 }
             }
         },
@@ -9342,6 +9346,10 @@ const docTemplate = `{
                 "created_at": {
                     "type": "string"
                 },
+                "credits_locked": {
+                    "description": "CreditsLocked marks the cast/crew as manually edited. When set, the\nmetadata services skip replacing credits on a TMDB re-enrichment so\nadmin edits survive a refresh. Cleared to hand control back to TMDB.",
+                    "type": "boolean"
+                },
                 "description": {
                     "type": "string"
                 },
@@ -9482,6 +9490,10 @@ const docTemplate = `{
                 },
                 "created_at": {
                     "type": "string"
+                },
+                "credits_locked": {
+                    "description": "CreditsLocked marks the cast/crew as manually edited. When set, the\nmetadata services skip replacing credits on a TMDB re-enrichment so\nadmin edits survive a refresh. Cleared to hand control back to TMDB.",
+                    "type": "boolean"
                 },
                 "description": {
                     "type": "string"

@@ -10,7 +10,7 @@ type Movie struct {
 	OriginalTitle string    `json:"original_title"`
 	Description   string    `json:"description"`
 	Year          int       `json:"year"`
-	Genres        string    `gorm:"default:'[]'" json:"genres"`  // JSON-encoded []string
+	Genres        string    `gorm:"default:'[]'" json:"genres"` // JSON-encoded []string
 	Rating        float32   `json:"rating"`
 	Runtime       int       `json:"runtime"` // minutes
 	PosterPath    string    `json:"poster_path"`
@@ -21,8 +21,12 @@ type Movie struct {
 	// Subsequent enrichments use it directly so a rescan or refresh can't
 	// re-search by title and revert to a different popular match. 0 means
 	// "not yet resolved".
-	TMDBID   int    `gorm:"index" json:"tmdb_id"`
-	FilePath string `json:"file_path"`
+	TMDBID int `gorm:"index" json:"tmdb_id"`
+	// CreditsLocked marks the cast/crew as manually edited. When set, the
+	// metadata services skip replacing credits on a TMDB re-enrichment so
+	// admin edits survive a refresh. Cleared to hand control back to TMDB.
+	CreditsLocked bool   `gorm:"default:false" json:"credits_locked"`
+	FilePath      string `json:"file_path"`
 	// SourcePath is the original on-disk location the scanner discovered
 	// the movie at (typically under MEDIA_PATH). FilePath is the canonical
 	// post-transcode/post-copy location (typically under OUTPUT_PATH).

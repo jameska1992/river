@@ -53,9 +53,9 @@ type CreditsRepository interface {
 	CreatePerson(name, profilePath string) (*models.Person, error)
 	FindPersonByID(personID uuid.UUID) (*models.Person, error)
 	GetPersonFilmography(personID uuid.UUID) ([]PersonMovieCastRow, []PersonMovieCrewRow, []PersonTVShowCastRow, []PersonTVShowCrewRow, error)
-	SetMovieCredits(movieID uuid.UUID, cast []models.MovieCast, crew []models.MovieCrew) error
+	SetMovieCredits(movieID uuid.UUID, cast []models.MovieCast, crew []models.MovieCrew, locked *bool) error
 	GetMovieCredits(movieID uuid.UUID) ([]models.MovieCast, []models.MovieCrew, error)
-	SetTVShowCredits(tvShowID uuid.UUID, cast []models.TVShowCast, crew []models.TVShowCrew) error
+	SetTVShowCredits(tvShowID uuid.UUID, cast []models.TVShowCast, crew []models.TVShowCrew, locked *bool) error
 	GetTVShowCredits(tvShowID uuid.UUID) ([]models.TVShowCast, []models.TVShowCrew, error)
 }
 
@@ -200,7 +200,7 @@ func (r *gormCreditsRepository) CreatePerson(name, profilePath string) (*models.
 	return &p, r.db.Create(&p).Error
 }
 
-func (r *gormCreditsRepository) SetMovieCredits(movieID uuid.UUID, cast []models.MovieCast, crew []models.MovieCrew) error {
+func (r *gormCreditsRepository) SetMovieCredits(movieID uuid.UUID, cast []models.MovieCast, crew []models.MovieCrew, locked *bool) error {
 	return r.db.Transaction(func(tx *gorm.DB) error {
 		// Snapshot the people currently linked to this movie before we
 		// replace the credits, so we can clean up any that end up orphaned.
@@ -226,6 +226,13 @@ func (r *gormCreditsRepository) SetMovieCredits(movieID uuid.UUID, cast []models
 				return err
 			}
 		}
+		// Set the manual-edit lock in the same transaction when requested.
+		if locked != nil {
+			if err := tx.Model(&models.Movie{}).Where("id = ?", movieID).
+				Update("credits_locked", *locked).Error; err != nil {
+				return err
+			}
+		}
 		return deleteOrphanedPeople(tx, prev)
 	})
 }
@@ -245,7 +252,7 @@ func (r *gormCreditsRepository) GetMovieCredits(movieID uuid.UUID) ([]models.Mov
 	return cast, crew, nil
 }
 
-func (r *gormCreditsRepository) SetTVShowCredits(tvShowID uuid.UUID, cast []models.TVShowCast, crew []models.TVShowCrew) error {
+func (r *gormCreditsRepository) SetTVShowCredits(tvShowID uuid.UUID, cast []models.TVShowCast, crew []models.TVShowCrew, locked *bool) error {
 	return r.db.Transaction(func(tx *gorm.DB) error {
 		prev, err := linkedPersonIDs(tx, []creditLink{
 			{"tv_show_casts", "tv_show_id"}, {"tv_show_crews", "tv_show_id"},
@@ -266,6 +273,12 @@ func (r *gormCreditsRepository) SetTVShowCredits(tvShowID uuid.UUID, cast []mode
 		}
 		if len(crew) > 0 {
 			if err := tx.Create(&crew).Error; err != nil {
+				return err
+			}
+		}
+		if locked != nil {
+			if err := tx.Model(&models.TVShow{}).Where("id = ?", tvShowID).
+				Update("credits_locked", *locked).Error; err != nil {
 				return err
 			}
 		}

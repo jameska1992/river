@@ -65,6 +65,50 @@ func NewCreditsRepository(db *gorm.DB) CreditsRepository {
 	return &gormCreditsRepository{db: db}
 }
 
+// creditLink names a credit join table and its media foreign-key column.
+type creditLink struct{ table, idCol string }
+
+// linkedPersonIDs returns the distinct person ids currently linked to a
+// media item across the given credit tables. Used to snapshot who was
+// attached before a full-replace so orphans can be cleaned up afterward.
+func linkedPersonIDs(tx *gorm.DB, links []creditLink, mediaID uuid.UUID) ([]string, error) {
+	seen := map[string]struct{}{}
+	for _, l := range links {
+		var ids []string
+		if err := tx.Table(l.table).
+			Where(l.idCol+" = ?", mediaID).
+			Pluck("person_id", &ids).Error; err != nil {
+			return nil, err
+		}
+		for _, id := range ids {
+			seen[id] = struct{}{}
+		}
+	}
+	out := make([]string, 0, len(seen))
+	for id := range seen {
+		out = append(out, id)
+	}
+	return out, nil
+}
+
+// deleteOrphanedPeople removes any of the given people that are no longer
+// referenced by ANY cast/crew credit (movie or TV). Manually-added people
+// (tmdb_id NULL) accumulate on every re-edit because the credits PUT can
+// only create them, never re-link — this reaps the ones a replace left
+// dangling. Scoped to the just-unlinked candidates so a Person still used
+// by another title is never touched.
+func deleteOrphanedPeople(tx *gorm.DB, candidateIDs []string) error {
+	if len(candidateIDs) == 0 {
+		return nil
+	}
+	return tx.Where("id IN ?", candidateIDs).
+		Where("NOT EXISTS (SELECT 1 FROM movie_casts WHERE movie_casts.person_id = people.id)").
+		Where("NOT EXISTS (SELECT 1 FROM movie_crews WHERE movie_crews.person_id = people.id)").
+		Where("NOT EXISTS (SELECT 1 FROM tv_show_casts WHERE tv_show_casts.person_id = people.id)").
+		Where("NOT EXISTS (SELECT 1 FROM tv_show_crews WHERE tv_show_crews.person_id = people.id)").
+		Delete(&models.Person{}).Error
+}
+
 func (r *gormCreditsRepository) FindPersonByID(personID uuid.UUID) (*models.Person, error) {
 	var p models.Person
 	if err := r.db.First(&p, "id = ?", personID).Error; err != nil {
@@ -158,6 +202,14 @@ func (r *gormCreditsRepository) CreatePerson(name, profilePath string) (*models.
 
 func (r *gormCreditsRepository) SetMovieCredits(movieID uuid.UUID, cast []models.MovieCast, crew []models.MovieCrew) error {
 	return r.db.Transaction(func(tx *gorm.DB) error {
+		// Snapshot the people currently linked to this movie before we
+		// replace the credits, so we can clean up any that end up orphaned.
+		prev, err := linkedPersonIDs(tx, []creditLink{
+			{"movie_casts", "movie_id"}, {"movie_crews", "movie_id"},
+		}, movieID)
+		if err != nil {
+			return err
+		}
 		if err := tx.Where("movie_id = ?", movieID).Delete(&models.MovieCast{}).Error; err != nil {
 			return err
 		}
@@ -174,7 +226,7 @@ func (r *gormCreditsRepository) SetMovieCredits(movieID uuid.UUID, cast []models
 				return err
 			}
 		}
-		return nil
+		return deleteOrphanedPeople(tx, prev)
 	})
 }
 
@@ -195,6 +247,12 @@ func (r *gormCreditsRepository) GetMovieCredits(movieID uuid.UUID) ([]models.Mov
 
 func (r *gormCreditsRepository) SetTVShowCredits(tvShowID uuid.UUID, cast []models.TVShowCast, crew []models.TVShowCrew) error {
 	return r.db.Transaction(func(tx *gorm.DB) error {
+		prev, err := linkedPersonIDs(tx, []creditLink{
+			{"tv_show_casts", "tv_show_id"}, {"tv_show_crews", "tv_show_id"},
+		}, tvShowID)
+		if err != nil {
+			return err
+		}
 		if err := tx.Where("tv_show_id = ?", tvShowID).Delete(&models.TVShowCast{}).Error; err != nil {
 			return err
 		}
@@ -211,7 +269,7 @@ func (r *gormCreditsRepository) SetTVShowCredits(tvShowID uuid.UUID, cast []mode
 				return err
 			}
 		}
-		return nil
+		return deleteOrphanedPeople(tx, prev)
 	})
 }
 

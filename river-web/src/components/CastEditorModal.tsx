@@ -8,18 +8,17 @@ import styles from './CastEditorModal.module.css'
 interface Props {
   type: 'movie' | 'tvshow'
   mediaId: string
-  // Full current credits. Crew is preserved verbatim on save — the PUT
-  // endpoint replaces cast AND crew, so submitting cast alone would wipe it.
+  // Full current credits (cast + crew). Both lists are editable here and the
+  // full set is re-submitted on save, since the PUT endpoint is full-replace.
   credits: Credits
   onSaved: (updated: Credits) => void
   onClose: () => void
 }
 
-// One editable cast row. `key` is a stable client-side id so React keeps
-// input focus correct across reorders/removals. `tmdbId` is carried through
-// for TMDB-sourced people so a re-save dedupes onto the existing Person
-// instead of creating a duplicate; manually-added rows leave it null and the
-// backend mints a fresh Person (tmdb_id stays NULL, no unique-index clash).
+// `key` is a stable client-side id so React keeps input focus across
+// reorders/removals. `tmdbId` is carried through for TMDB-sourced people so a
+// re-save dedupes onto the existing Person; manual rows leave it null and the
+// backend mints a fresh Person (orphans from prior edits are reaped server-side).
 interface CastRow {
   key: number
   tmdbId: number | null
@@ -28,13 +27,24 @@ interface CastRow {
   profilePath: string
 }
 
+interface CrewRow {
+  key: number
+  tmdbId: number | null
+  name: string
+  job: string
+  department: string
+  profilePath: string
+}
+
+type Tab = 'cast' | 'crew'
+
 export function CastEditorModal({ type, mediaId, credits, onSaved, onClose }: Props) {
   const overlayRef = useRef<HTMLDivElement>(null)
-  // Monotonic id source for row keys. Seeded past the initial rows (which
-  // key off their index) so freshly-added rows never collide with them.
-  const nextKey = useRef(credits.cast.length)
+  // Seed past both initial lists (cast keys 0..n-1, crew keys n..n+m-1) so
+  // freshly-added rows never collide.
+  const nextKey = useRef(credits.cast.length + credits.crew.length)
 
-  const [rows, setRows] = useState<CastRow[]>(() =>
+  const [castRows, setCastRows] = useState<CastRow[]>(() =>
     credits.cast.map((c, i) => ({
       key: i,
       tmdbId: c.tmdb_id,
@@ -43,6 +53,17 @@ export function CastEditorModal({ type, mediaId, credits, onSaved, onClose }: Pr
       profilePath: c.profile_path,
     })),
   )
+  const [crewRows, setCrewRows] = useState<CrewRow[]>(() =>
+    credits.crew.map((c, i) => ({
+      key: credits.cast.length + i,
+      tmdbId: c.tmdb_id,
+      name: c.name,
+      job: c.job,
+      department: c.department,
+      profilePath: c.profile_path,
+    })),
+  )
+  const [tab, setTab] = useState<Tab>('cast')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -52,49 +73,60 @@ export function CastEditorModal({ type, mediaId, credits, onSaved, onClose }: Pr
     return () => document.removeEventListener('keydown', handler)
   }, [onClose])
 
-  const update = (key: number, patch: Partial<CastRow>) =>
-    setRows(rs => rs.map(r => (r.key === key ? { ...r, ...patch } : r)))
-
-  const remove = (key: number) => setRows(rs => rs.filter(r => r.key !== key))
-
-  const move = (index: number, delta: number) =>
-    setRows(rs => {
+  // ── Cast ops ──
+  const updateCast = (key: number, patch: Partial<CastRow>) =>
+    setCastRows(rs => rs.map(r => (r.key === key ? { ...r, ...patch } : r)))
+  const removeCast = (key: number) => setCastRows(rs => rs.filter(r => r.key !== key))
+  const moveCast = (index: number, delta: number) =>
+    setCastRows(rs => {
       const next = index + delta
       if (next < 0 || next >= rs.length) return rs
       const copy = [...rs]
       ;[copy[index], copy[next]] = [copy[next], copy[index]]
       return copy
     })
+  const addCast = () =>
+    setCastRows(rs => [...rs, { key: nextKey.current++, tmdbId: null, name: '', character: '', profilePath: '' }])
 
-  const add = () =>
-    setRows(rs => [...rs, { key: nextKey.current++, tmdbId: null, name: '', character: '', profilePath: '' }])
+  // ── Crew ops ── (crew has no display order — server sorts by dept/job)
+  const updateCrew = (key: number, patch: Partial<CrewRow>) =>
+    setCrewRows(rs => rs.map(r => (r.key === key ? { ...r, ...patch } : r)))
+  const removeCrew = (key: number) => setCrewRows(rs => rs.filter(r => r.key !== key))
+  const addCrew = () =>
+    setCrewRows(rs => [...rs, { key: nextKey.current++, tmdbId: null, name: '', job: '', department: '', profilePath: '' }])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    // Drop rows the user left completely blank, then require a name on
-    // whatever remains (the API binds name as required).
-    const kept = rows.filter(r => r.name.trim() || r.character.trim() || r.profilePath.trim())
-    if (kept.some(r => !r.name.trim())) {
+    // Drop fully-blank rows, then require a name on whatever remains (the API
+    // binds name as required for both cast and crew).
+    const keptCast = castRows.filter(r => r.name.trim() || r.character.trim() || r.profilePath.trim())
+    const keptCrew = crewRows.filter(r => r.name.trim() || r.job.trim() || r.department.trim() || r.profilePath.trim())
+    if (keptCast.some(r => !r.name.trim())) {
+      setTab('cast')
       setError('Every cast member needs a name. Remove empty rows or fill them in.')
+      return
+    }
+    if (keptCrew.some(r => !r.name.trim())) {
+      setTab('crew')
+      setError('Every crew member needs a name. Remove empty rows or fill them in.')
       return
     }
 
     const payload: SetCreditsRequest = {
-      cast: kept.map((r, i) => ({
+      cast: keptCast.map((r, i) => ({
         ...(r.tmdbId ? { tmdb_id: r.tmdbId } : {}),
         name: r.name.trim(),
         profile_path: r.profilePath.trim(),
         character: r.character.trim(),
         order: i,
       })),
-      // Preserve crew untouched — the endpoint is full-replace.
-      crew: credits.crew.map(c => ({
-        ...(c.tmdb_id ? { tmdb_id: c.tmdb_id } : {}),
-        name: c.name,
-        profile_path: c.profile_path,
-        job: c.job,
-        department: c.department,
+      crew: keptCrew.map(r => ({
+        ...(r.tmdbId ? { tmdb_id: r.tmdbId } : {}),
+        name: r.name.trim(),
+        profile_path: r.profilePath.trim(),
+        job: r.job.trim(),
+        department: r.department.trim(),
       })),
     }
 
@@ -111,9 +143,9 @@ export function CastEditorModal({ type, mediaId, credits, onSaved, onClose }: Pr
       onClose()
     } catch (err) {
       if (err instanceof ApiError && err.status === 403) {
-        setError('You don’t have permission to edit cast (admin only).')
+        setError('You don’t have permission to edit credits (admin only).')
       } else {
-        setError(err instanceof Error ? err.message : 'Failed to save cast')
+        setError(err instanceof Error ? err.message : 'Failed to save credits')
       }
     } finally {
       setSaving(false)
@@ -128,88 +160,87 @@ export function CastEditorModal({ type, mediaId, credits, onSaved, onClose }: Pr
     >
       <div className={styles.dialog} role="dialog" aria-modal>
         <div className={styles.header}>
-          <h2 className={`headline-sm ${styles.headerTitle}`}>Edit cast</h2>
+          <h2 className={`headline-sm ${styles.headerTitle}`}>Edit credits</h2>
           <button className="btn btn-icon" onClick={onClose} aria-label="Close">
             <RiCloseLine size={20} />
           </button>
         </div>
 
+        <div className={styles.tabs} role="tablist">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={tab === 'cast'}
+            className={`${styles.tab} ${tab === 'cast' ? styles.tabActive : ''}`}
+            onClick={() => setTab('cast')}
+          >
+            Cast {castRows.length > 0 && <span className={styles.tabCount}>{castRows.length}</span>}
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={tab === 'crew'}
+            className={`${styles.tab} ${tab === 'crew' ? styles.tabActive : ''}`}
+            onClick={() => setTab('crew')}
+          >
+            Crew {crewRows.length > 0 && <span className={styles.tabCount}>{crewRows.length}</span>}
+          </button>
+        </div>
+
         <form className={styles.form} onSubmit={handleSubmit}>
           <div className={styles.rows}>
-            {rows.length === 0 && (
-              <p className={`body-md ${styles.empty}`}>No cast members yet. Add one below.</p>
+            {tab === 'cast' ? (
+              <>
+                {castRows.length === 0 && (
+                  <p className={`body-md ${styles.empty}`}>No cast members yet. Add one below.</p>
+                )}
+                {castRows.map((r, i) => (
+                  <div key={r.key} className={styles.row}>
+                    <div className={styles.photo}>
+                      {imageUrl(r.profilePath) ? <img src={imageUrl(r.profilePath)} alt="" /> : <RiUserLine size={20} />}
+                    </div>
+                    <div className={styles.fields}>
+                      <input className={styles.input} value={r.name} onChange={e => updateCast(r.key, { name: e.target.value })} placeholder="Name" aria-label="Name" />
+                      <input className={styles.input} value={r.character} onChange={e => updateCast(r.key, { character: e.target.value })} placeholder="Character" aria-label="Character" />
+                      <input className={styles.input} type="url" value={r.profilePath} onChange={e => updateCast(r.key, { profilePath: e.target.value })} placeholder="Profile image URL (optional)" aria-label="Profile image URL" />
+                    </div>
+                    <div className={styles.rowActions}>
+                      <button type="button" className="btn btn-icon" onClick={() => moveCast(i, -1)} disabled={i === 0} aria-label="Move up" title="Move up"><RiArrowUpLine size={16} /></button>
+                      <button type="button" className="btn btn-icon" onClick={() => moveCast(i, 1)} disabled={i === castRows.length - 1} aria-label="Move down" title="Move down"><RiArrowDownLine size={16} /></button>
+                      <button type="button" className={`btn btn-icon ${styles.removeBtn}`} onClick={() => removeCast(r.key)} aria-label="Remove cast member" title="Remove"><RiDeleteBinLine size={16} /></button>
+                    </div>
+                  </div>
+                ))}
+                <button type="button" className={`btn ${styles.addBtn}`} onClick={addCast}>
+                  <RiAddLine size={16} /><span>Add cast member</span>
+                </button>
+              </>
+            ) : (
+              <>
+                {crewRows.length === 0 && (
+                  <p className={`body-md ${styles.empty}`}>No crew members yet. Add one below.</p>
+                )}
+                {crewRows.map(r => (
+                  <div key={r.key} className={styles.row}>
+                    <div className={styles.photo}>
+                      {imageUrl(r.profilePath) ? <img src={imageUrl(r.profilePath)} alt="" /> : <RiUserLine size={20} />}
+                    </div>
+                    <div className={styles.fields}>
+                      <input className={styles.input} value={r.name} onChange={e => updateCrew(r.key, { name: e.target.value })} placeholder="Name" aria-label="Name" />
+                      <input className={styles.input} value={r.job} onChange={e => updateCrew(r.key, { job: e.target.value })} placeholder="Job (e.g. Director)" aria-label="Job" />
+                      <input className={styles.input} value={r.department} onChange={e => updateCrew(r.key, { department: e.target.value })} placeholder="Department (e.g. Directing)" aria-label="Department" />
+                      <input className={styles.input} type="url" value={r.profilePath} onChange={e => updateCrew(r.key, { profilePath: e.target.value })} placeholder="Profile image URL (optional)" aria-label="Profile image URL" />
+                    </div>
+                    <div className={styles.rowActions}>
+                      <button type="button" className={`btn btn-icon ${styles.removeBtn}`} onClick={() => removeCrew(r.key)} aria-label="Remove crew member" title="Remove"><RiDeleteBinLine size={16} /></button>
+                    </div>
+                  </div>
+                ))}
+                <button type="button" className={`btn ${styles.addBtn}`} onClick={addCrew}>
+                  <RiAddLine size={16} /><span>Add crew member</span>
+                </button>
+              </>
             )}
-            {rows.map((r, i) => (
-              <div key={r.key} className={styles.row}>
-                <div className={styles.photo}>
-                  {imageUrl(r.profilePath) ? (
-                    <img src={imageUrl(r.profilePath)} alt="" />
-                  ) : (
-                    <RiUserLine size={20} />
-                  )}
-                </div>
-                <div className={styles.fields}>
-                  <input
-                    className={styles.input}
-                    value={r.name}
-                    onChange={e => update(r.key, { name: e.target.value })}
-                    placeholder="Name"
-                    aria-label="Name"
-                  />
-                  <input
-                    className={styles.input}
-                    value={r.character}
-                    onChange={e => update(r.key, { character: e.target.value })}
-                    placeholder="Character"
-                    aria-label="Character"
-                  />
-                  <input
-                    className={styles.input}
-                    type="url"
-                    value={r.profilePath}
-                    onChange={e => update(r.key, { profilePath: e.target.value })}
-                    placeholder="Profile image URL (optional)"
-                    aria-label="Profile image URL"
-                  />
-                </div>
-                <div className={styles.rowActions}>
-                  <button
-                    type="button"
-                    className="btn btn-icon"
-                    onClick={() => move(i, -1)}
-                    disabled={i === 0}
-                    aria-label="Move up"
-                    title="Move up"
-                  >
-                    <RiArrowUpLine size={16} />
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn-icon"
-                    onClick={() => move(i, 1)}
-                    disabled={i === rows.length - 1}
-                    aria-label="Move down"
-                    title="Move down"
-                  >
-                    <RiArrowDownLine size={16} />
-                  </button>
-                  <button
-                    type="button"
-                    className={`btn btn-icon ${styles.removeBtn}`}
-                    onClick={() => remove(r.key)}
-                    aria-label="Remove cast member"
-                    title="Remove"
-                  >
-                    <RiDeleteBinLine size={16} />
-                  </button>
-                </div>
-              </div>
-            ))}
-
-            <button type="button" className={`btn ${styles.addBtn}`} onClick={add}>
-              <RiAddLine size={16} />
-              <span>Add cast member</span>
-            </button>
           </div>
 
           {error && <p className={`label-sm ${styles.errorMsg}`}>{error}</p>}

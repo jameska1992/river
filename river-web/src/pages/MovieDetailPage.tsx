@@ -440,7 +440,7 @@ function CreditsSection({ credits, isAdmin, onEditCast }: {
       {isAdmin && (
         <button className={`btn ${styles.editCastBtn}`} onClick={onEditCast}>
           <RiEditLine size={14} />
-          <span>{credits.cast.length > 0 ? 'Edit cast' : 'Add cast'}</span>
+          <span>{credits.cast.length > 0 || credits.crew.length > 0 ? 'Edit credits' : 'Add credits'}</span>
         </button>
       )}
       {credits.cast.length > 0 && (

@@ -1,18 +1,11 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { api } from '../api'
 import { useAsync } from '../hooks/useAsync'
 import { Grid } from '../components/collections'
 import { PosterCard, type PosterCardProps } from '../components/PosterCard'
 import { Loading, ErrorState, EmptyState } from '../components/States'
+import { libraryTabs, TAB_LABEL, type LibraryTab as Tab } from '../util/libraryTabs'
 import { heading, screen } from './styles'
-
-type Tab = 'movies' | 'tvshows' | 'music' | 'audiobooks'
-const TABS: { key: Tab; label: string }[] = [
-  { key: 'movies', label: 'Movies' },
-  { key: 'tvshows', label: 'TV' },
-  { key: 'music', label: 'Music' },
-  { key: 'audiobooks', label: 'Books' },
-]
 
 // Fetch the selected type and normalise each into PosterCard props.
 async function fetchTab(tab: Tab): Promise<PosterCardProps[]> {
@@ -37,31 +30,50 @@ async function fetchTab(tab: Tab): Promise<PosterCardProps[]> {
 }
 
 export default function LibraryPage() {
-  const [tab, setTab] = useState<Tab>('movies')
-  const { data, loading, error, reload } = useAsync(() => fetchTab(tab), [tab])
+  // Tabs are driven by what libraries actually exist — no point offering a
+  // Music tab when no music library is configured.
+  const libraries = useAsync(() => api.listLibraries(), [])
+  const tabs = useMemo<Tab[]>(
+    () => (libraries.data ? libraryTabs(libraries.data.map(l => l.type)) : []),
+    [libraries.data],
+  )
+
+  // Selected tab is null until the user picks; fall back to the first available
+  // (and never leave a selection that's no longer offered).
+  const [picked, setPicked] = useState<Tab | null>(null)
+  const activeTab: Tab | null = (picked && tabs.includes(picked) ? picked : tabs[0]) ?? null
+
+  const content = useAsync(() => (activeTab ? fetchTab(activeTab) : Promise.resolve([])), [activeTab])
+
+  if (libraries.loading) return <><Header /><Loading /></>
+  if (libraries.error) return <><Header /><ErrorState message={libraries.error} onRetry={libraries.reload} /></>
+  if (tabs.length === 0) return <><Header /><EmptyState message="No libraries configured yet." /></>
 
   return (
     <div>
-      <h1 style={{ ...heading, ...screen, paddingBottom: '0.75rem' }}>Library</h1>
-
+      <Header />
       <div style={styles.tabs}>
-        {TABS.map(t => (
+        {tabs.map(t => (
           <button
-            key={t.key}
-            onClick={() => setTab(t.key)}
-            style={{ ...styles.tab, ...(tab === t.key ? styles.tabActive : {}) }}
+            key={t}
+            onClick={() => setPicked(t)}
+            style={{ ...styles.tab, ...(activeTab === t ? styles.tabActive : {}) }}
           >
-            {t.label}
+            {TAB_LABEL[t]}
           </button>
         ))}
       </div>
 
-      {loading ? <Loading />
-        : error ? <ErrorState message={error} onRetry={reload} />
-        : !data || data.length === 0 ? <EmptyState message="Nothing in this library yet." />
-        : <Grid>{data.map(c => <PosterCard key={c.to} {...c} />)}</Grid>}
+      {content.loading ? <Loading />
+        : content.error ? <ErrorState message={content.error} onRetry={content.reload} />
+        : !content.data || content.data.length === 0 ? <EmptyState message="Nothing in this library yet." />
+        : <Grid>{content.data.map(c => <PosterCard key={c.to} {...c} />)}</Grid>}
     </div>
   )
+}
+
+function Header() {
+  return <h1 style={{ ...heading, ...screen, paddingBottom: '0.75rem' }}>Library</h1>
 }
 
 const styles: Record<string, React.CSSProperties> = {

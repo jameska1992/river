@@ -38,6 +38,17 @@ There is no build-time URL — the JS app is embedded. On first run, enter your 
 
 To wipe the API URL and any other river-mobile state, clear the app's data from the device's app settings.
 
+## Distribution
+
+The APK is published from river-web the same way as the TV app: nginx serves it statically at `/river-mobile.apk`, and river-web's `/download` page links it. The `.apk` itself is a **gitignored build artifact** (`*.apk` in the repo's `.gitignore`, like `river-tv.apk`) — it's placed into `river-web/public/` before the river-web image is built, not committed. Build it and drop it in with:
+
+```bash
+./gradlew assembleDebug
+cp app/build/outputs/apk/debug/app-debug.apk ../river-web/public/river-mobile.apk
+```
+
+End-user install instructions live in [`SIDELOADING.md`](./SIDELOADING.md).
+
 ## Devices
 
 - **Phones / tablets** — `android.intent.category.LAUNCHER` puts the app in the launcher. No TV leanback intent or banner (that's `river-tv-android`).

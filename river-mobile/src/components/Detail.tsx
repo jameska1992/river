@@ -18,8 +18,19 @@ export function DetailHero({
   const src = imageUrl(image, landscape ? 'backdrop' : 'poster')
   return (
     <div>
-      <div style={{ ...styles.art, aspectRatio: landscape ? '16 / 9' : '2 / 3', maxWidth: landscape ? '100%' : '12rem' }}>
+      <div
+        style={{
+          ...styles.art,
+          aspectRatio: landscape ? '16 / 9' : '2 / 3',
+          maxWidth: landscape ? '100%' : '12rem',
+          // Full-bleed backdrops fade into the page, so square off the bottom;
+          // the small portrait poster stays a rounded card.
+          borderRadius: landscape ? 0 : 'var(--radius-md)',
+        }}
+      >
         {src && <img src={src} alt={title} style={styles.artImg} />}
+        {/* Blend the backdrop into the page background at the bottom edge. */}
+        {landscape && src && <div style={styles.fade} />}
       </div>
       <div style={styles.body}>
         <h1 style={styles.title}>{title}</h1>
@@ -54,10 +65,16 @@ export function PlayRow({
 
 const styles: Record<string, React.CSSProperties> = {
   art: {
+    position: 'relative',
     width: '100%', margin: '0 auto', borderRadius: 'var(--radius-md)', overflow: 'hidden',
     background: 'var(--bg-elev-2)',
   },
   artImg: { width: '100%', height: '100%', objectFit: 'cover', display: 'block' },
+  fade: {
+    position: 'absolute', left: 0, right: 0, bottom: 0, height: '55%',
+    background: 'linear-gradient(to bottom, transparent, var(--bg))',
+    pointerEvents: 'none',
+  },
   body: { padding: '1rem 1.25rem' },
   title: { margin: '0 0 0.25rem', fontSize: '1.5rem', fontWeight: 700 },
   subtitle: { margin: '0 0 0.5rem', color: 'var(--text-muted)' },

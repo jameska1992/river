@@ -4,17 +4,24 @@ import { api } from '../api'
 import type { Season } from '../api'
 import { useAsync } from '../hooks/useAsync'
 import { DetailHero, PlayRow } from '../components/Detail'
+import { PeopleRow } from '../components/People'
 import { WatchlistButton } from '../components/WatchlistButton'
 import { Loading, ErrorState, EmptyState } from '../components/States'
 import { episodeCode } from '../util/format'
+import { castToEntries, crewToEntries } from '../util/credits'
 
 export default function TVShowDetailPage() {
   const { id = '' } = useParams()
   const navigate = useNavigate()
   const { data, loading, error, reload } = useAsync(
     async () => {
-      const [show, seasons] = await Promise.all([api.getTVShow(id), api.listSeasons(id)])
-      return { show, seasons: seasons.sort((a, b) => a.number - b.number) }
+      // Credits are best-effort so an un-enriched show still renders.
+      const [show, seasons, credits] = await Promise.all([
+        api.getTVShow(id),
+        api.listSeasons(id),
+        api.getTVShowCredits(id).catch(() => null),
+      ])
+      return { show, seasons: seasons.sort((a, b) => a.number - b.number), credits }
     },
     [id],
   )
@@ -32,7 +39,7 @@ export default function TVShowDetailPage() {
   if (loading) return <Loading />
   if (error || !data) return <ErrorState message={error ?? 'Not found'} onRetry={reload} />
 
-  const { show, seasons } = data
+  const { show, seasons, credits } = data
   const meta = [show.year > 0 ? String(show.year) : null, show.status || null, ...(show.genres ?? [])]
     .filter(Boolean).join('  ·  ')
 
@@ -75,6 +82,9 @@ export default function TVShowDetailPage() {
             ))}
         </>
       )}
+
+      {credits && <PeopleRow title="Cast" people={castToEntries(credits.cast)} />}
+      {credits && <PeopleRow title="Crew" people={crewToEntries(credits.crew)} />}
     </div>
   )
 }

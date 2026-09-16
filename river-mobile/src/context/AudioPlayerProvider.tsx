@@ -193,20 +193,28 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
   }), [next, prev, seek])
 
   // Keep the native foreground service alive while something is loaded, so
-  // playback survives backgrounding / screen-off.
+  // playback survives backgrounding / screen-off. Fire only on the actual
+  // active↔idle transition — never at mount while idle, or we'd ask Android to
+  // start (then immediately tear down) a foreground service with nothing
+  // playing, which trips its "didn't call startForeground in time" watchdog.
   const hasCurrent = current != null
-  useEffect(() => { nativeAudioActive(hasCurrent) }, [hasCurrent])
+  const wasActiveRef = useRef(false)
+  useEffect(() => {
+    if (hasCurrent && !wasActiveRef.current) { wasActiveRef.current = true; nativeAudioActive(true) }
+    else if (!hasCurrent && wasActiveRef.current) { wasActiveRef.current = false; nativeAudioActive(false) }
+  }, [hasCurrent])
 
-  // Mirror metadata into the native media notification (also when duration arrives).
+  // Mirror metadata into the native media notification (also when duration
+  // arrives). Guarded on current so it never starts the service while idle.
   useEffect(() => {
     if (current) nativeSetMetadata(current.title, current.artist, current.album, duration * 1000)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [current?.id, duration])
 
   // Mirror play/pause state; Android extrapolates position from here, so
-  // pushing on state change (not every tick) is enough.
+  // pushing on state change (not every tick) is enough. Guarded on current.
   useEffect(() => {
-    nativeSetPlayback(playing, position * 1000)
+    if (current) nativeSetPlayback(playing, position * 1000)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [playing])
 

@@ -3,7 +3,7 @@ import {
   RiArrowLeftLine, RiPlayFill, RiPauseFill,
   RiReplay10Line, RiForward10Line,
   RiSkipBackFill, RiSkipForwardFill,
-  RiClosedCaptioningLine, RiVolumeUpLine,
+  RiClosedCaptioningLine, RiVolumeUpLine, RiVolumeMuteLine, RiSunLine,
   RiFullscreenLine, RiFullscreenExitLine,
 } from 'react-icons/ri'
 import { api, type AudioTrack, type Subtitle } from '../api'
@@ -12,11 +12,21 @@ import { formatDuration } from '../util/format'
 import {
   SEEK_SECONDS, SKIP_PREV_THRESHOLD_S, UP_NEXT_THRESHOLD_S,
   shouldResume, clampSeek, seekFraction,
+  gestureSide, gestureValue, isVerticalDrag, type PlayerGesture,
 } from '../util/player'
 import { BottomSheet, SheetOption } from './BottomSheet'
 
 const CONTROLS_HIDE_MS = 3500
 const PROGRESS_SEND_INTERVAL_S = 5
+// A vertical swipe over ~70% of the screen height covers the full 0–1 range.
+const GESTURE_SPAN_FRACTION = 0.7
+const GESTURE_HIDE_MS = 700
+// Never fully black out the screen — leave enough to see and swipe back up.
+const MAX_DIM = 0.85
+
+// Volume / brightness persist across player opens within the session.
+let sessionVolume = 1
+let sessionBrightness = 1
 
 export interface UpNext {
   title: string
@@ -95,6 +105,14 @@ export function VideoPlayer({
   const [scrubFrac, setScrubFrac] = useState<number | null>(null)
   const scrubbing = scrubFrac !== null
   const [upNextDismissed, setUpNextDismissed] = useState(false)
+
+  // Volume / brightness swipe gestures. Volume drives the media element;
+  // brightness is a dimming overlay (no web API for real screen brightness).
+  const [volume, setVolume] = useState(sessionVolume)
+  const [brightness, setBrightness] = useState(sessionBrightness)
+  const [gesture, setGesture] = useState<{ kind: PlayerGesture; value: number } | null>(null)
+  const gestureRef = useRef({ startX: 0, startY: 0, span: 1, startValue: 0, kind: null as PlayerGesture | null, moved: false })
+  const gestureHideTimer = useRef<number | null>(null)
 
   const altAudio = activeAudioId !== null
   const altAudioUrl = activeAudioId ? api.audioTrackStreamUrl(activeAudioId) : undefined
@@ -255,6 +273,55 @@ export function VideoPlayer({
     } catch { /* fullscreen / orientation not supported — no-op */ }
   }, [revealControls])
 
+  // Apply + persist volume (to whichever element carries the audio) and persist
+  // brightness for the session.
+  useEffect(() => {
+    sessionVolume = volume
+    if (videoRef.current) videoRef.current.volume = volume
+    if (audioRef.current) audioRef.current.volume = volume
+  }, [volume, altAudio])
+  useEffect(() => { sessionBrightness = brightness }, [brightness])
+
+  const onGestureDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    const el = e.currentTarget
+    el.setPointerCapture(e.pointerId)
+    const rect = el.getBoundingClientRect()
+    gestureRef.current = {
+      startX: e.clientX, startY: e.clientY,
+      span: rect.height * GESTURE_SPAN_FRACTION,
+      startValue: 0, kind: null, moved: false,
+    }
+  }, [])
+
+  const onGestureMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    const g = gestureRef.current
+    const dx = e.clientX - g.startX
+    const dyDown = e.clientY - g.startY
+    if (!g.kind) {
+      if (!isVerticalDrag(dx, dyDown)) return
+      g.kind = gestureSide(g.startX, window.innerWidth)
+      g.startValue = g.kind === 'volume' ? volume : brightness
+      g.moved = true
+    }
+    const value = gestureValue(g.startValue, -dyDown, g.span) // up = increase
+    if (g.kind === 'volume') setVolume(value)
+    else setBrightness(value)
+    setGesture({ kind: g.kind, value })
+  }, [volume, brightness])
+
+  const onGestureUp = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    const g = gestureRef.current
+    e.currentTarget.releasePointerCapture?.(e.pointerId)
+    if (!g.moved) {
+      // A tap (no drag committed) toggles the controls.
+      setShowControls(v => !v)
+    } else {
+      if (gestureHideTimer.current) window.clearTimeout(gestureHideTimer.current)
+      gestureHideTimer.current = window.setTimeout(() => setGesture(null), GESTURE_HIDE_MS)
+    }
+    gestureRef.current = { ...g, kind: null, moved: false }
+  }, [])
+
   const displayedTime = scrubbing && scrubFrac != null ? scrubFrac * duration : currentTime
   const remaining = Math.max(0, duration - displayedTime)
   const progressPct = duration > 0 ? (displayedTime / duration) * 100 : 0
@@ -317,12 +384,32 @@ export function VideoPlayer({
         <audio ref={audioRef} src={audioSrc} autoPlay preload="auto" style={{ display: 'none' }} />
       )}
 
-      {/* Tap surface: toggles the controls. Sits below the controls layer. */}
-      <button
-        aria-label={showControls ? 'Hide controls' : 'Show controls'}
-        style={styles.tapLayer}
-        onClick={() => setShowControls(v => !v)}
+      {/* Brightness dim overlay (web has no real screen-brightness API). */}
+      {brightness < 1 && <div style={{ ...styles.dim, opacity: Math.min(MAX_DIM, 1 - brightness) }} />}
+
+      {/* Gesture + tap surface: tap toggles controls; a vertical swipe on the
+          left adjusts volume, on the right adjusts brightness. Empty areas of
+          the controls layer above are pointer-transparent, so swipes reach here
+          whether the controls are shown or hidden. */}
+      <div
+        style={styles.gestureLayer}
+        onPointerDown={onGestureDown}
+        onPointerMove={onGestureMove}
+        onPointerUp={onGestureUp}
+        onPointerCancel={onGestureUp}
       />
+
+      {gesture && (
+        <div style={styles.indicator}>
+          {gesture.kind === 'volume'
+            ? (gesture.value === 0 ? <RiVolumeMuteLine /> : <RiVolumeUpLine />)
+            : <RiSunLine />}
+          <div style={styles.indicatorTrack}>
+            <div style={{ ...styles.indicatorFill, width: `${Math.round(gesture.value * 100)}%` }} />
+          </div>
+          <span style={styles.indicatorPct}>{Math.round(gesture.value * 100)}%</span>
+        </div>
+      )}
 
       {buffering && !error && <div style={styles.spinner}>Loading…</div>}
       {error && (
@@ -348,9 +435,9 @@ export function VideoPlayer({
         </button>
       )}
 
-      <div style={{ ...styles.controls, opacity: showControls ? 1 : 0, pointerEvents: showControls ? 'auto' : 'none' }}>
+      <div style={{ ...styles.controls, opacity: showControls ? 1 : 0 }}>
         {/* Top bar */}
-        <div style={styles.topBar}>
+        <div style={{ ...styles.topBar, pointerEvents: showControls ? 'auto' : 'none' }}>
           <button aria-label="Back" onClick={onExit} style={styles.iconBtn}><RiArrowLeftLine /></button>
           <div style={styles.titleWrap}>
             <div style={styles.title}>{title}</div>
@@ -362,7 +449,7 @@ export function VideoPlayer({
         </div>
 
         {/* Center transport */}
-        <div style={styles.center}>
+        <div style={{ ...styles.center, pointerEvents: showControls ? 'auto' : 'none' }}>
           {onPrev && <button aria-label="Previous" onClick={skipBack} style={styles.sideBtn}><RiSkipBackFill /></button>}
           <button aria-label={`Rewind ${SEEK_SECONDS} seconds`} onClick={() => seekBy(-SEEK_SECONDS)} style={styles.sideBtn}><RiReplay10Line /></button>
           <button aria-label={paused ? 'Play' : 'Pause'} onClick={togglePlay} style={styles.playBtn}>
@@ -373,7 +460,7 @@ export function VideoPlayer({
         </div>
 
         {/* Bottom: scrub + times + track pickers */}
-        <div style={styles.bottom}>
+        <div style={{ ...styles.bottom, pointerEvents: showControls ? 'auto' : 'none' }}>
           <div style={styles.timeRow}>
             <span style={styles.time}>{formatDuration(Math.floor(displayedTime))}</span>
             <span style={styles.time}>-{formatDuration(Math.ceil(remaining))}</span>
@@ -458,7 +545,19 @@ export function VideoPlayer({
 const styles: Record<string, React.CSSProperties> = {
   page: { position: 'fixed', inset: 0, background: '#000', overflow: 'hidden', touchAction: 'none' },
   video: { width: '100%', height: '100%', objectFit: 'contain', background: '#000' },
-  tapLayer: { position: 'absolute', inset: 0, background: 'transparent', border: 'none' },
+  dim: { position: 'absolute', inset: 0, background: '#000', pointerEvents: 'none' },
+  gestureLayer: { position: 'absolute', inset: 0, touchAction: 'none' },
+
+  indicator: {
+    position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)',
+    display: 'flex', alignItems: 'center', gap: '0.6rem',
+    padding: '0.6rem 1rem', borderRadius: '999px',
+    background: 'rgba(0,0,0,0.7)', color: '#fff', fontSize: '1.2rem',
+    pointerEvents: 'none',
+  },
+  indicatorTrack: { width: '6rem', height: '0.35rem', borderRadius: '999px', background: 'rgba(255,255,255,0.3)', overflow: 'hidden' },
+  indicatorFill: { height: '100%', background: 'var(--accent)' },
+  indicatorPct: { fontSize: '0.85rem', fontVariantNumeric: 'tabular-nums', minWidth: '2.5rem', textAlign: 'right' },
 
   spinner: { position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', color: 'var(--text-muted)', pointerEvents: 'none' },
   error: {
@@ -473,6 +572,10 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
     transition: 'opacity 200ms ease',
     background: 'linear-gradient(to bottom, rgba(0,0,0,0.55) 0%, transparent 25%, transparent 60%, rgba(0,0,0,0.75) 100%)',
+    // The container is visual only — its empty areas stay pointer-transparent so
+    // swipes fall through to the gesture layer. Only the button groups below
+    // (topBar / center / bottom) opt back in, and only while controls show.
+    pointerEvents: 'none',
   },
   topBar: {
     display: 'flex', alignItems: 'center', gap: '0.75rem',

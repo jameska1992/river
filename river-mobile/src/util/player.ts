@@ -34,3 +34,26 @@ export function seekFraction(clientX: number, rectLeft: number, rectWidth: numbe
   if (rectWidth <= 0) return 0
   return Math.max(0, Math.min(1, (clientX - rectLeft) / rectWidth))
 }
+
+// --- Vertical-swipe gestures (volume / brightness) ---
+
+export type PlayerGesture = 'volume' | 'brightness'
+
+// Which control a swipe drives, by where it starts: left half = volume,
+// right half = brightness.
+export function gestureSide(startX: number, width: number): PlayerGesture {
+  return startX < width / 2 ? 'volume' : 'brightness'
+}
+
+// New 0–1 value after dragging `dyUp` pixels upward (positive = up) from
+// `startValue`, where a `span`-pixel drag covers the whole 0–1 range. Clamped.
+export function gestureValue(startValue: number, dyUp: number, span: number): number {
+  if (span <= 0) return startValue
+  return Math.max(0, Math.min(1, startValue + dyUp / span))
+}
+
+// Whether a move is a deliberate vertical drag — past the dead-zone and more
+// vertical than horizontal — rather than a tap or a horizontal swipe.
+export function isVerticalDrag(dx: number, dy: number, deadZone = 8): boolean {
+  return Math.abs(dy) > deadZone && Math.abs(dy) > Math.abs(dx)
+}

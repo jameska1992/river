@@ -680,6 +680,20 @@ export interface LogsResponse {
   total: number
 }
 
+export interface FailedJob extends BaseModel {
+  service: string
+  media_type: string
+  source_path: string
+  reason: string
+  attempts: number
+  routing_key: string
+}
+
+export interface FailedJobsResponse {
+  jobs: FailedJob[]
+  total: number
+}
+
 // --- Requests (Radarr / Sonarr) ---
 
 export interface MovieSearchResult {

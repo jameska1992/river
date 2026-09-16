@@ -51,6 +51,114 @@ const docTemplate = `{
                 }
             }
         },
+        "/admin/failed-jobs": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "failed-jobs"
+                ],
+                "summary": "List failed ingest jobs",
+                "responses": {
+                    "200": {
+                        "description": "{jobs, total}",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/failed-jobs/{id}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "failed-jobs"
+                ],
+                "summary": "Dismiss a failed ingest job",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Failed job ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/failed-jobs/{id}/retry": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "failed-jobs"
+                ],
+                "summary": "Retry a failed ingest job",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Failed job ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "description": "Accepted"
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "502": {
+                        "description": "Bad Gateway",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/admin/logs": {
             "get": {
                 "security": [
@@ -3493,6 +3601,50 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/failed-jobs": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "failed-jobs"
+                ],
+                "summary": "Report a failed (dead-lettered) ingest job",
+                "parameters": [
+                    {
+                        "description": "Failed job",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.reportFailedJobReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -8735,6 +8887,36 @@ const docTemplate = `{
                     "type": "string",
                     "maxLength": 32,
                     "minLength": 3
+                }
+            }
+        },
+        "handlers.reportFailedJobReq": {
+            "type": "object",
+            "required": [
+                "service"
+            ],
+            "properties": {
+                "attempts": {
+                    "type": "integer"
+                },
+                "event": {
+                    "description": "Event is the raw MediaDiscoveredEvent JSON, replayed on retry.",
+                    "type": "string"
+                },
+                "media_type": {
+                    "type": "string"
+                },
+                "reason": {
+                    "type": "string"
+                },
+                "routing_key": {
+                    "type": "string"
+                },
+                "service": {
+                    "type": "string"
+                },
+                "source_path": {
+                    "type": "string"
                 }
             }
         },

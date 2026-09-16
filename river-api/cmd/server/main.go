@@ -96,6 +96,7 @@ func main() {
 	watchlistSvc := services.NewWatchlistService(watchlistRepo, movieRepo, tvShowRepo, audiobookRepo)
 	watchPartySvc := services.NewWatchPartyService(watchPartyRepo)
 	serviceLogSvc := services.NewServiceLogService(serviceLogRepo)
+	failedJobSvc := services.NewFailedJobService(repository.NewFailedJobRepository(db))
 	settingsSvc := services.NewSettingsService(settingRepo)
 	searchRepo := repository.NewSearchRepository(db)
 	searchSvc := services.NewSearchService(searchRepo)
@@ -148,6 +149,7 @@ func main() {
 		handlers.NewWatchlistHandler(watchlistSvc),
 		handlers.NewWatchPartyHandler(watchPartySvc, watchPartyHub),
 		handlers.NewServiceLogHandler(serviceLogSvc),
+		handlers.NewFailedJobHandler(failedJobSvc, cfg.RiverScanURL),
 		handlers.NewRequestHandler(settingsSvc),
 		handlers.NewSettingsHandler(settingsSvc),
 		handlers.NewImageProxyHandler(),

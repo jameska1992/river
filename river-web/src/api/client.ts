@@ -1021,6 +1021,29 @@ export class RiverClient {
     return this.request('GET', `/admin/logs${qs ? `?${qs}` : ''}`)
   }
 
+  async getFailedJobs(params?: {
+    service?: string
+    media_type?: string
+    page?: number
+    limit?: number
+  }): Promise<{ jobs: import('./types').FailedJob[]; total: number }> {
+    const q = new URLSearchParams()
+    if (params?.service)    q.set('service',    params.service)
+    if (params?.media_type) q.set('media_type', params.media_type)
+    if (params?.page)       q.set('page',       String(params.page))
+    if (params?.limit)      q.set('limit',      String(params.limit))
+    const qs = q.toString()
+    return this.request('GET', `/admin/failed-jobs${qs ? `?${qs}` : ''}`)
+  }
+
+  async retryFailedJob(id: string): Promise<void> {
+    return this.request('POST', `/admin/failed-jobs/${id}/retry`)
+  }
+
+  async dismissFailedJob(id: string): Promise<void> {
+    return this.request('DELETE', `/admin/failed-jobs/${id}`)
+  }
+
   async updateMe(email: string): Promise<import('./types').User> {
     return this.request('PUT', '/auth/me', { email })
   }

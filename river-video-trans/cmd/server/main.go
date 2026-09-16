@@ -27,7 +27,7 @@ func main() {
 	api.Log("info", "started")
 
 	// Use one connection for initial exchange/queue setup, then close it.
-	setupCons, err := consumer.New(cfg.RabbitMQURL, cfg.RabbitMQExchange, cfg.MaxRetries, cfg.RetryBackoff)
+	setupCons, err := consumer.New(cfg.RabbitMQURL, cfg.RabbitMQExchange, cfg.MaxRetries, cfg.RetryBackoff, nil)
 	if err != nil {
 		log.Fatalf("FATAL rabbitmq setup: %v", err)
 	}
@@ -43,7 +43,7 @@ func main() {
 	// restart it — which lost the in-flight state of every *other* worker
 	// in the process). Only SIGTERM/SIGINT exits the process.
 	for i := range cfg.WorkerCount {
-		go runWorker(i, cfg.RabbitMQURL, cfg.RabbitMQExchange, cfg.MaxRetries, cfg.RetryBackoff, proc.Handle)
+		go runWorker(i, cfg.RabbitMQURL, cfg.RabbitMQExchange, cfg.MaxRetries, cfg.RetryBackoff, api.ReportFailedJob, proc.Handle)
 	}
 
 	quit := make(chan os.Signal, 1)
@@ -57,7 +57,7 @@ func main() {
 // It connects, runs Consume until it returns, closes the consumer, waits
 // briefly, then reconnects. Backoff grows on repeated connect failures and
 // resets after a successful connect.
-func runWorker(id int, rabbitURL, exchange string, maxRetries int, retryBackoff time.Duration, handler func(consumer.MediaDiscoveredEvent) error) {
+func runWorker(id int, rabbitURL, exchange string, maxRetries int, retryBackoff time.Duration, reporter consumer.DeadLetterReporter, handler func(consumer.MediaDiscoveredEvent) error) {
 	log.Printf("INFO worker %d started", id)
 	const (
 		minBackoff = time.Second
@@ -65,7 +65,7 @@ func runWorker(id int, rabbitURL, exchange string, maxRetries int, retryBackoff 
 	)
 	backoff := minBackoff
 	for {
-		c, err := consumer.New(rabbitURL, exchange, maxRetries, retryBackoff)
+		c, err := consumer.New(rabbitURL, exchange, maxRetries, retryBackoff, reporter)
 		if err != nil {
 			log.Printf("WARN worker %d: rabbitmq connect failed: %v (retry in %s)", id, err, backoff)
 			time.Sleep(backoff)

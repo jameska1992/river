@@ -53,6 +53,7 @@ func Migrate(db *gorm.DB) error {
 		&models.DismissedNextUp{},
 		&models.ServiceLog{},
 		&models.Setting{},
+		&models.FailedJob{},
 	); err != nil {
 		return err
 	}

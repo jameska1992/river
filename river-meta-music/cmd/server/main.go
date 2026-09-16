@@ -30,7 +30,7 @@ func main() {
 	mb := musicbrainz.New()
 
 	// Declare exchange and queue, then close the setup connection.
-	setupCons, err := consumer.New(cfg.RabbitMQURL, cfg.RabbitMQExchange, cfg.MaxRetries, cfg.RetryBackoff)
+	setupCons, err := consumer.New(cfg.RabbitMQURL, cfg.RabbitMQExchange, cfg.MaxRetries, cfg.RetryBackoff, api.ReportFailedJob)
 	if err != nil {
 		log.Fatalf("FATAL rabbitmq setup: %v", err)
 	}
@@ -59,7 +59,7 @@ func main() {
 	errCh := make(chan error, cfg.WorkerCount)
 	workers := make([]*consumer.Consumer, cfg.WorkerCount)
 	for i := range cfg.WorkerCount {
-		w, err := consumer.New(cfg.RabbitMQURL, cfg.RabbitMQExchange, cfg.MaxRetries, cfg.RetryBackoff)
+		w, err := consumer.New(cfg.RabbitMQURL, cfg.RabbitMQExchange, cfg.MaxRetries, cfg.RetryBackoff, api.ReportFailedJob)
 		if err != nil {
 			log.Fatalf("FATAL worker %d: %v", i, err)
 		}

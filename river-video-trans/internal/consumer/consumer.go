@@ -43,6 +43,11 @@ const retryCountHeader = "x-retry-count"
 // dlqReasonHeader records why a message was parked in the dead-letter queue.
 const dlqReasonHeader = "x-death-reason"
 
+// DeadLetterReporter is called when a message is parked in the DLQ, so the
+// caller can persist it (e.g. POST to river-api's failed-jobs store). nil is
+// fine — reporting is then skipped.
+type DeadLetterReporter func(mediaType, sourcePath, reason, routingKey string, attempts int, event []byte)
+
 type Consumer struct {
 	conn       *amqp.Connection
 	ch         *amqp.Channel
@@ -52,12 +57,13 @@ type Consumer struct {
 	dlq        string
 	maxRetries int
 	backoff    time.Duration
+	reporter   DeadLetterReporter
 }
 
 // New connects, declares the work queue (unchanged), and the retry + dead-
 // letter queues. maxRetries is the number of attempts before a message is
 // parked in the DLQ; backoff is the delay before each retry.
-func New(url, exchange string, maxRetries int, backoff time.Duration) (*Consumer, error) {
+func New(url, exchange string, maxRetries int, backoff time.Duration, reporter DeadLetterReporter) (*Consumer, error) {
 	conn, err := amqp.Dial(url)
 	if err != nil {
 		return nil, fmt.Errorf("connect to rabbitmq: %w", err)
@@ -100,6 +106,7 @@ func New(url, exchange string, maxRetries int, backoff time.Duration) (*Consumer
 	return &Consumer{
 		conn: conn, ch: ch, exchange: exchange, queue: q.Name,
 		retryQueue: retryQueue, dlq: dlq, maxRetries: maxRetries, backoff: backoff,
+		reporter: reporter,
 	}, nil
 }
 
@@ -141,7 +148,9 @@ func (c *Consumer) Consume(handler func(MediaDiscoveredEvent) error) error {
 		var event MediaDiscoveredEvent
 		if err := json.Unmarshal(d.Body, &event); err != nil {
 			log.Printf("ERROR unmarshal message, dead-lettering: %v", err)
-			c.finish(d, c.publishDLQ(d.Body, fmt.Sprintf("unmarshal: %v", err)))
+			reason := fmt.Sprintf("unmarshal: %v", err)
+			c.report("", "", reason, d.RoutingKey, 0, d.Body)
+			c.finish(d, c.publishDLQ(d.Body, reason))
 			continue
 		}
 		if err := handler(event); err != nil {
@@ -160,6 +169,7 @@ func (c *Consumer) handleFailure(d amqp.Delivery, event MediaDiscoveredEvent, ca
 	attempts := retryCount(d.Headers)
 	if shouldDeadLetter(attempts, c.maxRetries) {
 		log.Printf("ERROR event %s failed after %d attempt(s), dead-lettering: %v", event.EventID, attempts+1, cause)
+		c.report(event.LibraryType, sourcePathOf(event), cause.Error(), d.RoutingKey, attempts+1, d.Body)
 		c.finish(d, c.publishDLQ(d.Body, cause.Error()))
 		return
 	}
@@ -208,6 +218,23 @@ func (c *Consumer) publishDLQ(body []byte, reason string) error {
 func (c *Consumer) Close() {
 	c.ch.Close()
 	c.conn.Close()
+}
+
+// report forwards a parked message to the DeadLetterReporter (if any) so it
+// can be persisted for operators.
+func (c *Consumer) report(mediaType, sourcePath, reason, routingKey string, attempts int, event []byte) {
+	if c.reporter != nil {
+		c.reporter(mediaType, sourcePath, reason, routingKey, attempts, event)
+	}
+}
+
+// sourcePathOf picks a human-meaningful path for a failed event — the first
+// file if present, else the directory.
+func sourcePathOf(e MediaDiscoveredEvent) string {
+	if len(e.Files) > 0 {
+		return e.Files[0]
+	}
+	return e.DirectoryPath
 }
 
 // shouldDeadLetter reports whether a delivery that has already been attempted

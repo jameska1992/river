@@ -7,6 +7,7 @@ export type {
   Library, LibraryPath, Movie, TVShow, Season, Episode,
   WatchParty, WatchPartyMember,
   ServiceLog, LogsResponse,
+  FailedJob, FailedJobsResponse,
   CastCredit, CrewCredit, Credits,
   SetCastCredit, SetCrewCredit, SetCreditsRequest,
   Person, PersonMovieCastItem, PersonMovieCrewItem, PersonTVShowCastItem, PersonTVShowCrewItem,

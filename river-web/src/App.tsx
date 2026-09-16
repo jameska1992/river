@@ -34,6 +34,7 @@ import { LibrariesPage } from './pages/admin/LibrariesPage'
 import { UploadPage } from './pages/admin/UploadPage'
 import { UsersPage } from './pages/admin/UsersPage'
 import { LogsPage } from './pages/admin/LogsPage'
+import { FailedJobsPage } from './pages/admin/FailedJobsPage'
 import { ScannerStatePage } from './pages/admin/ScannerStatePage'
 import { UnidentifiedPage } from './pages/admin/UnidentifiedPage'
 import { AdminSettingsPage } from './pages/admin/AdminSettingsPage'
@@ -125,6 +126,7 @@ export default function App() {
                 <Route path="merge-shows" element={<MergeTVShowsPage />} />
                 <Route path="users" element={<UsersPage />} />
                 <Route path="logs" element={<LogsPage />} />
+                <Route path="failed-jobs" element={<FailedJobsPage />} />
                 <Route path="scanner-state" element={<ScannerStatePage />} />
                 <Route path="settings" element={<AdminSettingsPage />} />
               </Route>

@@ -195,6 +195,29 @@ func main() {
 		log.Printf("retranscode queued: type=%s media=%s file=%q", req.LibraryType, req.MediaID, req.File)
 		w.WriteHeader(http.StatusAccepted)
 	})
+	mux.HandleFunc("POST /republish", func(w http.ResponseWriter, r *http.Request) {
+		// Re-publish a previously-failed event verbatim. river-api proxies
+		// here (it has no RabbitMQ connection) when an admin retries a
+		// dead-lettered job; the body is the original MediaDiscoveredEvent and
+		// the publisher routes it by its library type. Bypasses scan state.
+		if pub == nil {
+			http.Error(w, "transcoding is disabled", http.StatusServiceUnavailable)
+			return
+		}
+		var event publisher.MediaDiscoveredEvent
+		if err := json.NewDecoder(r.Body).Decode(&event); err != nil || event.LibraryType == "" {
+			http.Error(w, "invalid event", http.StatusBadRequest)
+			return
+		}
+		if err := pub.Publish(context.Background(), event); err != nil {
+			log.Printf("republish error: %v", err)
+			api.Log("error", "republish: "+err.Error())
+			http.Error(w, "publish failed", http.StatusBadGateway)
+			return
+		}
+		log.Printf("republished event: type=%s media=%s", event.LibraryType, event.MediaID)
+		w.WriteHeader(http.StatusAccepted)
+	})
 	srv := &http.Server{Addr: ":" + cfg.HTTPPort, Handler: mux}
 	go func() {
 		log.Printf("scan trigger server listening on :%s", cfg.HTTPPort)

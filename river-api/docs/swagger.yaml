@@ -527,6 +527,26 @@ definitions:
     - password
     - username
     type: object
+  handlers.reportFailedJobReq:
+    properties:
+      attempts:
+        type: integer
+      event:
+        description: Event is the raw MediaDiscoveredEvent JSON, replayed on retry.
+        type: string
+      media_type:
+        type: string
+      reason:
+        type: string
+      routing_key:
+        type: string
+      service:
+        type: string
+      source_path:
+        type: string
+    required:
+    - service
+    type: object
   handlers.scanningRequest:
     properties:
       scan_interval:
@@ -1386,6 +1406,72 @@ paths:
       summary: Active sessions
       tags:
       - admin
+  /admin/failed-jobs:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{jobs, total}'
+          schema:
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List failed ingest jobs
+      tags:
+      - failed-jobs
+  /admin/failed-jobs/{id}:
+    delete:
+      parameters:
+      - description: Failed job ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Dismiss a failed ingest job
+      tags:
+      - failed-jobs
+  /admin/failed-jobs/{id}/retry:
+    post:
+      parameters:
+      - description: Failed job ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "502":
+          description: Bad Gateway
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Retry a failed ingest job
+      tags:
+      - failed-jobs
   /admin/logs:
     get:
       parameters:
@@ -3559,6 +3645,33 @@ paths:
       summary: Remove collection item
       tags:
       - collections
+  /failed-jobs:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Failed job
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.reportFailedJobReq'
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Report a failed (dead-lettered) ingest job
+      tags:
+      - failed-jobs
   /image:
     get:
       parameters:

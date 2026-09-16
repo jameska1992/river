@@ -30,6 +30,7 @@ func Register(r *gin.Engine, secret string,
 	watchlist *handlers.WatchlistHandler,
 	watchParty *handlers.WatchPartyHandler,
 	serviceLog *handlers.ServiceLogHandler,
+	failedJob *handlers.FailedJobHandler,
 	request *handlers.RequestHandler,
 	settings *handlers.SettingsHandler,
 	imageProxy *handlers.ImageProxyHandler,
@@ -70,6 +71,14 @@ func Register(r *gin.Engine, secret string,
 		// Logs
 		protected.POST("/logs", serviceLog.Create)
 		protected.GET("/admin/logs", middleware.AdminOnly(), serviceLog.List)
+
+		// Failed ingest jobs (dead-lettered messages). Services report via
+		// POST /failed-jobs (admin-or-service, like /logs); admins list,
+		// retry, and dismiss under /admin.
+		protected.POST("/failed-jobs", middleware.AdminOrService(), failedJob.Report)
+		protected.GET("/admin/failed-jobs", middleware.AdminOnly(), failedJob.List)
+		protected.POST("/admin/failed-jobs/:id/retry", middleware.AdminOnly(), failedJob.Retry)
+		protected.DELETE("/admin/failed-jobs/:id", middleware.AdminOnly(), failedJob.Dismiss)
 
 		// Admin
 		protected.GET("/admin/stats", middleware.AdminOnly(), admin.GetStats)

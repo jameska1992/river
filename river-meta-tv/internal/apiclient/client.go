@@ -37,6 +37,23 @@ func (c *Client) Log(level, message string) {
 	}()
 }
 
+// ReportFailedJob records a dead-lettered ingest event in river-api's
+// failed-jobs store so admins can see, retry, or dismiss it. Best-effort:
+// a reporting failure is swallowed (the message is already parked in the DLQ,
+// which remains the source of truth).
+func (c *Client) ReportFailedJob(mediaType, sourcePath, reason, routingKey string, attempts int, event []byte) {
+	body := map[string]any{
+		"service":     c.service,
+		"media_type":  mediaType,
+		"source_path": sourcePath,
+		"reason":      reason,
+		"attempts":    attempts,
+		"routing_key": routingKey,
+		"event":       string(event),
+	}
+	_ = c.do("POST", "/api/failed-jobs", body, nil)
+}
+
 func (c *Client) Login() error {
 	body, _ := json.Marshal(map[string]string{
 		"username": c.username,

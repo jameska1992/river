@@ -84,7 +84,10 @@ func Register(r *gin.Engine, secret string,
 		protected.GET("/admin/stats", middleware.AdminOnly(), admin.GetStats)
 		protected.POST("/admin/tvshows/merge/preview", middleware.AdminOnly(), showMerge.PreviewMerge)
 		protected.POST("/admin/tvshows/merge", middleware.AdminOnly(), showMerge.Merge)
-		protected.GET("/admin/tvshows/resolve", middleware.AdminOnly(), showMerge.ResolvePath)
+		// Read-only path→show lookup the scanner calls on every TV scan; the
+		// scanner runs as the least-privilege `service` role, so this must allow
+		// it (merge/preview above stay admin-only — they mutate).
+		protected.GET("/admin/tvshows/resolve", middleware.AdminOrService(), showMerge.ResolvePath)
 		protected.GET("/admin/settings/integrations", middleware.AdminOnly(), settings.GetIntegrations)
 		protected.PUT("/admin/settings/integrations", middleware.AdminOnly(), settings.UpdateIntegrations)
 		protected.POST("/admin/settings/integrations/seed", middleware.AdminOnly(), settings.SeedIntegrations)

@@ -30,7 +30,7 @@ func main() {
 	ol := openlib.New()
 
 	// Declare exchange and queue using a throwaway connection, then close it.
-	setupCons, err := consumer.New(cfg.RabbitMQURL, cfg.RabbitMQExchange)
+	setupCons, err := consumer.New(cfg.RabbitMQURL, cfg.RabbitMQExchange, cfg.MaxRetries, cfg.RetryBackoff)
 	if err != nil {
 		log.Fatalf("FATAL rabbitmq setup: %v", err)
 	}
@@ -59,7 +59,7 @@ func main() {
 	errCh := make(chan error, cfg.WorkerCount)
 	workers := make([]*consumer.Consumer, cfg.WorkerCount)
 	for i := range cfg.WorkerCount {
-		w, err := consumer.New(cfg.RabbitMQURL, cfg.RabbitMQExchange)
+		w, err := consumer.New(cfg.RabbitMQURL, cfg.RabbitMQExchange, cfg.MaxRetries, cfg.RetryBackoff)
 		if err != nil {
 			log.Fatalf("FATAL worker %d: %v", i, err)
 		}

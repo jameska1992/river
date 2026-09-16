@@ -92,6 +92,7 @@ handlers → services → repository → database (GORM/Postgres)
 - Exchange: `river.media` (topic exchange)
 - Routing keys: `media.discovered.movie`, `media.discovered.tvshow`, `media.discovered.music`, `media.discovered.audiobook`
 - Queues: `river.video.trans` (movie+tvshow), `river.audio.trans` (music+audiobook), `river.meta.movie`, `river.meta.tvshow`, `river.meta.book` (audiobook), `river.meta.music` (music)
+- **Retry + dead-letter:** each consumer also declares `<queue>.retry` and `<queue>.dlq`. On a handler error the message is republished to `<queue>.retry` (a consumer-less queue with a per-message TTL that dead-letters back to the work queue after `RETRY_BACKOFF`), carrying an `x-retry-count` header. After `MAX_RETRIES` attempts it's parked in `<queue>.dlq` (with an `x-death-reason` header) instead of being dropped or looping forever. The work queue's own declaration is left unchanged, so this upgrades cleanly on installs where the queue already exists.
 
 ### Authentication (river-api)
 
@@ -110,13 +111,13 @@ Uses `http.ServeContent` for HTTP Range header support (enables seeking without 
 
 **river-scan**: `RIVER_API_USERNAME`, `RIVER_API_PASSWORD`, `RIVER_API_URL`, `RABBITMQ_URL`, `RABBITMQ_EXCHANGE`, `SCAN_INTERVAL`, `STATE_PATH`
 
-**river-video-trans**: `RIVER_API_USERNAME`, `RIVER_API_PASSWORD`, `RIVER_API_URL`, `RABBITMQ_URL`, `RABBITMQ_EXCHANGE`, `WORKER_COUNT`, `OUTPUT_DIR`
+**river-video-trans**: `RIVER_API_USERNAME`, `RIVER_API_PASSWORD`, `RIVER_API_URL`, `RABBITMQ_URL`, `RABBITMQ_EXCHANGE`, `WORKER_COUNT`, `OUTPUT_DIR`, `MAX_RETRIES`, `RETRY_BACKOFF`
 
-**river-audio-trans**: `RIVER_API_USERNAME`, `RIVER_API_PASSWORD`, `RIVER_API_URL`, `RABBITMQ_URL`, `RABBITMQ_EXCHANGE`, `WORKER_COUNT`, `OUTPUT_DIR`
+**river-audio-trans**: `RIVER_API_USERNAME`, `RIVER_API_PASSWORD`, `RIVER_API_URL`, `RABBITMQ_URL`, `RABBITMQ_EXCHANGE`, `WORKER_COUNT`, `OUTPUT_DIR`, `MAX_RETRIES`, `RETRY_BACKOFF`
 
-**river-meta-movie / river-meta-tv**: `RIVER_API_USERNAME`, `RIVER_API_PASSWORD`, `TMDB_API_KEY`, `RIVER_API_URL`, `RABBITMQ_URL`, `RABBITMQ_EXCHANGE`, `WORKER_COUNT`, `TMDB_IMAGE_BASE`
+**river-meta-movie / river-meta-tv**: `RIVER_API_USERNAME`, `RIVER_API_PASSWORD`, `TMDB_API_KEY`, `RIVER_API_URL`, `RABBITMQ_URL`, `RABBITMQ_EXCHANGE`, `WORKER_COUNT`, `TMDB_IMAGE_BASE`, `MAX_RETRIES`, `RETRY_BACKOFF`
 
-**river-meta-book**: `RIVER_API_USERNAME`, `RIVER_API_PASSWORD`, `RIVER_API_URL`, `RABBITMQ_URL`, `RABBITMQ_EXCHANGE`, `WORKER_COUNT`
+**river-meta-book**: `RIVER_API_USERNAME`, `RIVER_API_PASSWORD`, `RIVER_API_URL`, `RABBITMQ_URL`, `RABBITMQ_EXCHANGE`, `WORKER_COUNT`, `MAX_RETRIES`, `RETRY_BACKOFF`
 
 ## External Dependencies
 

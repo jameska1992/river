@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"time"
 )
 
 type Config struct {
@@ -13,6 +14,8 @@ type Config struct {
 	RiverAPIUsername string
 	RiverAPIPassword string
 	WorkerCount      int
+	MaxRetries       int
+	RetryBackoff     time.Duration
 	Port             string
 }
 
@@ -24,6 +27,8 @@ func Load() (*Config, error) {
 		RiverAPIUsername: os.Getenv("RIVER_API_USERNAME"),
 		RiverAPIPassword: os.Getenv("RIVER_API_PASSWORD"),
 		WorkerCount:      getEnvInt("WORKER_COUNT", 2),
+		MaxRetries:       getEnvInt("MAX_RETRIES", 5),
+		RetryBackoff:     getEnvDuration("RETRY_BACKOFF", 30*time.Second),
 		Port:             getEnv("PORT", "8083"),
 	}
 	if cfg.RiverAPIUsername == "" || cfg.RiverAPIPassword == "" {
@@ -43,6 +48,17 @@ func getEnvInt(key string, def int) int {
 	if v := os.Getenv(key); v != "" {
 		if i, err := strconv.Atoi(v); err == nil && i > 0 {
 			return i
+		}
+	}
+	return def
+}
+
+// getEnvDuration parses a Go duration string (e.g. "30s", "2m"); falls back
+// to def when unset or unparseable.
+func getEnvDuration(key string, def time.Duration) time.Duration {
+	if v := os.Getenv(key); v != "" {
+		if d, err := time.ParseDuration(v); err == nil && d > 0 {
+			return d
 		}
 	}
 	return def

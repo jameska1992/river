@@ -64,7 +64,9 @@ export default function AccountPickerPage() {
               onRemove={() => void remove(acc)}
             />
           ))}
-          <AddTile onSelect={() => navigate('/login')} />
+          {/* state.add tells the /login route to show the form even though a
+              session is still active (otherwise the guard bounces us home). */}
+          <AddTile onSelect={() => navigate('/login', { state: { add: true } })} />
         </div>
 
         <EditToggle editing={editing} onToggle={() => setEditing(e => !e)} />

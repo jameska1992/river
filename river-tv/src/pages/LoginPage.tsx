@@ -1,5 +1,5 @@
-import { useRef, useState, type ChangeEvent, type FormEvent } from 'react'
-import { useLocation } from 'react-router-dom'
+import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/authContext'
 import { api, ApiError } from '../api'
 import { FocusProvider, useFocusable } from '../hooks/useFocus'
@@ -7,15 +7,40 @@ import { Popup } from '../components/Popup'
 
 export default function LoginPage() {
   const { login } = useAuth()
+  const navigate = useNavigate()
+  const state = useLocation().state as { username?: string; add?: boolean } | null
   // A stale saved account routes here to re-authenticate — prefill its
   // username so the user only needs to re-enter the password.
-  const prefill = (useLocation().state as { username?: string } | null)?.username ?? ''
+  const prefill = state?.username ?? ''
+  // Reached via the account picker's "Add account" while a session is active.
+  // In that case Back should return to the picker rather than sit here.
+  const addIntent = state?.add === true
   const [server, setServer] = useState(api.apiBaseURL)
   const [username, setUsername] = useState(prefill)
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [pickerOpen, setPickerOpen] = useState(false)
+
+  // In the add-account flow the /login guard no longer auto-redirects once a
+  // session exists, so Back would otherwise trap the user on the form — send
+  // them back to the picker instead. (Not armed for the normal signed-out
+  // login, where there's nowhere to go back to.)
+  useEffect(() => {
+    if (!addIntent) return
+    const onKey = (e: KeyboardEvent) => {
+      // Escape / GoBack only — NOT Backspace, which deletes text in the
+      // username/password fields. The inputs stopPropagation() on Escape /
+      // GoBack while focused (to blur first), so this fires only from the
+      // form chrome, never mid-typing.
+      if (e.key === 'Escape' || e.key === 'GoBack') {
+        e.preventDefault()
+        navigate(-1)
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [addIntent, navigate])
 
   async function onSubmit(e?: FormEvent) {
     e?.preventDefault()
@@ -24,6 +49,10 @@ export default function LoginPage() {
     api.setBaseURL(server)
     try {
       await login(username, password)
+      // Land on home for the just-signed-in account. Explicit because the
+      // add-account flow keeps the /login guard from redirecting (state.add
+      // is still set), and being explicit also covers the normal flow.
+      navigate('/', { replace: true })
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Login failed')
     } finally {

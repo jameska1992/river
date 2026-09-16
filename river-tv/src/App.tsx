@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes } from 'react-router-dom'
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { useAuth } from './context/authContext'
 import LoginPage from './pages/LoginPage'
 import AccountPickerPage from './pages/AccountPickerPage'
@@ -28,13 +28,24 @@ function Protected({ children }: { children: ReactNode }) {
   return <>{children}</>
 }
 
+// The /login route. Normally a signed-in user is bounced home (so Back can't
+// strand them on the login form), but the account picker's "Add account" tile
+// navigates here with state.add to sign in a *different* account while a
+// session is still active — that intent must render the form, not redirect.
+function LoginRoute() {
+  const { user } = useAuth()
+  const addIntent = (useLocation().state as { add?: boolean } | null)?.add === true
+  if (user && !addIntent) return <Navigate to="/" replace />
+  return <LoginPage />
+}
+
 export default function App() {
-  const { user, isLoading, accounts } = useAuth()
+  const { isLoading, accounts } = useAuth()
   if (isLoading) return null
 
   return (
     <Routes>
-      <Route path="/login" element={user ? <Navigate to="/" replace /> : <LoginPage />} />
+      <Route path="/login" element={<LoginRoute />} />
       {/* The picker is reachable while signed in too (Sidebar → Change
           account), so it isn't gated on `user`. With no accounts left there's
           nothing to pick — fall through to the login form. */}

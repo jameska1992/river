@@ -4,10 +4,10 @@ import react from '@vitejs/plugin-react'
 // Separate from vite.config.ts so the production build stays vitest-free.
 export default defineConfig({
   plugins: [react()],
-  // Test files are excluded from tsconfig.app.json (so `tsc -b` ignores them),
-  // which leaves esbuild without a jsx setting and defaulting to the classic
-  // runtime. Force the automatic runtime so test JSX needs no React import.
-  esbuild: { jsx: 'automatic', jsxImportSource: 'react' },
+  // JSX is handled by @vitejs/plugin-react + vitest's transformer (oxc as of
+  // vitest 5), both of which default to the automatic runtime, so test JSX
+  // needs no React import even though test files are excluded from
+  // tsconfig.app.json.
   test: {
     environment: 'jsdom',
     setupFiles: ['./src/setupTests.ts'],

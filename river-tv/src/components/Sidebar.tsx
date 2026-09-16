@@ -10,6 +10,7 @@ import {
   RiPlayCircleFill,
   RiSearchLine,
   RiTv2Line,
+  RiUserSharedLine,
 } from 'react-icons/ri'
 import { useAuth } from '../context/authContext'
 import { useFocusable } from '../hooks/useFocus'
@@ -44,7 +45,7 @@ export const SIDEBAR_RAIL_REM = 5
 export const SIDEBAR_EXPANDED_REM = 16
 
 export function Sidebar() {
-  const { user, logout } = useAuth()
+  const { signOutActive } = useAuth()
   const navigate = useNavigate()
   const { pathname } = useLocation()
   const [focusCount, setFocusCount] = useState(0)
@@ -86,11 +87,19 @@ export function Sidebar() {
 
       <div style={styles.footer}>
         <Item
-          label={user?.username ?? 'Sign out'}
+          label="Change account"
+          icon={<RiUserSharedLine />}
+          active={false}
+          expanded={expanded}
+          onSelect={() => navigate('/accounts')}
+          onFocusChange={handleFocusChange}
+        />
+        <Item
+          label="Sign out"
           icon={<RiLogoutBoxRLine />}
           active={false}
           expanded={expanded}
-          onSelect={() => void logout()}
+          onSelect={() => void signOutActive()}
           onFocusChange={handleFocusChange}
         />
       </div>

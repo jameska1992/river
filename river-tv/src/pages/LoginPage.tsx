@@ -1,4 +1,5 @@
 import { useRef, useState, type ChangeEvent, type FormEvent } from 'react'
+import { useLocation } from 'react-router-dom'
 import { useAuth } from '../context/authContext'
 import { api, ApiError } from '../api'
 import { FocusProvider, useFocusable } from '../hooks/useFocus'
@@ -6,8 +7,11 @@ import { Popup } from '../components/Popup'
 
 export default function LoginPage() {
   const { login } = useAuth()
+  // A stale saved account routes here to re-authenticate — prefill its
+  // username so the user only needs to re-enter the password.
+  const prefill = (useLocation().state as { username?: string } | null)?.username ?? ''
   const [server, setServer] = useState(api.apiBaseURL)
-  const [username, setUsername] = useState('')
+  const [username, setUsername] = useState(prefill)
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)

@@ -45,6 +45,32 @@ const DEFAULT_BASE_URL = 'http://localhost:8080/api'
 const SERVERS_KEY = 'river:api-servers'
 const SERVERS_LIMIT = 8
 
+// Multi-account registry (issue #86): a shared TV can remember several
+// accounts and switch between them without re-entering passwords. Each entry
+// carries the account's durable secret — its refresh token — which is rotated
+// on every /auth/refresh and MUST be written back here (see persistActive-
+// RefreshToken) or the next switch to that account 401s. Accounts are scoped
+// by the server they were added on so the ServerPicker and account picker
+// compose cleanly.
+const ACCOUNTS_KEY = 'river:accounts'
+const ACTIVE_ACCOUNT_KEY = 'river:active_account'
+
+// SavedAccount is one remembered account on this device. refreshToken is the
+// durable per-account secret; UI code should treat it as opaque.
+export interface SavedAccount {
+  id: string
+  username: string
+  serverBase: string
+  refreshToken: string
+}
+
+// newAccountID generates a stable local id without depending on
+// crypto.randomUUID, which is unavailable in a WebView served over plain
+// http (non-secure context) — common for a LAN river-api.
+function newAccountID(): string {
+  return `acc_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`
+}
+
 export class ApiError extends Error {
   readonly status: number
 
@@ -115,6 +141,89 @@ export class RiverClient {
     const next = this.getRememberedServers().filter(s => s !== url)
     if (next.length === 0) localStorage.removeItem(SERVERS_KEY)
     else localStorage.setItem(SERVERS_KEY, JSON.stringify(next))
+  }
+
+  // --- Multi-account registry ---
+
+  getAccounts(): SavedAccount[] {
+    try {
+      const raw = localStorage.getItem(ACCOUNTS_KEY)
+      if (!raw) return []
+      const arr = JSON.parse(raw) as unknown
+      if (!Array.isArray(arr)) return []
+      return arr.filter((a): a is SavedAccount =>
+        !!a && typeof a === 'object' &&
+        typeof (a as SavedAccount).id === 'string' &&
+        typeof (a as SavedAccount).username === 'string' &&
+        typeof (a as SavedAccount).refreshToken === 'string')
+    } catch {
+      return []
+    }
+  }
+
+  // Accounts remembered on the currently-selected server. The picker uses
+  // this so switching servers and switching accounts stay consistent.
+  getAccountsForServer(serverBase?: string): SavedAccount[] {
+    const base = (serverBase ?? this.baseURL).replace(/\/+$/, '')
+    return this.getAccounts().filter(a => a.serverBase.replace(/\/+$/, '') === base)
+  }
+
+  private setAccounts(list: SavedAccount[]): void {
+    if (list.length === 0) localStorage.removeItem(ACCOUNTS_KEY)
+    else localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(list))
+  }
+
+  get activeAccountId(): string | null {
+    return localStorage.getItem(ACTIVE_ACCOUNT_KEY)
+  }
+
+  private setActiveAccountId(id: string | null): void {
+    if (id) localStorage.setItem(ACTIVE_ACCOUNT_KEY, id)
+    else localStorage.removeItem(ACTIVE_ACCOUNT_KEY)
+  }
+
+  // upsertActiveAccount records the just-logged-in account (matched by
+  // username+server so a re-login updates rather than duplicates) and makes
+  // it the active account.
+  private upsertActiveAccount(username: string, refreshToken: string): void {
+    const server = this.baseURL.replace(/\/+$/, '')
+    const list = this.getAccounts()
+    const existing = list.find(a => a.username === username && a.serverBase.replace(/\/+$/, '') === server)
+    let id: string
+    if (existing) {
+      existing.refreshToken = refreshToken
+      id = existing.id
+    } else {
+      id = newAccountID()
+      list.push({ id, username, serverBase: server, refreshToken })
+    }
+    this.setAccounts(list)
+    this.setActiveAccountId(id)
+  }
+
+  // ensureActiveAccount backfills the registry for a session that predates
+  // multi-account (the upgrade path): if we're authenticated but have no
+  // active saved account, record the current session as one so it shows up in
+  // the picker. No-op once an active account exists.
+  ensureActiveAccount(username: string): void {
+    if (this.activeAccountId) return
+    const rt = this.refreshToken
+    if (!rt) return
+    this.upsertActiveAccount(username, rt)
+  }
+
+  // persistActiveRefreshToken keeps the active account's stored secret in
+  // sync after a token rotation — the single most important correctness
+  // detail, since /auth/refresh revokes the old token.
+  private persistActiveRefreshToken(refreshToken: string): void {
+    const id = this.activeAccountId
+    if (!id) return
+    const list = this.getAccounts()
+    const acc = list.find(a => a.id === id)
+    if (acc && acc.refreshToken !== refreshToken) {
+      acc.refreshToken = refreshToken
+      this.setAccounts(list)
+    }
   }
 
   // --- Token storage ---
@@ -273,6 +382,8 @@ export class RiverClient {
     this.setStreamToken(res.stream_token)
     // Server worked — keep it in the recent list for next time.
     this.rememberServer(this.baseURL)
+    // Remember this account on the device + make it active.
+    this.upsertActiveAccount(res.user.username, res.refresh_token)
     return res
   }
 
@@ -293,6 +404,9 @@ export class RiverClient {
       this.setAccessToken(res.access_token)
       this.setRefreshToken(res.refresh_token)
       this.setStreamToken(res.stream_token)
+      // The refresh token was rotated server-side — persist it against the
+      // active account or the next switch to it will 401.
+      this.persistActiveRefreshToken(res.refresh_token)
     } catch {
       this.clearAuth()
       throw new ApiError(401, 'Session expired, please log in again')
@@ -318,6 +432,53 @@ export class RiverClient {
     if (token) {
       // best-effort — don't propagate errors after clearing local state
       await this.request('POST', '/auth/logout', { refresh_token: token }).catch(() => {})
+    }
+  }
+
+  // switchToAccount makes a saved account active and mints fresh access/stream
+  // tokens from its cached refresh token — passwordless. Throws (401) if that
+  // token is stale/revoked, leaving the account in the registry so the UI can
+  // prompt for a re-login rather than erroring.
+  async switchToAccount(id: string): Promise<User> {
+    const acc = this.getAccounts().find(a => a.id === id)
+    if (!acc) throw new ApiError(404, 'account not found on this device')
+    // Follow the account to the server it was added on, if different.
+    if (acc.serverBase && acc.serverBase.replace(/\/+$/, '') !== this.baseURL.replace(/\/+$/, '')) {
+      this.setBaseURL(acc.serverBase)
+    }
+    this.setActiveAccountId(id)
+    this.setRefreshToken(acc.refreshToken)
+    // Drop the previous account's short-lived tokens; doRefresh mints fresh
+    // ones (and persists the rotated refresh token back to this account).
+    this.setAccessToken(null)
+    this.setStreamToken(null)
+    await this.doRefresh()
+    return this.me()
+  }
+
+  // removeAccount forgets a saved account and revokes its refresh token
+  // server-side (best-effort). Clears the session if it was the active one.
+  async removeAccount(id: string): Promise<void> {
+    const list = this.getAccounts()
+    const acc = list.find(a => a.id === id)
+    this.setAccounts(list.filter(a => a.id !== id))
+    if (this.activeAccountId === id) {
+      this.setActiveAccountId(null)
+      this.clearAuth()
+    }
+    if (acc?.refreshToken) {
+      await this.request('POST', '/auth/logout', { refresh_token: acc.refreshToken }).catch(() => {})
+    }
+  }
+
+  // signOutActive revokes + forgets only the active account, leaving other
+  // remembered accounts intact.
+  async signOutActive(): Promise<void> {
+    const id = this.activeAccountId
+    await this.logout() // revokes the current refresh token + clears local tokens
+    if (id) {
+      this.setAccounts(this.getAccounts().filter(a => a.id !== id))
+      this.setActiveAccountId(null)
     }
   }
 

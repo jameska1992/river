@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { useAuth } from './context/authContext'
 import LoginPage from './pages/LoginPage'
+import AccountPickerPage from './pages/AccountPickerPage'
 import HomePage from './pages/HomePage'
 import MoviesPage from './pages/MoviesPage'
 import TVShowsPage from './pages/TVShowsPage'
@@ -19,19 +20,28 @@ import PersonDetailPage from './pages/PersonDetailPage'
 import type { ReactNode } from 'react'
 
 function Protected({ children }: { children: ReactNode }) {
-  const { user, isLoading } = useAuth()
+  const { user, isLoading, accounts } = useAuth()
   if (isLoading) return null
-  if (!user) return <Navigate to="/login" replace />
+  // No active session: show the account picker when this TV remembers any
+  // accounts, otherwise the login form.
+  if (!user) return <Navigate to={accounts.length > 0 ? '/accounts' : '/login'} replace />
   return <>{children}</>
 }
 
 export default function App() {
-  const { user, isLoading } = useAuth()
+  const { user, isLoading, accounts } = useAuth()
   if (isLoading) return null
 
   return (
     <Routes>
       <Route path="/login" element={user ? <Navigate to="/" replace /> : <LoginPage />} />
+      {/* The picker is reachable while signed in too (Sidebar → Change
+          account), so it isn't gated on `user`. With no accounts left there's
+          nothing to pick — fall through to the login form. */}
+      <Route
+        path="/accounts"
+        element={accounts.length > 0 ? <AccountPickerPage /> : <Navigate to="/login" replace />}
+      />
       <Route path="/" element={<Protected><HomePage /></Protected>} />
       <Route path="/movies" element={<Protected><MoviesPage /></Protected>} />
       <Route path="/movies/:id" element={<Protected><MovieDetailPage /></Protected>} />

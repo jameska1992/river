@@ -1,6 +1,7 @@
 import { RiverClient, ApiError } from './client'
 
 export { RiverClient, ApiError }
+export type { SavedAccount } from './client'
 
 export type {
   BaseModel, User, LoginResponse, ActivityItem, LibraryType,

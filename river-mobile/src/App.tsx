@@ -11,6 +11,7 @@ import MovieDetailPage from './pages/MovieDetailPage'
 import TVShowDetailPage from './pages/TVShowDetailPage'
 import AlbumDetailPage from './pages/AlbumDetailPage'
 import AudiobookDetailPage from './pages/AudiobookDetailPage'
+import CollectionDetailPage from './pages/CollectionDetailPage'
 import MoviePlayerPage from './pages/MoviePlayerPage'
 import EpisodePlayerPage from './pages/EpisodePlayerPage'
 import { AudioPlayerProvider } from './context/AudioPlayerProvider'
@@ -53,6 +54,7 @@ export default function App() {
           <Route path="/tvshows/:id" element={<TVShowDetailPage />} />
           <Route path="/albums/:id" element={<AlbumDetailPage />} />
           <Route path="/audiobooks/:id" element={<AudiobookDetailPage />} />
+          <Route path="/collections/:id" element={<CollectionDetailPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>

@@ -3,6 +3,12 @@ import {
   RiHome2Line, RiSearchLine, RiFilmLine, RiBookmarkLine, RiSettings3Line,
 } from 'react-icons/ri'
 import type { ReactNode } from 'react'
+import { useAudioPlayer } from '../context/audioPlayerContext'
+import { MiniPlayer } from './MiniPlayer'
+
+// Mini-player height (kept in sync with MiniPlayer's own styling) so content
+// can reserve space for it when something is playing.
+const MINI_PLAYER_H = '3.75rem'
 
 // Bottom tab bar — the primary phone navigation. Fixed to the bottom with a
 // safe-area inset; page content scrolls above it (see the .screen padding).
@@ -15,11 +21,18 @@ const TABS: { to: string; label: string; icon: ReactNode; end?: boolean }[] = [
 ]
 
 export function BottomTabsLayout() {
+  const { current } = useAudioPlayer()
+  // When the mini-player is docked it sits above the tab bar, so reserve its
+  // height on top of the tab-bar inset to keep page content clear of both.
+  const contentPad = current
+    ? `calc(var(--tabbar-h) + var(--safe-bottom) + ${MINI_PLAYER_H})`
+    : 'calc(var(--tabbar-h) + var(--safe-bottom))'
   return (
     <div style={styles.root}>
-      <main style={styles.content}>
+      <main style={{ ...styles.content, paddingBottom: contentPad }}>
         <Outlet />
       </main>
+      <MiniPlayer />
       <nav style={styles.bar}>
         {TABS.map(t => (
           <NavLink

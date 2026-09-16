@@ -13,7 +13,7 @@ import AlbumDetailPage from './pages/AlbumDetailPage'
 import AudiobookDetailPage from './pages/AudiobookDetailPage'
 import MoviePlayerPage from './pages/MoviePlayerPage'
 import EpisodePlayerPage from './pages/EpisodePlayerPage'
-import PlayerPlaceholder from './pages/PlayerPlaceholder'
+import { AudioPlayerProvider } from './context/AudioPlayerProvider'
 
 export default function App() {
   const { user, isLoading } = useAuth()
@@ -29,28 +29,33 @@ export default function App() {
   }
 
   return (
-    <Routes>
-      <Route path="/login" element={<Navigate to="/" replace />} />
+    // The audio player lives above the router so its <audio> and the docked
+    // mini-player survive navigation. Mounted here (authenticated only) so its
+    // progress socket never opens on the login screen. Fullscreen video routes
+    // pause nothing — audio just keeps playing underneath if it was started.
+    <AudioPlayerProvider>
+      <Routes>
+        <Route path="/login" element={<Navigate to="/" replace />} />
 
-      {/* Fullscreen players (no tab bar). Audio players land in #144. */}
-      <Route path="/movies/:id/watch" element={<MoviePlayerPage />} />
-      <Route path="/tvshows/:showId/seasons/:seasonId/episodes/:episodeId/watch" element={<EpisodePlayerPage />} />
-      <Route path="/albums/:id/play" element={<PlayerPlaceholder />} />
-      <Route path="/audiobooks/:id/listen" element={<PlayerPlaceholder />} />
+        {/* Fullscreen video players (no tab bar). */}
+        <Route path="/movies/:id/watch" element={<MoviePlayerPage />} />
+        <Route path="/tvshows/:showId/seasons/:seasonId/episodes/:episodeId/watch" element={<EpisodePlayerPage />} />
 
-      {/* Everything else lives under the bottom-tab shell. */}
-      <Route element={<BottomTabsLayout />}>
-        <Route path="/" element={<HomePage />} />
-        <Route path="/search" element={<SearchPage />} />
-        <Route path="/library" element={<LibraryPage />} />
-        <Route path="/watchlist" element={<WatchlistPage />} />
-        <Route path="/settings" element={<SettingsPage />} />
-        <Route path="/movies/:id" element={<MovieDetailPage />} />
-        <Route path="/tvshows/:id" element={<TVShowDetailPage />} />
-        <Route path="/albums/:id" element={<AlbumDetailPage />} />
-        <Route path="/audiobooks/:id" element={<AudiobookDetailPage />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Route>
-    </Routes>
+        {/* Everything else lives under the bottom-tab shell. Audio (music +
+            audiobooks) plays via the docked mini/full player, not a route. */}
+        <Route element={<BottomTabsLayout />}>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/search" element={<SearchPage />} />
+          <Route path="/library" element={<LibraryPage />} />
+          <Route path="/watchlist" element={<WatchlistPage />} />
+          <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/movies/:id" element={<MovieDetailPage />} />
+          <Route path="/tvshows/:id" element={<TVShowDetailPage />} />
+          <Route path="/albums/:id" element={<AlbumDetailPage />} />
+          <Route path="/audiobooks/:id" element={<AudiobookDetailPage />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Route>
+      </Routes>
+    </AudioPlayerProvider>
   )
 }

@@ -1,6 +1,8 @@
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 import { api } from '../api'
 import { useAsync } from '../hooks/useAsync'
+import { useAudioPlayer } from '../context/audioPlayerContext'
+import { chapterToAudioItem } from '../util/audio'
 import { DetailHero, PlayRow } from '../components/Detail'
 import { WatchlistButton } from '../components/WatchlistButton'
 import { Loading, ErrorState, EmptyState } from '../components/States'
@@ -8,7 +10,7 @@ import { formatDuration } from '../util/format'
 
 export default function AudiobookDetailPage() {
   const { id = '' } = useParams()
-  const navigate = useNavigate()
+  const { playQueue } = useAudioPlayer()
   const { data, loading, error, reload } = useAsync(
     async () => {
       const [book, chapters] = await Promise.all([api.getAudiobook(id), api.listChapters(id)])
@@ -23,6 +25,13 @@ export default function AudiobookDetailPage() {
   const { book, chapters } = data
   const meta = [book.author || null, book.year > 0 ? String(book.year) : null, book.narrator ? `Narrated by ${book.narrator}` : null]
     .filter(Boolean).join('  ·  ')
+
+  // Playable queue (chapters with a file), in order.
+  const items = chapters.filter(ch => ch.file_path).map(ch => chapterToAudioItem(ch, book))
+  const play = (chapterId: string) => {
+    const start = items.findIndex(it => it.id === chapterId)
+    playQueue(items, start < 0 ? 0 : start)
+  }
 
   return (
     <div>
@@ -39,7 +48,7 @@ export default function AudiobookDetailPage() {
           index={ch.number}
           title={ch.title || `Chapter ${ch.number}`}
           meta={ch.duration > 0 ? formatDuration(ch.duration) : undefined}
-          onPlay={() => navigate(`/audiobooks/${id}/listen?chapter=${ch.id}`)}
+          onPlay={() => play(ch.id)}
         />
       ))}
     </div>

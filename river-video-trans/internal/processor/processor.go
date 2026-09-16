@@ -1,6 +1,7 @@
 package processor
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -264,13 +265,22 @@ func (p *Processor) processTVShow(event consumer.MediaDiscoveredEvent) error {
 		episodeIDByNum[ep.Number] = ep.ID
 	}
 
+	// deferredErr collects special-episode failures. We still process every
+	// other file in the season, then return the error so the whole event is
+	// retried (already-transcoded files short-circuit on the retry). This is
+	// what lets a special that meta-tv hadn't created yet succeed on a later
+	// attempt instead of being dropped forever.
+	var deferredErr error
 	for _, file := range event.Files {
 		if !isVideoFile(file) {
 			continue
 		}
 		epNum := parseEpisodeNumber(file)
 		if epNum == 0 {
-			p.processSpecialFile(file, showID, seasonID, showName, seasonNum, specialBySource, event.ForceTranscode)
+			if err := p.processSpecialFile(file, showID, seasonID, showName, seasonNum, specialBySource, event.ForceTranscode); err != nil {
+				log.Printf("WARN special %q not processed: %v", filepath.Base(file), err)
+				deferredErr = errors.Join(deferredErr, err)
+			}
 			continue
 		}
 
@@ -313,40 +323,41 @@ func (p *Processor) processTVShow(event consumer.MediaDiscoveredEvent) error {
 		p.registerAudioTracks("episode", epID, finalPath, info)
 		p.registerSubtitles("episode", epID, file, finalPath, info)
 	}
-	return nil
+	return deferredErr
 }
 
 // processSpecialFile transcodes a special episode and patches its file_path.
-// The episode record itself is created by river-meta-tv (which owns the
-// SPxx numbering); we only proceed when that record already exists. If
-// meta-tv hasn't seen this special yet, we skip — the next scan retries.
+// The episode record itself is created by river-meta-tv (which owns the SPxx
+// numbering); we only proceed when that record already exists. If meta-tv
+// hasn't created it yet, we return a retryable error so the message is retried
+// with backoff (and eventually dead-lettered) rather than silently dropped —
+// this is the fix for specials that were discovered but never transcoded when
+// video-trans reached them before meta-tv (issue #78).
 func (p *Processor) processSpecialFile(
 	file, showID, seasonID, showName string,
 	seasonNum int,
 	specialBySource map[string]apiclient.Episode,
 	force bool,
-) {
+) error {
 	ep, found := specialBySource[file]
 	if !found {
-		log.Printf("WARN special %q has no episode record yet (meta-tv hasn't run); will retry next scan", filepath.Base(file))
-		return
+		return fmt.Errorf("special %q has no episode record yet (meta-tv hasn't created it); will retry", filepath.Base(file))
 	}
 	outPath := specialOutputPath(file, showName, seasonNum, ep.Number, p.outputDir)
 	info, finalPath, err := p.processEpisodeFileTo(file, outPath, force)
 	if err != nil {
-		log.Printf("ERROR processing special %q: %v", file, err)
-		return
+		return fmt.Errorf("processing special %q: %w", file, err)
 	}
 	log.Printf("INFO updating file_path for special S%02dSP%02d", seasonNum, ep.Number)
 	if _, err := p.api.UpdateEpisode(showID, seasonID, ep.ID, apiclient.EpisodeRequest{
 		FilePath:   finalPath,
 		SourcePath: file,
 	}); err != nil {
-		log.Printf("ERROR update special S%02dSP%02d: %v", seasonNum, ep.Number, err)
-		return
+		return fmt.Errorf("update special S%02dSP%02d: %w", seasonNum, ep.Number, err)
 	}
 	p.registerAudioTracks("episode", ep.ID, finalPath, info)
 	p.registerSubtitles("episode", ep.ID, file, finalPath, info)
+	return nil
 }
 
 // processMovieFile probes and transcodes the file if necessary, writing

@@ -28,6 +28,9 @@ const MEDIA_ACTIONS = ['play', 'pause', 'previoustrack', 'nexttrack', 'seekbackw
  */
 export function AudioPlayerProvider({ children }: { children: ReactNode }) {
   const audioRef = useRef<HTMLAudioElement>(null)
+  // True while we've pushed a history entry for the expanded full player, so
+  // Back collapses it instead of navigating (see the popstate effect below).
+  const pushedRef = useRef(false)
 
   const [queue, setQueue] = useState<AudioItem[]>([])
   const [index, setIndex] = useState(0)
@@ -49,6 +52,24 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
     indexRef.current = index
     currentRef.current = current
   })
+
+  // Back collapses the expanded full player instead of navigating the page.
+  // Shell-agnostic: the Android shell maps hardware Back to history.back(), and
+  // browser Back works the same. Expanding pushes a same-URL history entry;
+  // popping it (Back, or the chevron via collapse()) collapses the player.
+  useEffect(() => {
+    if (expanded && !pushedRef.current) {
+      pushedRef.current = true
+      window.history.pushState({ riverPlayer: true }, '')
+    }
+  }, [expanded])
+  useEffect(() => {
+    const onPop = () => {
+      if (pushedRef.current) { pushedRef.current = false; setExpanded(false) }
+    }
+    window.addEventListener('popstate', onPop)
+    return () => window.removeEventListener('popstate', onPop)
+  }, [])
 
   const playQueue = useCallback((items: AudioItem[], startIndex: number) => {
     setQueue(items)
@@ -89,11 +110,18 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const expand = useCallback(() => setExpanded(true), [])
-  const collapse = useCallback(() => setExpanded(false), [])
+  // Collapsing pops the history entry we pushed on expand (which itself
+  // collapses via the popstate handler), keeping Back-history balanced.
+  const collapse = useCallback(() => {
+    if (pushedRef.current) window.history.back()
+    else setExpanded(false)
+  }, [])
 
   const close = useCallback(() => {
     const a = audioRef.current
     if (a) { a.pause(); a.removeAttribute('src'); a.load() }
+    // Consume the expanded-player history entry if one is outstanding.
+    if (pushedRef.current) window.history.back()
     setQueue([]); setIndex(0); setExpanded(false)
     setPlaying(false); setPosition(0); setDuration(0)
     if ('mediaSession' in navigator) navigator.mediaSession.metadata = null

@@ -1,0 +1,104 @@
+/* Logo font — matches river-web / river-tv (--font-logo). */
+@import url('https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700;900&display=swap');
+
+/*
+ * Design tokens mirror river-tv / river-web, but sizing is phone-first
+ * (16px base, natural scrolling) rather than the 10-foot TV scale.
+ */
+:root {
+  --bg:           #131313;
+  --bg-elev:      #1c1b1b;
+  --bg-elev-2:    #201f1f;
+  --bg-elev-3:    #2a2a2a;
+  --text:         #e5e2e1;
+  --text-muted:   #cbc3d7;
+  --outline:      #494454;
+  --accent:       #d0bcff;
+  --on-accent:    #3c0091;
+  --accent-soft:  rgba(208, 188, 255, 0.18);
+  --error:        #ffb4ab;
+
+  --font-logo:    'Cinzel Decorative', 'Cinzel', Georgia, serif;
+
+  --radius-sm:    0.5rem;
+  --radius-md:    0.75rem;
+  --radius-lg:    1.25rem;
+
+  /* Height of the bottom tab bar; screens pad their bottom by this so
+     content never sits beneath it. Keep in sync with BottomTabs. */
+  --tabbar-h:     4rem;
+  /* Extra bottom inset for gesture-nav / home indicator on modern phones. */
+  --safe-bottom:  env(safe-area-inset-bottom, 0px);
+
+  color-scheme: dark;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body, #root {
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-size: 1rem; /* 16px phone base */
+  line-height: 1.45;
+}
+
+/* Momentum scrolling; avoid text auto-inflation in the WebView. */
+body {
+  -webkit-overflow-scrolling: touch;
+  text-size-adjust: 100%;
+  -webkit-text-size-adjust: 100%;
+}
+
+a { color: inherit; text-decoration: none; }
+
+button {
+  font: inherit;
+  color: inherit;
+  border: none;
+  background: none;
+  cursor: pointer;
+  /* Kill the grey tap flash; we draw our own active states. */
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ── Shared primitives ─────────────────────────────────── */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.85rem 1.25rem;
+  border-radius: var(--radius-md);
+  background: var(--bg-elev-2);
+  color: var(--text);
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.btn:disabled { opacity: 0.5; }
+
+.input {
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--bg-elev-2);
+  color: var(--text);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  padding: 0.9rem 1rem;
+  font-size: 1rem;
+  outline: none;
+}
+.input:focus { border-color: var(--accent); }

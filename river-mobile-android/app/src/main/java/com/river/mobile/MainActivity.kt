@@ -1,6 +1,9 @@
 package com.river.mobile
 
 import android.annotation.SuppressLint
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import android.view.KeyEvent
 import android.view.WindowManager
@@ -40,6 +43,10 @@ class MainActivity : AppCompatActivity() {
     private lateinit var webView: WebView
     private lateinit var assetLoader: WebViewAssetLoader
     private var lastBackPress = 0L
+
+    // Set from the JS bridge (window.RiverNative.audioActive). While true the
+    // WebView is NOT paused on background, so its <audio> keeps playing.
+    @Volatile private var audioActive = false
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -105,8 +112,14 @@ class MainActivity : AppCompatActivity() {
                 allowContentAccess = false
             }
         }
+        webView.addJavascriptInterface(NativeBridge(this), "RiverNative")
         setContentView(webView)
         webView.requestFocus()
+
+        // Route OS media commands (notification / lock-screen / headset) from
+        // the foreground service back into the web audio player.
+        AudioService.commandListener = { command -> runOnUiThread { dispatchMediaCommand(command) } }
+        requestNotificationsPermission()
 
         webView.loadUrl("http://$APP_ASSETS_DOMAIN/index.html")
     }
@@ -133,7 +146,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onPause() {
-        webView.onPause()
+        // Keep the WebView (and its <audio>) alive in the background while audio
+        // is active; otherwise suspend it as usual to save resources.
+        if (!audioActive) webView.onPause()
         super.onPause()
     }
 
@@ -143,12 +158,81 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
+        AudioService.commandListener = null
+        stopAudioService()
         webView.destroy()
         super.onDestroy()
     }
 
+    // --- Native audio bridge plumbing (called by NativeBridge / AudioService) ---
+
+    fun startAudioService() {
+        audioActive = true
+        // Kick the foreground service; metadata/state intents follow immediately.
+        sendToService(
+            Intent(this, AudioService::class.java)
+                .setAction(AudioService.ACTION_STATE)
+                .putExtra(AudioService.EXTRA_PLAYING, true)
+                .putExtra(AudioService.EXTRA_POSITION, 0L),
+        )
+    }
+
+    fun stopAudioService() {
+        audioActive = false
+        startService(Intent(this, AudioService::class.java).setAction(AudioService.ACTION_STOP))
+    }
+
+    fun updateAudioMetadata(title: String, artist: String, album: String, durationMs: Long) {
+        sendToService(
+            Intent(this, AudioService::class.java)
+                .setAction(AudioService.ACTION_META)
+                .putExtra(AudioService.EXTRA_TITLE, title)
+                .putExtra(AudioService.EXTRA_ARTIST, artist)
+                .putExtra(AudioService.EXTRA_ALBUM, album)
+                .putExtra(AudioService.EXTRA_DURATION, durationMs),
+        )
+    }
+
+    fun updateAudioPlayback(playing: Boolean, positionMs: Long) {
+        sendToService(
+            Intent(this, AudioService::class.java)
+                .setAction(AudioService.ACTION_STATE)
+                .putExtra(AudioService.EXTRA_PLAYING, playing)
+                .putExtra(AudioService.EXTRA_POSITION, positionMs),
+        )
+    }
+
+    private fun sendToService(intent: Intent) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            startForegroundService(intent)
+        } else {
+            startService(intent)
+        }
+    }
+
+    private fun dispatchMediaCommand(command: AudioService.Command) {
+        val js = when (command) {
+            AudioService.Command.Play -> "window.__riverAudio&&window.__riverAudio.play()"
+            AudioService.Command.Pause -> "window.__riverAudio&&window.__riverAudio.pause()"
+            AudioService.Command.Next -> "window.__riverAudio&&window.__riverAudio.next()"
+            AudioService.Command.Prev -> "window.__riverAudio&&window.__riverAudio.prev()"
+            is AudioService.Command.SeekTo ->
+                "window.__riverAudio&&window.__riverAudio.seekTo(${command.positionMs})"
+        }
+        webView.evaluateJavascript(js, null)
+    }
+
+    private fun requestNotificationsPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+        ) {
+            requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), REQ_NOTIFICATIONS)
+        }
+    }
+
     companion object {
         private const val EXIT_WINDOW_MS = 2000L
+        private const val REQ_NOTIFICATIONS = 42
         // The synthetic origin WebViewAssetLoader serves the bundled build from.
         private const val APP_ASSETS_DOMAIN = "appassets.androidplatform.net"
     }

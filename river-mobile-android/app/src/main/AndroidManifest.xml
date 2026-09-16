@@ -7,6 +7,12 @@
     <!-- Keeps the screen on during playback when the activity asks for it
          (FLAG_KEEP_SCREEN_ON). -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <!-- Background audio: a mediaPlayback foreground service keeps the WebView
+         alive with the screen off, and POST_NOTIFICATIONS (API 33+) lets it
+         show the media notification. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application
         android:label="@string/app_name"
@@ -35,5 +41,12 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- Foreground service backing background audio + the media
+             notification. Not exported; driven only from within the app. -->
+        <service
+            android:name=".AudioService"
+            android:exported="false"
+            android:foregroundServiceType="mediaPlayback" />
     </application>
 </manifest>

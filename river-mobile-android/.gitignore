@@ -11,3 +11,6 @@ captures/
 *.aab
 *.jks
 *.keystore
+
+# Gradle daemon JVM criteria (machine-specific, auto-generated)
+gradle/gradle-daemon-jvm.properties

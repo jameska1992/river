@@ -3,6 +3,7 @@ import { api } from '../api'
 import { shouldResume, clampSeek } from '../util/player'
 import { stepIndex, type AudioItem } from '../util/audio'
 import { imageUrl } from '../util/imageUrl'
+import { nativeAudioActive, nativeSetMetadata, nativeSetPlayback, registerNativeControls } from '../util/nativeBridge'
 import { AudioPlayerContext, type AudioPlayerState } from './audioPlayerContext'
 import { FullPlayer } from '../components/FullPlayer'
 
@@ -179,6 +180,35 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [current?.id])
+
+  // --- river-mobile-android bridge (no-ops in a plain browser) ---
+
+  // Expose transport controls the native notification / lock-screen drive.
+  useEffect(() => registerNativeControls({
+    play: () => { void audioRef.current?.play().catch(() => {}) },
+    pause: () => audioRef.current?.pause(),
+    next,
+    prev,
+    seekTo: ms => seek(ms / 1000),
+  }), [next, prev, seek])
+
+  // Keep the native foreground service alive while something is loaded, so
+  // playback survives backgrounding / screen-off.
+  const hasCurrent = current != null
+  useEffect(() => { nativeAudioActive(hasCurrent) }, [hasCurrent])
+
+  // Mirror metadata into the native media notification (also when duration arrives).
+  useEffect(() => {
+    if (current) nativeSetMetadata(current.title, current.artist, current.album, duration * 1000)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [current?.id, duration])
+
+  // Mirror play/pause state; Android extrapolates position from here, so
+  // pushing on state change (not every tick) is enough.
+  useEffect(() => {
+    nativeSetPlayback(playing, position * 1000)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [playing])
 
   const value: AudioPlayerState = useMemo(() => ({
     current, queue, index, playing, position, duration, expanded,

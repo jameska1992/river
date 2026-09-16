@@ -5,7 +5,7 @@ Android phone/tablet app that ships the [river-mobile](../river-mobile/) web bui
 - The Vite build is packaged as APK assets and served under `http://appassets.androidplatform.net/` via `WebViewAssetLoader` — no external web server is required and no first-run URL prompt is needed. HTTP (not HTTPS) is deliberate: river-api on a LAN is almost always plain HTTP, and matching schemes avoids WebView's inconsistent mixed-content handling.
 - The hardware **Back** button walks the WebView's history (`goBack()`), which — because react-router pushes real history entries — steps back through the app (detail → list, exit the video route, …). At the root of history a second Back within 2 s exits the app. (This differs from the TV shell, which maps Back → Escape for its D-pad focus manager.)
 - Orientation is portrait-first but not locked, so the device can rotate and the in-app video player can go landscape while it's on screen.
-- The API server URL is configured **inside** river-mobile (login screen), not here.
+- **Background audio**: while music/audiobooks are loaded, a `mediaPlayback` foreground service (`AudioService`) keeps the WebView alive so playback continues with the screen off / app backgrounded, and a framework `MediaSession` + MediaStyle notification surfaces lock-screen and notification transport controls. The web player talks to it through the `window.RiverNative` bridge (start/stop, metadata, play/pause state); control taps route back into the web player via `window.__riverAudio`. The API server URL is configured **inside** river-mobile (login screen), not here.
 
 ## Build
 

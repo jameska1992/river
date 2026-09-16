@@ -11,6 +11,8 @@ import MovieDetailPage from './pages/MovieDetailPage'
 import TVShowDetailPage from './pages/TVShowDetailPage'
 import AlbumDetailPage from './pages/AlbumDetailPage'
 import AudiobookDetailPage from './pages/AudiobookDetailPage'
+import MoviePlayerPage from './pages/MoviePlayerPage'
+import EpisodePlayerPage from './pages/EpisodePlayerPage'
 import PlayerPlaceholder from './pages/PlayerPlaceholder'
 
 export default function App() {
@@ -30,9 +32,9 @@ export default function App() {
     <Routes>
       <Route path="/login" element={<Navigate to="/" replace />} />
 
-      {/* Fullscreen players (no tab bar). Real players land in #143/#144. */}
-      <Route path="/movies/:id/watch" element={<PlayerPlaceholder />} />
-      <Route path="/tvshows/:showId/seasons/:seasonId/episodes/:episodeId/watch" element={<PlayerPlaceholder />} />
+      {/* Fullscreen players (no tab bar). Audio players land in #144. */}
+      <Route path="/movies/:id/watch" element={<MoviePlayerPage />} />
+      <Route path="/tvshows/:showId/seasons/:seasonId/episodes/:episodeId/watch" element={<EpisodePlayerPage />} />
       <Route path="/albums/:id/play" element={<PlayerPlaceholder />} />
       <Route path="/audiobooks/:id/listen" element={<PlayerPlaceholder />} />
 

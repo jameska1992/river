@@ -175,6 +175,11 @@ jobs:
         working-directory: ${{ matrix.client }}
         continue-on-error: true
         run: npm run lint
+      # --if-present: only river-mobile defines tests today; the other clients
+      # skip this step cleanly until they add a `test` script.
+      - name: test
+        working-directory: ${{ matrix.client }}
+        run: npm test --if-present
       - name: build
         working-directory: ${{ matrix.client }}
         run: npm run build

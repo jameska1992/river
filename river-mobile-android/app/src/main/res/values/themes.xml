@@ -1,0 +1,14 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Phone theme: no action bar, dark chrome to match the app. System bars
+         stay visible (unlike the TV build's fullscreen), and the WebView draws
+         behind them where the web layout uses safe-area insets. -->
+    <style name="Theme.RiverMobile" parent="Theme.AppCompat.NoActionBar">
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowBackground">@android:color/black</item>
+        <item name="android:statusBarColor" tools:targetApi="lollipop">@android:color/black</item>
+        <item name="android:navigationBarColor" tools:targetApi="lollipop">@android:color/black</item>
+        <item name="colorPrimary">#d0bcff</item>
+        <item name="colorPrimaryDark">#131313</item>
+        <item name="colorAccent">#d0bcff</item>
+    </style>
+</resources>

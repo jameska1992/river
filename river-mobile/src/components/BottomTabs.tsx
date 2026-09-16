@@ -13,9 +13,9 @@ const MINI_PLAYER_H = '3.75rem'
 // Bottom tab bar — the primary phone navigation. Fixed to the bottom with a
 // safe-area inset; page content scrolls above it (see the .screen padding).
 const TABS: { to: string; label: string; icon: ReactNode; end?: boolean }[] = [
-  { to: '/', label: 'Home', icon: <RiHome2Line />, end: true },
   { to: '/search', label: 'Search', icon: <RiSearchLine /> },
   { to: '/library', label: 'Library', icon: <RiFilmLine /> },
+  { to: '/', label: 'Home', icon: <RiHome2Line />, end: true },
   { to: '/watchlist', label: 'Watchlist', icon: <RiBookmarkLine /> },
   { to: '/settings', label: 'Settings', icon: <RiSettings3Line /> },
 ]

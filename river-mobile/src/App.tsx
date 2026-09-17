@@ -7,6 +7,7 @@ import SearchPage from './pages/SearchPage'
 import LibraryPage from './pages/LibraryPage'
 import WatchlistPage from './pages/WatchlistPage'
 import SettingsPage from './pages/SettingsPage'
+import RequestPage from './pages/RequestPage'
 import MovieDetailPage from './pages/MovieDetailPage'
 import TVShowDetailPage from './pages/TVShowDetailPage'
 import AlbumDetailPage from './pages/AlbumDetailPage'
@@ -50,6 +51,7 @@ export default function App() {
           <Route path="/library" element={<LibraryPage />} />
           <Route path="/watchlist" element={<WatchlistPage />} />
           <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/request" element={<RequestPage />} />
           <Route path="/movies/:id" element={<MovieDetailPage />} />
           <Route path="/tvshows/:id" element={<TVShowDetailPage />} />
           <Route path="/albums/:id" element={<AlbumDetailPage />} />

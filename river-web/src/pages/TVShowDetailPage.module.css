@@ -603,3 +603,9 @@
   font-style: italic;
   line-height: 1.2;
 }
+
+.creditsGroupTitle {
+  margin-top: var(--space-3);
+  margin-bottom: var(--space-1);
+  color: var(--color-on-surface-variant);
+}

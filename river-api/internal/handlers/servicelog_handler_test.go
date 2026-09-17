@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"testing"
 
+	"river-api/internal/middleware"
 	"river-api/internal/services"
 
 	"github.com/gin-gonic/gin"
@@ -17,6 +18,16 @@ func serviceLogRouter(repo *fakeServiceLogRepo) *gin.Engine {
 	r := gin.New()
 	r.POST("/logs", h.Create)
 	r.GET("/admin/logs", h.List)
+	return r
+}
+
+// Router that injects an authenticated principal, as the auth middleware would.
+func serviceLogRouterAs(repo *fakeServiceLogRepo, username string) *gin.Engine {
+	gin.SetMode(gin.TestMode)
+	h := NewServiceLogHandler(services.NewServiceLogService(repo))
+	r := gin.New()
+	r.Use(func(c *gin.Context) { c.Set("claims", &middleware.Claims{Username: username, Role: "service"}) })
+	r.POST("/logs", h.Create)
 	return r
 }
 
@@ -37,6 +48,17 @@ func TestServiceLogHandler_Create(t *testing.T) {
 		bad := serviceLogRouter(&fakeServiceLogRepo{createErr: errors.New("db down")})
 		w := doJSON(bad, http.MethodPost, "/logs", `{"level":"info","service":"s","message":"m"}`)
 		assert.Equal(t, http.StatusInternalServerError, w.Code)
+	})
+	t.Run("stamps the authenticated caller, keeping the body's service label", func(t *testing.T) {
+		repo := &fakeServiceLogRepo{}
+		r := serviceLogRouterAs(repo, "river-service")
+		// A spoofed service label still records who actually wrote it.
+		w := doJSON(r, http.MethodPost, "/logs", `{"level":"info","service":"river-scan","message":"scan complete"}`)
+		assert.Equal(t, http.StatusNoContent, w.Code)
+		if assert.Len(t, repo.entries, 1) {
+			assert.Equal(t, "river-scan", repo.entries[0].Service)      // component label preserved
+			assert.Equal(t, "river-service", repo.entries[0].CreatedBy) // real attribution stamped server-side
+		}
 	})
 }
 

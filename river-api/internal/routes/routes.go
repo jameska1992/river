@@ -69,7 +69,9 @@ func Register(r *gin.Engine, secret string,
 		protected.POST("/auth/me/password", auth.ChangePassword)
 
 		// Logs
-		protected.POST("/logs", serviceLog.Create)
+		// Only services + admins append logs (not every authenticated user);
+		// the handler stamps the real caller as CreatedBy.
+		protected.POST("/logs", middleware.AdminOrService(), serviceLog.Create)
 		protected.GET("/admin/logs", middleware.AdminOnly(), serviceLog.List)
 
 		// Failed ingest jobs (dead-lettered messages). Services report via

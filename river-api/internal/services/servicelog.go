@@ -8,9 +8,10 @@ import (
 )
 
 type CreateLogInput struct {
-	Level   string
-	Service string
-	Message string
+	Level     string
+	Service   string
+	Message   string
+	CreatedBy string
 }
 
 type ListLogsInput struct {
@@ -32,9 +33,10 @@ func NewServiceLogService(repo repository.ServiceLogRepository) *ServiceLogServi
 
 func (s *ServiceLogService) Create(input CreateLogInput) error {
 	entry := &models.ServiceLog{
-		Level:   input.Level,
-		Service: input.Service,
-		Message: input.Message,
+		Level:     input.Level,
+		Service:   input.Service,
+		Message:   input.Message,
+		CreatedBy: input.CreatedBy,
 	}
 	return s.repo.Create(entry)
 }

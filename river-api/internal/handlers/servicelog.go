@@ -3,6 +3,7 @@ package handlers
 import (
 	"net/http"
 
+	"river-api/internal/middleware"
 	"river-api/internal/services"
 
 	"github.com/gin-gonic/gin"
@@ -40,10 +41,18 @@ func (h *ServiceLogHandler) Create(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+	// Attribute the entry to the authenticated principal (service account or
+	// admin), stamped from the JWT — never from the body — so a spoofed
+	// `service` label can't hide who actually wrote it.
+	createdBy := ""
+	if claims := middleware.GetClaims(c); claims != nil {
+		createdBy = claims.Username
+	}
 	if err := h.svc.Create(services.CreateLogInput{
-		Level:   req.Level,
-		Service: req.Service,
-		Message: req.Message,
+		Level:     req.Level,
+		Service:   req.Service,
+		Message:   req.Message,
+		CreatedBy: createdBy,
 	}); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

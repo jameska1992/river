@@ -45,7 +45,13 @@ const SEEK_SECONDS = 10
 const RESUME_TAIL_GUARD_S = 30
 const UP_NEXT_THRESHOLD_S = 30
 const SEEK_PILL_HIDE_MS = 800
-const AUDIO_SYNC_DRIFT_S = 0.15
+// Alt-audio (muted <video> + separate <audio>) sync tuning. The audio element
+// streams over its own connection, so on flaky links — Fire OS WebView
+// especially — it can stall or drift relative to the video. We tolerate small
+// drift and only hard-correct larger gaps, rate-limited so a correction's own
+// re-seek can't loop into a freeze.
+const AUDIO_SYNC_TOLERANCE_S = 0.3   // ignore drift below this
+const AUDIO_RESEAT_MIN_MS = 1500     // min gap between hard re-seats
 
 export interface UpNext {
   title: string
@@ -271,34 +277,102 @@ function PlayerInner({
     }
   }, [activeSubtitleId, subtitles])
 
-  // Alt-audio sync: mirror video state to the separate <audio> element
-  // when an alternate track is selected. The default-audio path keeps
-  // the <audio> element unmounted so there's no overhead when not used.
+  // Alt-audio sync: mirror the video's clock onto the separate <audio> element
+  // when an alternate track is selected. The audio streams over its own
+  // connection and can stall/drift independently (Fire OS WebView especially),
+  // so rather than hard-snapping the audio to the video on every tick — which
+  // thrashes the audio decoder into a freeze — we HOLD the pair (pause both)
+  // whenever *either* element runs out of buffer, then re-seat and resume
+  // together once both can play. Small drift is tolerated; larger gaps are
+  // re-seated, rate-limited and guarded so a correction's own seek can't loop.
+  // (The default-audio path leaves the <audio> element unmounted — no overhead.)
   const altAudio = activeAudioId !== null
   useEffect(() => {
     if (!altAudio) return
     const v = videoRef.current
     const a = audioRef.current
     if (!v || !a) return
-    const onPlay = () => { void a.play() }
-    const onPauseEv = () => { a.pause() }
-    const onSeeked = () => { a.currentTime = v.currentTime }
+
+    let resyncing = false   // our own currentTime write is in flight
+    let holding = false     // we've paused the pair to wait on buffer
+    let lastReseat = 0
+
+    const bothReady = () =>
+      v.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA &&
+      a.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA
+
+    // Align audio to the video clock. Skip no-op writes (they wouldn't fire
+    // 'seeked', which would otherwise leave `resyncing` stuck true).
+    const reseat = () => {
+      if (Math.abs(a.currentTime - v.currentTime) < 0.02) return
+      resyncing = true
+      a.currentTime = v.currentTime
+    }
+
+    // Buffer underrun on either side → pause the pair so the video can't race
+    // ahead of (or dead-lock with) the audio.
+    const hold = () => {
+      if (holding || v.paused) return
+      holding = true
+      v.pause()
+      a.pause()
+    }
+    // Resume only once BOTH elements have buffered again, realigned first.
+    const tryResume = () => {
+      if (!holding || !bothReady()) return
+      holding = false
+      reseat()
+      void v.play()
+      void a.play()
+    }
+
+    const onVideoPlay = () => { if (!holding) void a.play() }
+    const onVideoPause = () => { if (!holding) a.pause() }
+    const onSeeked = () => reseat()
+    const onWaiting = () => hold()
+    const onReady = () => tryResume()
+    const onAudioSeeked = () => { resyncing = false }
     const onTimeUpdate = () => {
-      if (Math.abs(a.currentTime - v.currentTime) > AUDIO_SYNC_DRIFT_S) {
-        a.currentTime = v.currentTime
+      if (holding || resyncing) return
+      const now = performance.now()
+      if (Math.abs(a.currentTime - v.currentTime) > AUDIO_SYNC_TOLERANCE_S &&
+          now - lastReseat > AUDIO_RESEAT_MIN_MS) {
+        lastReseat = now
+        reseat()
       }
     }
-    a.currentTime = v.currentTime
-    if (!v.paused) void a.play()
-    v.addEventListener('play', onPlay)
-    v.addEventListener('pause', onPauseEv)
+
+    // Start aligned; if the audio hasn't buffered yet, hold until it has.
+    reseat()
+    if (!v.paused) {
+      if (bothReady()) void a.play()
+      else hold()
+    }
+
+    v.addEventListener('play', onVideoPlay)
+    v.addEventListener('pause', onVideoPause)
     v.addEventListener('seeked', onSeeked)
+    v.addEventListener('waiting', onWaiting)
+    v.addEventListener('playing', onReady)
+    v.addEventListener('canplay', onReady)
     v.addEventListener('timeupdate', onTimeUpdate)
+    a.addEventListener('waiting', onWaiting)
+    a.addEventListener('playing', onReady)
+    a.addEventListener('canplay', onReady)
+    a.addEventListener('seeked', onAudioSeeked)
+
     return () => {
-      v.removeEventListener('play', onPlay)
-      v.removeEventListener('pause', onPauseEv)
+      v.removeEventListener('play', onVideoPlay)
+      v.removeEventListener('pause', onVideoPause)
       v.removeEventListener('seeked', onSeeked)
+      v.removeEventListener('waiting', onWaiting)
+      v.removeEventListener('playing', onReady)
+      v.removeEventListener('canplay', onReady)
       v.removeEventListener('timeupdate', onTimeUpdate)
+      a.removeEventListener('waiting', onWaiting)
+      a.removeEventListener('playing', onReady)
+      a.removeEventListener('canplay', onReady)
+      a.removeEventListener('seeked', onAudioSeeked)
       a.pause()
     }
   }, [altAudio, activeAudioId])

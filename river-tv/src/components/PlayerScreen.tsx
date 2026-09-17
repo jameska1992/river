@@ -30,7 +30,7 @@ import { imageUrl } from '../util/imageUrl'
  *   • buffered-range indicator on the seek bar
  *   • seek-feedback pill (e.g. "+10s") when scrubbing
  *   • subtitle picker (HTML <track> mode toggling) and audio-track
- *     picker (mute video + sync a separate <audio> element)
+ *     picker (swaps the <video> source to the track's variant MP4)
  *   • "Up Next" card during the last 30 s of the current item
  *
  * Key handling: FocusProvider manages D-pad nav between visible control
@@ -45,7 +45,6 @@ const SEEK_SECONDS = 10
 const RESUME_TAIL_GUARD_S = 30
 const UP_NEXT_THRESHOLD_S = 30
 const SEEK_PILL_HIDE_MS = 800
-const AUDIO_SYNC_DRIFT_S = 0.15
 
 export interface UpNext {
   title: string
@@ -107,25 +106,6 @@ function PlayerInner({
   audioOnly, coverUrl, onExit,
 }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null)
-  const audioRef = useRef<HTMLAudioElement>(null)
-
-  // The <video> plays from local state seeded by the streamUrl prop, so
-  // stall recovery can reload the source in place. Keep it in sync when the
-  // prop changes (e.g. skip-next reuses this component with a new URL) using
-  // React's adjust-state-during-render pattern — no effect needed.
-  const [src, setSrc] = useState(streamUrl)
-  const [lastStreamUrl, setLastStreamUrl] = useState(streamUrl)
-  if (streamUrl !== lastStreamUrl) {
-    setLastStreamUrl(streamUrl)
-    setSrc(streamUrl)
-  }
-
-  const buildSrc = useCallback(
-    () => (buildStreamUrl ? buildStreamUrl() : streamUrl),
-    [buildStreamUrl, streamUrl],
-  )
-  const { recover, onError: onMediaError, freezeGraceMs } = useMediaRecovery(videoRef, buildSrc, setSrc)
-
   const [paused, setPaused] = useState(true)
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
@@ -139,26 +119,33 @@ function PlayerInner({
   const [audioTracks, setAudioTracks] = useState<AudioTrack[]>([])
   // null = no subtitles shown; otherwise id of the selected track.
   const [activeSubtitleId, setActiveSubtitleId] = useState<string | null>(null)
-  // null = use the video's built-in audio; otherwise id of an alt track.
+  // null = the file's default audio; otherwise the id of an alternate track.
+  // An alt track is a full video+that-audio variant MP4 (muxed server-side),
+  // so selecting one swaps the <video> source (see selectAudio) — a single
+  // element with native A/V sync, no separate <audio> element to keep aligned.
   const [activeAudioId, setActiveAudioId] = useState<string | null>(null)
 
-  // The alt-audio <audio> element gets the same in-place stall recovery as
-  // the video: its connection dies during the same pause, so on resume it
-  // would sit silent (play() "succeeds" but the timeline is frozen) while the
-  // video plays. It streams from its own local `src` state, kept in sync with
-  // the selected track via the adjust-state-during-render pattern.
-  const altAudioUrl = activeAudioId ? api.audioTrackStreamUrl(activeAudioId) : undefined
-  const [audioSrc, setAudioSrc] = useState(altAudioUrl)
-  const [lastAudioUrl, setLastAudioUrl] = useState(altAudioUrl)
-  if (altAudioUrl !== lastAudioUrl) {
-    setLastAudioUrl(altAudioUrl)
-    setAudioSrc(altAudioUrl)
+  // The <video> plays from local `src` state so stall recovery can reload it
+  // in place. It's set explicitly on a track swap (selectAudio) and reset here
+  // when the streamUrl prop changes — skip-next reuses this component for a new
+  // item, which returns it to that item's default audio.
+  const [src, setSrc] = useState(streamUrl)
+  const [lastStreamUrl, setLastStreamUrl] = useState(streamUrl)
+  if (streamUrl !== lastStreamUrl) {
+    setLastStreamUrl(streamUrl)
+    setActiveAudioId(null)
+    setSrc(streamUrl)
   }
-  const buildAudioSrc = useCallback(
-    () => (activeAudioId ? api.audioTrackStreamUrl(activeAudioId) : undefined),
-    [activeAudioId],
+  // On a track swap, restore position + play state once the new source loads.
+  const resumeAtRef = useRef<{ time: number; play: boolean } | null>(null)
+
+  const buildSrc = useCallback(
+    () => (activeAudioId
+      ? api.audioTrackStreamUrl(activeAudioId)
+      : (buildStreamUrl ? buildStreamUrl() : streamUrl)),
+    [activeAudioId, buildStreamUrl, streamUrl],
   )
-  const { recover: recoverAudio, onError: onAudioError } = useMediaRecovery(audioRef, buildAudioSrc, setAudioSrc)
+  const { recover, onError: onMediaError, freezeGraceMs } = useMediaRecovery(videoRef, buildSrc, setSrc)
 
   const [showSubsPicker, setShowSubsPicker] = useState(false)
   const [showAudioPicker, setShowAudioPicker] = useState(false)
@@ -271,61 +258,36 @@ function PlayerInner({
     }
   }, [activeSubtitleId, subtitles])
 
-  // Alt-audio sync: mirror video state to the separate <audio> element
-  // when an alternate track is selected. The default-audio path keeps
-  // the <audio> element unmounted so there's no overhead when not used.
-  const altAudio = activeAudioId !== null
-  useEffect(() => {
-    if (!altAudio) return
+  // Switch audio track: capture the current position + play state, then swap
+  // the <video> source to that track's variant MP4 (or the main stream for the
+  // default). onLoadedMetadata on the <video> restores the position once the
+  // new source loads — one element, natively A/V synced, nothing to keep in
+  // sync. A brief buffer while the new source loads is expected (like a
+  // quality switch), but there's no drift or freeze.
+  const selectAudio = useCallback((id: string | null) => {
     const v = videoRef.current
-    const a = audioRef.current
-    if (!v || !a) return
-    const onPlay = () => { void a.play() }
-    const onPauseEv = () => { a.pause() }
-    const onSeeked = () => { a.currentTime = v.currentTime }
-    const onTimeUpdate = () => {
-      if (Math.abs(a.currentTime - v.currentTime) > AUDIO_SYNC_DRIFT_S) {
-        a.currentTime = v.currentTime
-      }
-    }
-    a.currentTime = v.currentTime
-    if (!v.paused) void a.play()
-    v.addEventListener('play', onPlay)
-    v.addEventListener('pause', onPauseEv)
-    v.addEventListener('seeked', onSeeked)
-    v.addEventListener('timeupdate', onTimeUpdate)
-    return () => {
-      v.removeEventListener('play', onPlay)
-      v.removeEventListener('pause', onPauseEv)
-      v.removeEventListener('seeked', onSeeked)
-      v.removeEventListener('timeupdate', onTimeUpdate)
-      a.pause()
-    }
-  }, [altAudio, activeAudioId])
+    if (v) resumeAtRef.current = { time: v.currentTime, play: !v.paused }
+    setActiveAudioId(id)
+    setSrc(id ? api.audioTrackStreamUrl(id) : streamUrl)
+  }, [streamUrl])
 
   const togglePlay = useCallback(() => {
     const v = videoRef.current
     if (!v) return
     if (v.paused) {
       const before = v.currentTime
-      const a = audioRef.current
-      const audioBefore = a?.currentTime
       void v.play()
       // If resuming doesn't advance the timeline shortly, the stream stalled
       // while paused (dead connection / expired token) — reload it in place.
-      // Check the alt-audio element independently: it can be the frozen one
-      // (the video plays but the sound is silent) since it has its own socket.
       window.setTimeout(() => {
         const m = videoRef.current
         if (m && !m.paused && m.currentTime === before) void recover()
-        const am = audioRef.current
-        if (am && !am.paused && am.currentTime === audioBefore) void recoverAudio()
       }, freezeGraceMs)
     } else {
       v.pause()
     }
     bumpControls()
-  }, [bumpControls, recover, recoverAudio, freezeGraceMs])
+  }, [bumpControls, recover, freezeGraceMs])
 
   // Skip-back: near the start of the file → previous item (if any),
   // otherwise restart at zero. Works for movies too — they just don't
@@ -399,8 +361,6 @@ function PlayerInner({
   const showUpNext =
     !!upNext && !upNextDismissed && duration > 0 && remaining < UP_NEXT_THRESHOLD_S
 
-  const altTrack = altAudio ? audioTracks.find(t => t.id === activeAudioId) ?? null : null
-
   return (
     <div style={styles.page}>
       <video
@@ -408,7 +368,6 @@ function PlayerInner({
         src={src}
         autoPlay
         playsInline
-        muted={altAudio}
         style={{
           ...styles.video,
           objectFit: fitMode,
@@ -426,6 +385,16 @@ function PlayerInner({
         onCanPlay={() => { setBuffering(false); setError(null) }}
         onTimeUpdate={e => setCurrentTime(e.currentTarget.currentTime)}
         onDurationChange={e => setDuration(e.currentTarget.duration)}
+        // After an audio-track swap the source reloads; restore the position
+        // and play state captured in selectAudio so the switch is seamless.
+        onLoadedMetadata={e => {
+          const r = resumeAtRef.current
+          if (!r) return
+          resumeAtRef.current = null
+          const v = e.currentTarget
+          if (r.time > 0) v.currentTime = r.time
+          if (r.play) void v.play()
+        }}
         onProgress={e => {
           const v = e.currentTarget
           if (v.buffered.length === 0) return
@@ -470,16 +439,6 @@ function PlayerInner({
         ))}
       </video>
 
-      {altTrack && (
-        <audio
-          ref={audioRef}
-          src={audioSrc}
-          autoPlay
-          preload="auto"
-          style={{ display: 'none' }}
-          onError={onAudioError}
-        />
-      )}
 
       {audioOnly && (
         <div style={styles.coverOverlay}>
@@ -625,14 +584,14 @@ function PlayerInner({
             <PickerRow
               label="Default (in-file)"
               active={activeAudioId === null}
-              onSelect={() => { setActiveAudioId(null); setShowAudioPicker(false) }}
+              onSelect={() => { selectAudio(null); setShowAudioPicker(false) }}
             />
             {audioTracks.map(t => (
               <PickerRow
                 key={t.id}
                 label={t.label || t.language || `Track ${t.stream_index}`}
                 active={activeAudioId === t.id}
-                onSelect={() => { setActiveAudioId(t.id); setShowAudioPicker(false) }}
+                onSelect={() => { selectAudio(t.id); setShowAudioPicker(false) }}
               />
             ))}
           </div>

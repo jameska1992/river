@@ -61,7 +61,7 @@ interface Props {
  * Owns the <video> (autoplay, resume-from-saved-position, ended → next/exit),
  * throttled progress reporting over the WebSocket, tap-to-toggle controls with
  * a 3.5s auto-hide, a draggable scrub bar, ±10s skips, subtitle (<track> mode
- * toggling) and alternate-audio (muted video + synced <audio>) pickers, an
+ * toggling) and alternate-audio (swaps the <video> source to the variant) pickers, an
  * "Up Next" card, and best-effort fullscreen + landscape orientation lock.
  */
 export function VideoPlayer({
@@ -71,19 +71,10 @@ export function VideoPlayer({
   upNext, onPrev, onNext, startFromBeginning, onExit,
 }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null)
-  const audioRef = useRef<HTMLAudioElement>(null)
   const rootRef = useRef<HTMLDivElement>(null)
   const barRef = useRef<HTMLDivElement>(null)
-
-  // The <video> plays from local state seeded by the prop so recovery can
-  // reload the source in place; keep it in sync when the prop changes
-  // (skip-next reuses this component with a new URL) via adjust-during-render.
-  const [src, setSrc] = useState(streamUrl)
-  const [lastStreamUrl, setLastStreamUrl] = useState(streamUrl)
-  if (streamUrl !== lastStreamUrl) {
-    setLastStreamUrl(streamUrl)
-    setSrc(streamUrl)
-  }
+  // On an audio-track swap, restore position + play state once the new source loads.
+  const resumeAtRef = useRef<{ time: number; play: boolean } | null>(null)
 
   const [paused, setPaused] = useState(true)
   const [currentTime, setCurrentTime] = useState(0)
@@ -114,16 +105,32 @@ export function VideoPlayer({
   const gestureRef = useRef({ startX: 0, startY: 0, span: 1, startValue: 0, kind: null as PlayerGesture | null, moved: false })
   const gestureHideTimer = useRef<number | null>(null)
 
-  const altAudio = activeAudioId !== null
-  const altAudioUrl = activeAudioId ? api.audioTrackStreamUrl(activeAudioId) : undefined
-  const [audioSrc, setAudioSrc] = useState(altAudioUrl)
-  const [lastAudioUrl, setLastAudioUrl] = useState(altAudioUrl)
-  if (altAudioUrl !== lastAudioUrl) {
-    setLastAudioUrl(altAudioUrl)
-    setAudioSrc(altAudioUrl)
+  // The <video> plays from local `src` state so recovery can reload it in
+  // place. It's set explicitly on an audio-track swap (selectAudio) and reset
+  // when the streamUrl prop changes — skip-next reuses this component for a new
+  // item, returning it to that item's default audio. An alt track is a full
+  // video+that-audio variant MP4, so swapping the source keeps playback a
+  // single element with native A/V sync — no separate <audio> to align.
+  const [src, setSrc] = useState(streamUrl)
+  const [lastStreamUrl, setLastStreamUrl] = useState(streamUrl)
+  if (streamUrl !== lastStreamUrl) {
+    setLastStreamUrl(streamUrl)
+    setActiveAudioId(null)
+    setSrc(streamUrl)
   }
 
   const revealControls = useCallback(() => setShowControls(true), [])
+
+  // Switch audio track: capture position + play state, then swap the <video>
+  // source to that track's variant MP4 (or the main stream for the default).
+  // onLoadedMetadata restores the position once it loads — one element, synced.
+  const selectAudio = useCallback((id: string | null) => {
+    const v = videoRef.current
+    if (v) resumeAtRef.current = { time: v.currentTime, play: !v.paused }
+    setActiveAudioId(id)
+    setSrc(id ? api.audioTrackStreamUrl(id) : streamUrl)
+    setSheet(null)
+  }, [streamUrl])
 
   // Auto-hide controls while playing. Setting state inside the timeout (not
   // synchronously in the effect body) keeps this clear of set-state-in-effect.
@@ -189,34 +196,6 @@ export function VideoPlayer({
     }
   }, [activeSubtitleId, subtitles])
 
-  // Alt-audio sync: mirror the video's play/pause/seek onto a separate muted
-  // <audio> element carrying the selected track.
-  useEffect(() => {
-    if (!altAudio) return
-    const v = videoRef.current
-    const a = audioRef.current
-    if (!v || !a) return
-    const onPlay = () => { void a.play() }
-    const onPauseEv = () => { a.pause() }
-    const onSeeked = () => { a.currentTime = v.currentTime }
-    const onTimeUpdate = () => {
-      if (Math.abs(a.currentTime - v.currentTime) > 0.15) a.currentTime = v.currentTime
-    }
-    a.currentTime = v.currentTime
-    if (!v.paused) void a.play()
-    v.addEventListener('play', onPlay)
-    v.addEventListener('pause', onPauseEv)
-    v.addEventListener('seeked', onSeeked)
-    v.addEventListener('timeupdate', onTimeUpdate)
-    return () => {
-      v.removeEventListener('play', onPlay)
-      v.removeEventListener('pause', onPauseEv)
-      v.removeEventListener('seeked', onSeeked)
-      v.removeEventListener('timeupdate', onTimeUpdate)
-      a.pause()
-    }
-  }, [altAudio, activeAudioId])
-
   // Track document fullscreen state so the button reflects reality if the user
   // exits via a system gesture.
   useEffect(() => {
@@ -278,8 +257,7 @@ export function VideoPlayer({
   useEffect(() => {
     sessionVolume = volume
     if (videoRef.current) videoRef.current.volume = volume
-    if (audioRef.current) audioRef.current.volume = volume
-  }, [volume, altAudio])
+  }, [volume])
   useEffect(() => { sessionBrightness = brightness }, [brightness])
 
   const onGestureDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
@@ -335,7 +313,6 @@ export function VideoPlayer({
         src={src}
         autoPlay
         playsInline
-        muted={altAudio}
         style={styles.video}
         crossOrigin="anonymous"
         onPlay={() => setPaused(false)}
@@ -345,6 +322,16 @@ export function VideoPlayer({
         onCanPlay={() => { setBuffering(false); setError(null) }}
         onTimeUpdate={e => setCurrentTime(e.currentTarget.currentTime)}
         onDurationChange={e => setDuration(e.currentTarget.duration)}
+        // After an audio-track swap the source reloads; restore the position +
+        // play state captured in selectAudio so the switch is seamless.
+        onLoadedMetadata={e => {
+          const r = resumeAtRef.current
+          if (!r) return
+          resumeAtRef.current = null
+          const v = e.currentTarget
+          if (r.time > 0) v.currentTime = r.time
+          if (r.play) void v.play().catch(() => {})
+        }}
         onProgress={e => {
           const v = e.currentTarget
           if (v.buffered.length === 0) return
@@ -364,7 +351,9 @@ export function VideoPlayer({
             // Long pause / expired stream token — refresh it and reload in place.
             try {
               await api.refreshStreamToken()
-              setSrc(buildStreamUrl ? buildStreamUrl() : streamUrl)
+              setSrc(activeAudioId
+                ? api.audioTrackStreamUrl(activeAudioId)
+                : (buildStreamUrl ? buildStreamUrl() : streamUrl))
             } catch { /* stays on the error overlay */ }
           }
         }}
@@ -379,10 +368,6 @@ export function VideoPlayer({
           />
         ))}
       </video>
-
-      {altAudio && (
-        <audio ref={audioRef} src={audioSrc} autoPlay preload="auto" style={{ display: 'none' }} />
-      )}
 
       {/* Brightness dim overlay (web has no real screen-brightness API). */}
       {brightness < 1 && <div style={{ ...styles.dim, opacity: Math.min(MAX_DIM, 1 - brightness) }} />}
@@ -527,13 +512,13 @@ export function VideoPlayer({
 
       {sheet === 'audio' && (
         <BottomSheet title="Audio" onClose={() => setSheet(null)}>
-          <SheetOption label="Default (in-file)" active={activeAudioId === null} onSelect={() => { setActiveAudioId(null); setSheet(null) }} />
+          <SheetOption label="Default (in-file)" active={activeAudioId === null} onSelect={() => selectAudio(null)} />
           {audioTracks.map(t => (
             <SheetOption
               key={t.id}
               label={t.label || t.language || `Track ${t.stream_index}`}
               active={activeAudioId === t.id}
-              onSelect={() => { setActiveAudioId(t.id); setSheet(null) }}
+              onSelect={() => selectAudio(t.id)}
             />
           ))}
         </BottomSheet>

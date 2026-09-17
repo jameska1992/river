@@ -209,6 +209,9 @@ export function MovieDetailPage() {
                   {movie.year}
                 </span>
               )}
+              {movie.certification && (
+                <span className={styles.cert}>{movie.certification}</span>
+              )}
               {runtime && (
                 <span className={styles.attrItem}>
                   <RiTimeLine size={14} />

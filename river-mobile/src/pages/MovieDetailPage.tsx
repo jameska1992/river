@@ -23,6 +23,7 @@ export default function MovieDetailPage() {
   const { movie, credits } = data
   const meta = [
     movie.year > 0 ? String(movie.year) : null,
+    movie.certification || null,
     movie.runtime > 0 ? `${movie.runtime} min` : null,
     movie.rating > 0 ? `★ ${movie.rating.toFixed(1)}` : null,
     ...(movie.genres ?? []),

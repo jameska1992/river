@@ -43,6 +43,10 @@ type MovieInput struct {
 	Year          int
 	Genres        string
 	Rating        float32
+	// Certification is sticky like TMDBID: Update only overwrites it when the
+	// incoming value is non-empty, so admin metadata edits (which don't carry
+	// it) and metadata fetches that find no GB rating can't blank it.
+	Certification string
 	Runtime       int
 	PosterPath    string
 	BackdropPath  string
@@ -123,6 +127,7 @@ func (s *MovieService) Create(input MovieInput) (*models.Movie, error) {
 		Year:          input.Year,
 		Genres:        defaultJSON(input.Genres),
 		Rating:        input.Rating,
+		Certification: input.Certification,
 		Runtime:       input.Runtime,
 		PosterPath:    input.PosterPath,
 		BackdropPath:  input.BackdropPath,
@@ -148,6 +153,9 @@ func (s *MovieService) Update(id string, input MovieInput) (*models.Movie, error
 	movie.Description = input.Description
 	movie.Year = input.Year
 	movie.Rating = input.Rating
+	if input.Certification != "" {
+		movie.Certification = input.Certification
+	}
 	movie.Runtime = input.Runtime
 	movie.PosterPath = input.PosterPath
 	movie.BackdropPath = input.BackdropPath

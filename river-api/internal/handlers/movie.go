@@ -32,6 +32,7 @@ type movieRequest struct {
 	Year          int     `json:"year"`
 	Genres        string  `json:"genres"`
 	Rating        float32 `json:"rating"`
+	Certification string  `json:"certification"`
 	Runtime       int     `json:"runtime"`
 	PosterPath    string  `json:"poster_path"`
 	BackdropPath  string  `json:"backdrop_path"`
@@ -105,7 +106,7 @@ func (h *MovieHandler) Create(c *gin.Context) {
 	movie, err := h.svc.Create(services.MovieInput{
 		LibraryID: libID, Title: req.Title, OriginalTitle: req.OriginalTitle,
 		Description: req.Description, Year: req.Year, Genres: req.Genres,
-		Rating: req.Rating, Runtime: req.Runtime, PosterPath: req.PosterPath,
+		Rating: req.Rating, Certification: req.Certification, Runtime: req.Runtime, PosterPath: req.PosterPath,
 		BackdropPath: req.BackdropPath, TrailerURL: req.TrailerURL,
 		TMDBID: req.TMDBID, FilePath: req.FilePath, SourcePath: req.SourcePath,
 	})
@@ -184,7 +185,7 @@ func (h *MovieHandler) Update(c *gin.Context) {
 	movie, err := h.svc.Update(c.Param("id"), services.MovieInput{
 		LibraryID: libID, Title: req.Title, OriginalTitle: req.OriginalTitle,
 		Description: req.Description, Year: req.Year, Genres: req.Genres,
-		Rating: req.Rating, Runtime: req.Runtime, PosterPath: req.PosterPath,
+		Rating: req.Rating, Certification: req.Certification, Runtime: req.Runtime, PosterPath: req.PosterPath,
 		BackdropPath: req.BackdropPath, TrailerURL: req.TrailerURL,
 		TMDBID: req.TMDBID, FilePath: req.FilePath, SourcePath: req.SourcePath,
 	})

@@ -119,6 +119,7 @@ func (p *Processor) enrich(movie *apiclient.Movie, hintTMDB int, hintIMDB, paren
 		Year:          meta.Year,
 		Genres:        string(genresJSON),
 		Rating:        meta.Rating,
+		Certification: meta.Certification,
 		Runtime:       meta.Runtime,
 		PosterPath:    meta.PosterURL,
 		BackdropPath:  meta.BackdropURL,

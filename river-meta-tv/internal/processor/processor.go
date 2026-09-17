@@ -198,6 +198,7 @@ func (p *Processor) enrichShow(show *apiclient.TVShow, hintTMDB int, hintIMDB st
 		Status:        meta.Status,
 		Genres:        string(genresJSON),
 		Rating:        meta.Rating,
+		Certification: meta.Certification,
 		PosterPath:    meta.PosterURL,
 		BackdropPath:  meta.BackdropURL,
 		TrailerURL:    meta.TrailerURL,

@@ -8787,6 +8787,9 @@ const docTemplate = `{
                 "backdrop_path": {
                     "type": "string"
                 },
+                "certification": {
+                    "type": "string"
+                },
                 "description": {
                     "type": "string"
                 },
@@ -9070,6 +9073,9 @@ const docTemplate = `{
             ],
             "properties": {
                 "backdrop_path": {
+                    "type": "string"
+                },
+                "certification": {
                     "type": "string"
                 },
                 "description": {
@@ -9525,6 +9531,10 @@ const docTemplate = `{
                 "backdrop_path": {
                     "type": "string"
                 },
+                "certification": {
+                    "description": "Certification is the BBFC (GB) age rating (U, PG, 12, 12A, 15, 18, R18)\nfrom TMDB. Populated by the metadata service; only set/updated on a\nmetadata fetch, so existing titles stay blank until a refresh/re-scan.",
+                    "type": "string"
+                },
                 "created_at": {
                     "type": "string"
                 },
@@ -9670,6 +9680,10 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "backdrop_path": {
+                    "type": "string"
+                },
+                "certification": {
+                    "description": "Certification is the BBFC (GB) content rating from TMDB. Populated by\nthe metadata service; only set/updated on a metadata fetch, so existing\nshows stay blank until a refresh/re-scan.",
                     "type": "string"
                 },
                 "created_at": {

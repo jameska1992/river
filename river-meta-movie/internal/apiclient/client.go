@@ -159,6 +159,7 @@ type MovieRequest struct {
 	Year          int     `json:"year"`
 	Genres        string  `json:"genres"`
 	Rating        float32 `json:"rating"`
+	Certification string  `json:"certification"`
 	Runtime       int     `json:"runtime"`
 	PosterPath    string  `json:"poster_path"`
 	BackdropPath  string  `json:"backdrop_path"`

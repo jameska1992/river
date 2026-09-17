@@ -141,6 +141,20 @@
   color: var(--color-on-surface-variant);
 }
 
+/* BBFC (GB) content rating badge, e.g. "15" / "PG" — boxed to read as a classification mark. */
+.cert {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 6px;
+  height: 20px;
+  border: 1px solid var(--color-on-surface-variant);
+  border-radius: 3px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--color-on-surface-variant);
+}
+
 .genres {
   display: flex;
   flex-wrap: wrap;

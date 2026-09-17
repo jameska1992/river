@@ -17,6 +17,10 @@ type TVShow struct {
 	Status        string    `json:"status"`                     // e.g. "Ended", "Continuing"
 	Genres        string    `gorm:"default:'[]'" json:"genres"` // JSON-encoded []string
 	Rating        float32   `json:"rating"`
+	// Certification is the BBFC (GB) content rating from TMDB. Populated by
+	// the metadata service; only set/updated on a metadata fetch, so existing
+	// shows stay blank until a refresh/re-scan.
+	Certification string    `json:"certification"`
 	PosterPath    string    `json:"poster_path"`
 	BackdropPath  string    `json:"backdrop_path"`
 	TrailerURL    string    `json:"trailer_url"`

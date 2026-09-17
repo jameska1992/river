@@ -51,6 +51,7 @@ export interface Movie extends BaseModel {
   year: number
   genres: string[]
   rating: number
+  certification: string  // BBFC (GB) age rating; '' until a metadata refresh
   runtime: number    // minutes
   poster_path: string
   backdrop_path: string
@@ -141,6 +142,7 @@ export interface TVShow extends BaseModel {
   status: string
   genres: string[]
   rating: number
+  certification: string  // BBFC (GB) content rating; '' until a metadata refresh
   poster_path: string
   backdrop_path: string
   trailer_url: string

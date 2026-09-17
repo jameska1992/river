@@ -245,6 +245,9 @@ export function TVShowDetailPage() {
                 {show.year}
               </span>
             )}
+            {show.certification && (
+              <span className={styles.cert}>{show.certification}</span>
+            )}
             {show.status && (
               <span className={`badge ${statusBadgeClass(show.status)}`}>{show.status}</span>
             )}

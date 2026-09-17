@@ -12,6 +12,10 @@ type Movie struct {
 	Year          int       `json:"year"`
 	Genres        string    `gorm:"default:'[]'" json:"genres"` // JSON-encoded []string
 	Rating        float32   `json:"rating"`
+	// Certification is the BBFC (GB) age rating (U, PG, 12, 12A, 15, 18, R18)
+	// from TMDB. Populated by the metadata service; only set/updated on a
+	// metadata fetch, so existing titles stay blank until a refresh/re-scan.
+	Certification string    `json:"certification"`
 	Runtime       int       `json:"runtime"` // minutes
 	PosterPath    string    `json:"poster_path"`
 	BackdropPath  string    `json:"backdrop_path"`

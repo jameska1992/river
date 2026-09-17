@@ -112,6 +112,7 @@ export default function MovieDetailPage() {
 
                   <div style={styles.attrs}>
                     {movie.year > 0 && <span>{movie.year}</span>}
+                    {movie.certification && <span>{movie.certification}</span>}
                     {movie.runtime > 0 && <span>{formatRuntime(movie.runtime)}</span>}
                     {movie.rating > 0 && <span>★ {movie.rating.toFixed(1)}</span>}
                   </div>

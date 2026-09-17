@@ -42,6 +42,7 @@ type Metadata struct {
 	Year          int
 	Genres        []string
 	Rating        float32
+	Certification string // BBFC (GB) age rating, e.g. "15"
 	Runtime       int
 	PosterURL     string
 	BackdropURL   string
@@ -196,6 +197,8 @@ func yearFromReleaseDate(s string) int {
 func (c *Client) getMovieDetails(id int) (*Metadata, error) {
 	params := url.Values{}
 	params.Set("api_key", c.keyFn())
+	// Pull certifications in the same request (no extra round-trip).
+	params.Set("append_to_response", "release_dates")
 
 	resp, err := c.http.Get(fmt.Sprintf("https://api.themoviedb.org/3/movie/%d?%s", id, params.Encode()))
 	if err != nil {
@@ -218,9 +221,32 @@ func (c *Client) getMovieDetails(id int) (*Metadata, error) {
 		Genres        []struct {
 			Name string `json:"name"`
 		} `json:"genres"`
+		ReleaseDates struct {
+			Results []struct {
+				Iso31661     string `json:"iso_3166_1"`
+				ReleaseDates []struct {
+					Certification string `json:"certification"`
+				} `json:"release_dates"`
+			} `json:"results"`
+		} `json:"release_dates"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&d); err != nil {
 		return nil, fmt.Errorf("tmdb details decode: %w", err)
+	}
+
+	// BBFC (GB) certification: first non-empty entry for the GB region.
+	certification := ""
+	for _, r := range d.ReleaseDates.Results {
+		if r.Iso31661 != "GB" {
+			continue
+		}
+		for _, rd := range r.ReleaseDates {
+			if rd.Certification != "" {
+				certification = rd.Certification
+				break
+			}
+		}
+		break
 	}
 
 	year := 0
@@ -241,6 +267,7 @@ func (c *Client) getMovieDetails(id int) (*Metadata, error) {
 		Year:          year,
 		Genres:        genres,
 		Rating:        d.VoteAverage,
+		Certification: certification,
 		Runtime:       d.Runtime,
 	}
 	if d.PosterPath != "" {

@@ -161,6 +161,7 @@ type TVShowRequest struct {
 	Status        string  `json:"status"`
 	Genres        string  `json:"genres"`
 	Rating        float32 `json:"rating"`
+	Certification string  `json:"certification"`
 	PosterPath    string  `json:"poster_path"`
 	BackdropPath  string  `json:"backdrop_path"`
 	TrailerURL    string  `json:"trailer_url"`

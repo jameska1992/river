@@ -62,6 +62,9 @@ type TVShowInput struct {
 	Status        string
 	Genres        string
 	Rating        float32
+	// Certification is sticky like TMDBID: Update only overwrites it when the
+	// incoming value is non-empty (admin edits / empty fetches can't blank it).
+	Certification string
 	PosterPath    string
 	BackdropPath  string
 	TrailerURL    string
@@ -134,6 +137,7 @@ func (s *TVShowService) CreateShow(input TVShowInput) (*models.TVShow, error) {
 		Status:        input.Status,
 		Genres:        defaultJSON(input.Genres),
 		Rating:        input.Rating,
+		Certification: input.Certification,
 		PosterPath:    input.PosterPath,
 		BackdropPath:  input.BackdropPath,
 		TrailerURL:    input.TrailerURL,
@@ -231,6 +235,9 @@ func (s *TVShowService) UpdateShow(id string, input TVShowInput) (*models.TVShow
 	show.Year = input.Year
 	show.Status = input.Status
 	show.Rating = input.Rating
+	if input.Certification != "" {
+		show.Certification = input.Certification
+	}
 	show.PosterPath = input.PosterPath
 	show.BackdropPath = input.BackdropPath
 	show.TrailerURL = input.TrailerURL

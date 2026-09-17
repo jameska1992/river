@@ -454,6 +454,8 @@ definitions:
     properties:
       backdrop_path:
         type: string
+      certification:
+        type: string
       description:
         type: string
       file_path:
@@ -648,6 +650,8 @@ definitions:
   handlers.tvShowRequest:
     properties:
       backdrop_path:
+        type: string
+      certification:
         type: string
       description:
         type: string
@@ -988,6 +992,12 @@ definitions:
     properties:
       backdrop_path:
         type: string
+      certification:
+        description: |-
+          Certification is the BBFC (GB) age rating (U, PG, 12, 12A, 15, 18, R18)
+          from TMDB. Populated by the metadata service; only set/updated on a
+          metadata fetch, so existing titles stay blank until a refresh/re-scan.
+        type: string
       created_at:
         type: string
       credits_locked:
@@ -1102,6 +1112,12 @@ definitions:
   models.TVShow:
     properties:
       backdrop_path:
+        type: string
+      certification:
+        description: |-
+          Certification is the BBFC (GB) content rating from TMDB. Populated by
+          the metadata service; only set/updated on a metadata fetch, so existing
+          shows stay blank until a refresh/re-scan.
         type: string
       created_at:
         type: string

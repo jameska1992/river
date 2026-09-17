@@ -43,6 +43,7 @@ type ShowMetadata struct {
 	Status        string
 	Genres        []string
 	Rating        float32
+	Certification string // BBFC (GB) content rating, e.g. "15"
 	PosterURL     string
 	BackdropURL   string
 	TrailerURL    string
@@ -254,6 +255,8 @@ func (c *Client) searchShowCandidates(name string) ([]searchCandidate, error) {
 func (c *Client) getShowDetails(id int) (*ShowMetadata, error) {
 	params := url.Values{}
 	params.Set("api_key", c.keyFn())
+	// Pull content ratings in the same request (no extra round-trip).
+	params.Set("append_to_response", "content_ratings")
 
 	resp, err := c.http.Get(fmt.Sprintf("https://api.themoviedb.org/3/tv/%d?%s", id, params.Encode()))
 	if err != nil {
@@ -277,9 +280,24 @@ func (c *Client) getShowDetails(id int) (*ShowMetadata, error) {
 		Genres       []struct {
 			Name string `json:"name"`
 		} `json:"genres"`
+		ContentRatings struct {
+			Results []struct {
+				Iso31661 string `json:"iso_3166_1"`
+				Rating   string `json:"rating"`
+			} `json:"results"`
+		} `json:"content_ratings"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&d); err != nil {
 		return nil, fmt.Errorf("tmdb details decode: %w", err)
+	}
+
+	// BBFC (GB) content rating.
+	certification := ""
+	for _, r := range d.ContentRatings.Results {
+		if r.Iso31661 == "GB" {
+			certification = r.Rating
+			break
+		}
 	}
 
 	genres := make([]string, len(d.Genres))
@@ -296,6 +314,7 @@ func (c *Client) getShowDetails(id int) (*ShowMetadata, error) {
 		Status:        d.Status,
 		Genres:        genres,
 		Rating:        d.VoteAverage,
+		Certification: certification,
 	}
 	if d.PosterPath != "" {
 		meta.PosterURL = c.imageBase + d.PosterPath

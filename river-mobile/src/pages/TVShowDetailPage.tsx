@@ -40,7 +40,7 @@ export default function TVShowDetailPage() {
   if (error || !data) return <ErrorState message={error ?? 'Not found'} onRetry={reload} />
 
   const { show, seasons, credits } = data
-  const meta = [show.year > 0 ? String(show.year) : null, show.status || null, ...(show.genres ?? [])]
+  const meta = [show.year > 0 ? String(show.year) : null, show.certification || null, show.status || null, ...(show.genres ?? [])]
     .filter(Boolean).join('  ·  ')
 
   return (

@@ -146,6 +146,7 @@ export default function TVShowDetailPage() {
 
                   <div style={styles.attrs}>
                     {show.year > 0 && <span>{show.year}</span>}
+                    {show.certification && <span>{show.certification}</span>}
                     {show.status && <span>{show.status}</span>}
                     {show.rating > 0 && <span>★ {show.rating.toFixed(1)}</span>}
                     {seasons.length > 0 && (

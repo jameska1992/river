@@ -36,6 +36,7 @@ type tvShowRequest struct {
 	Status        string  `json:"status"`
 	Genres        string  `json:"genres"`
 	Rating        float32 `json:"rating"`
+	Certification string  `json:"certification"`
 	PosterPath    string  `json:"poster_path"`
 	BackdropPath  string  `json:"backdrop_path"`
 	TrailerURL    string  `json:"trailer_url"`
@@ -102,7 +103,7 @@ func (h *TVShowHandler) CreateShow(c *gin.Context) {
 	show, err := h.svc.CreateShow(services.TVShowInput{
 		LibraryID: libID, Title: req.Title, OriginalTitle: req.OriginalTitle,
 		Description: req.Description, Year: req.Year, Status: req.Status,
-		Genres: req.Genres, Rating: req.Rating, PosterPath: req.PosterPath,
+		Genres: req.Genres, Rating: req.Rating, Certification: req.Certification, PosterPath: req.PosterPath,
 		BackdropPath: req.BackdropPath, TrailerURL: req.TrailerURL,
 		TMDBID: req.TMDBID, FolderPath: req.FolderPath,
 	})
@@ -180,7 +181,7 @@ func (h *TVShowHandler) UpdateShow(c *gin.Context) {
 	show, err := h.svc.UpdateShow(c.Param("id"), services.TVShowInput{
 		LibraryID: libID, Title: req.Title, OriginalTitle: req.OriginalTitle,
 		Description: req.Description, Year: req.Year, Status: req.Status,
-		Genres: req.Genres, Rating: req.Rating, PosterPath: req.PosterPath,
+		Genres: req.Genres, Rating: req.Rating, Certification: req.Certification, PosterPath: req.PosterPath,
 		BackdropPath: req.BackdropPath, TrailerURL: req.TrailerURL,
 		TMDBID: req.TMDBID, FolderPath: req.FolderPath,
 	})

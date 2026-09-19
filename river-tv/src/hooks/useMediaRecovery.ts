@@ -39,16 +39,26 @@ export function useMediaRecovery(
   setSrc: (src: string) => void,
 ) {
   const lastRecoverRef = useRef(0)
+  // True while a reload is in flight. Reloading the src resets the element's
+  // currentTime to 0 and re-fires `timeupdate`, so callers consult this to
+  // hold their displayed-time state until the saved position is restored —
+  // otherwise the timer visibly flashes to 0:00 during the reload.
+  const recoveringRef = useRef(false)
 
   const recover = useCallback(async () => {
     const el = mediaRef.current
     if (!el) return
+    // Already reloading, or reloaded recently: don't stack reloads. The
+    // cooldown also stops a genuinely dead stream (which re-fires `error` on
+    // every reload) from spinning.
+    if (recoveringRef.current) return
     const now = Date.now()
     if (now - lastRecoverRef.current < RECOVERY_COOLDOWN_MS) return
     lastRecoverRef.current = now
 
     const resumeAt = el.currentTime
     const wasPlaying = !el.paused
+    recoveringRef.current = true
 
     // A fresh stream token covers the case where the old one expired while
     // asleep. Proceed even if this fails — a still-valid token reload can
@@ -61,7 +71,17 @@ export function useMediaRecovery(
     }
 
     const src = buildSrc()
-    if (!src) return
+    if (!src) {
+      recoveringRef.current = false
+      return
+    }
+
+    // Safety net: if the reload never reaches `loadedmetadata` (e.g. a truly
+    // dead stream), clear the flag anyway so the displayed time isn't frozen
+    // forever.
+    const clearGuard = window.setTimeout(() => {
+      recoveringRef.current = false
+    }, RECOVERY_COOLDOWN_MS)
 
     // Restore position + play-state once the reloaded element has metadata.
     // React reuses the same DOM node (only the src attribute changes), so
@@ -69,10 +89,16 @@ export function useMediaRecovery(
     el.addEventListener(
       'loadedmetadata',
       () => {
+        window.clearTimeout(clearGuard)
         const m = mediaRef.current
-        if (!m) return
+        if (!m) {
+          recoveringRef.current = false
+          return
+        }
         if (resumeAt > 0) m.currentTime = resumeAt
         if (wasPlaying) m.play().catch(() => {})
+        // Position restored — let displayed time track the element again.
+        recoveringRef.current = false
       },
       { once: true },
     )
@@ -82,10 +108,14 @@ export function useMediaRecovery(
     setSrc(`${src}${src.includes('?') ? '&' : '?'}_r=${Date.now()}`)
   }, [mediaRef, buildSrc, setSrc])
 
-  // Surface a fatal media error (e.g. the stream token 401'd) as a reload.
+  // Surface a media error as a reload — but only for errors that mean the
+  // stream is actually dead. MEDIA_ERR_ABORTED fires from our own src
+  // reassignment (the reload above) and from navigating away; treating it as
+  // a fault would reload spuriously or spin.
   const onError = useCallback(() => {
+    if (mediaRef.current?.error?.code === MediaError.MEDIA_ERR_ABORTED) return
     void recover()
-  }, [recover])
+  }, [mediaRef, recover])
 
   // Returning to a backgrounded app (or waking the device) is the moment
   // the frozen state is noticed. If the element thinks it's playing but the
@@ -105,5 +135,5 @@ export function useMediaRecovery(
     return () => document.removeEventListener('visibilitychange', onVisible)
   }, [mediaRef, recover])
 
-  return { recover, onError, freezeGraceMs: FREEZE_GRACE_MS }
+  return { recover, onError, recoveringRef, freezeGraceMs: FREEZE_GRACE_MS }
 }

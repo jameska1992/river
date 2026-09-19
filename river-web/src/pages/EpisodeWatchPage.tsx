@@ -109,7 +109,7 @@ export function EpisodeWatchPage() {
   const [sourceUnplayable, setSourceUnplayable] = useState(false)
 
   const buildStreamSrc = srcFor
-  const { recover, onError: onVideoError } = useMediaRecovery(videoRef, buildStreamSrc, setVideoSrc)
+  const { recover, onError: onVideoError, recoveringRef } = useMediaRecovery(videoRef, buildStreamSrc, setVideoSrc)
 
   const [playing, setPlaying] = useState(false)
   const [muted, setMuted] = useState(false)
@@ -333,6 +333,9 @@ export function EpisodeWatchPage() {
   const onTimeUpdate = () => {
     const v = videoRef.current
     if (!v || seeking) return
+    // A recovery reload resets currentTime to 0 until the saved position is
+    // restored — hold the displayed time/progress so it doesn't flash to 0:00.
+    if (recoveringRef.current) return
     setCurrentTime(v.currentTime)
     progressRef.current = { position: v.currentTime, duration: v.duration || 0 }
     if (v.currentTime - lastReportRef.current >= REPORT_INTERVAL) {

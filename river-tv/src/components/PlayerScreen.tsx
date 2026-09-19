@@ -145,7 +145,7 @@ function PlayerInner({
       : (buildStreamUrl ? buildStreamUrl() : streamUrl)),
     [activeAudioId, buildStreamUrl, streamUrl],
   )
-  const { recover, onError: onMediaError, freezeGraceMs } = useMediaRecovery(videoRef, buildSrc, setSrc)
+  const { recover, onError: onMediaError, recoveringRef, freezeGraceMs } = useMediaRecovery(videoRef, buildSrc, setSrc)
 
   const [showSubsPicker, setShowSubsPicker] = useState(false)
   const [showAudioPicker, setShowAudioPicker] = useState(false)
@@ -222,6 +222,9 @@ function PlayerInner({
     const tick = () => {
       const v = videoRef.current
       if (!v || v.paused || !v.duration) return
+      // Mid-reload the element briefly reports currentTime 0 — don't report
+      // it as progress and clobber the saved position.
+      if (recoveringRef.current) return
       if (Math.abs(v.currentTime - lastSent) >= PROGRESS_SEND_INTERVAL_S) {
         sock.send(progressKind, progressId, v.currentTime, v.duration)
         lastSent = v.currentTime
@@ -238,7 +241,7 @@ function PlayerInner({
       window.clearInterval(interval)
       sock.close()
     }
-  }, [progressKind, progressId])
+  }, [progressKind, progressId, recoveringRef])
 
   // Load subtitle + audio track metadata once.
   useEffect(() => {
@@ -383,7 +386,9 @@ function PlayerInner({
         // over a video that is playing fine.
         onPlaying={() => { setBuffering(false); setError(null) }}
         onCanPlay={() => { setBuffering(false); setError(null) }}
-        onTimeUpdate={e => setCurrentTime(e.currentTarget.currentTime)}
+        // A recovery reload resets currentTime to 0 until the saved position
+        // is restored — hold the displayed time so it doesn't flash to 0:00.
+        onTimeUpdate={e => { if (!recoveringRef.current) setCurrentTime(e.currentTarget.currentTime) }}
         onDurationChange={e => setDuration(e.currentTarget.duration)}
         // After an audio-track swap the source reloads; restore the position
         // and play state captured in selectAudio so the switch is seamless.

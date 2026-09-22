@@ -1,0 +1,134 @@
+/* Full-bleed crew rail. Scroll chrome mirrors SimilarCarousel so the crew row
+ * reads consistently with the "More like this" / collections rails; the cards
+ * are round-photo person cards (like the cast grid) rather than media cards. */
+
+.section {
+  padding-block: var(--space-3) 0;
+}
+
+.heading {
+  margin: 0 0 var(--space-3);
+  padding-inline: var(--container-margin);
+
+  @media (max-width: 768px) {
+    padding-inline: var(--space-2);
+  }
+}
+
+.carousel {
+  position: relative;
+}
+
+.row {
+  display: flex;
+  gap: var(--space-2);
+  overflow-x: auto;
+  /* Left padding lines the first card up with the heading; right padding is
+   * zero so the last card scrolls cleanly off the edge (carousel feel). */
+  padding: 0 0 var(--space-1) var(--container-margin);
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar { display: none; }
+
+  @media (max-width: 768px) {
+    padding-left: var(--space-2);
+  }
+}
+
+/* ── Edge fades ── */
+
+.fade {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 80px;
+  z-index: 2;
+  pointer-events: none;
+}
+.fadeLeft {
+  left: 0;
+  background: linear-gradient(to right, var(--color-background), transparent);
+}
+.fadeRight {
+  right: 0;
+  background: linear-gradient(to left, var(--color-background), transparent);
+}
+
+/* ── Scroll arrows ── */
+
+.arrow {
+  position: absolute;
+  top: 40px; /* center on the round photo (80px tall), not the text below */
+  transform: translateY(-50%);
+  z-index: 3;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--color-surface-high);
+  border: 1px solid var(--color-outline-variant);
+  color: var(--color-on-surface);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+  transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease;
+
+  &:hover {
+    background: var(--color-surface-highest);
+    color: var(--color-primary);
+    transform: translateY(-50%) scale(1.08);
+  }
+}
+.arrowLeft  { left: 12px; }
+.arrowRight { right: 12px; }
+
+/* ── Person card ── */
+
+.card {
+  flex-shrink: 0;
+  width: 84px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  text-decoration: none;
+  color: inherit;
+}
+
+.card:hover .photo {
+  outline: 2px solid var(--color-primary);
+}
+
+.photo {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: var(--color-surface-high);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-outline-variant);
+  flex-shrink: 0;
+}
+
+.photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.name {
+  text-align: center;
+  color: var(--color-on-surface);
+  line-height: 1.3;
+  word-break: break-word;
+}
+
+.job {
+  text-align: center;
+  color: var(--color-on-surface-variant);
+  font-style: italic;
+  line-height: 1.2;
+}

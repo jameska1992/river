@@ -105,6 +105,17 @@ services:
       TMDB_API_KEY: ${TMDB_API_KEY:-}
       SUBDL_API_KEY: ${SUBDL_API_KEY:-}
       SCAN_INTERVAL: ${SCAN_INTERVAL:-3600s}
+      # Optional per-service API keys (service-role Phase 2). Set any of these
+      # to a value starting with "rvk_" to provision a scoped key for that
+      # service; the seed below is create-if-absent so it never clobbers a key
+      # rotated via the admin UI. Leave unset to keep password auth.
+      RIVER_SCAN_API_KEY: ${RIVER_SCAN_API_KEY:-}
+      RIVER_VIDEO_TRANS_API_KEY: ${RIVER_VIDEO_TRANS_API_KEY:-}
+      RIVER_AUDIO_TRANS_API_KEY: ${RIVER_AUDIO_TRANS_API_KEY:-}
+      RIVER_META_MOVIE_API_KEY: ${RIVER_META_MOVIE_API_KEY:-}
+      RIVER_META_TV_API_KEY: ${RIVER_META_TV_API_KEY:-}
+      RIVER_META_BOOK_API_KEY: ${RIVER_META_BOOK_API_KEY:-}
+      RIVER_META_MUSIC_API_KEY: ${RIVER_META_MUSIC_API_KEY:-}
     command:
       - sh
       - -c
@@ -130,6 +141,30 @@ services:
           --post-data="{\"radarr_url\":\"$$RADARR_URL\",\"radarr_api_key\":\"$$RADARR_API_KEY\",\"sonarr_url\":\"$$SONARR_URL\",\"sonarr_api_key\":\"$$SONARR_API_KEY\",\"tmdb_api_key\":\"$$TMDB_API_KEY\",\"subdl_api_key\":\"$$SUBDL_API_KEY\",\"scan_interval\":\"$$SCAN_INTERVAL\"}" \
           http://river-api:8080/api/admin/settings/integrations/seed || true
 
+        # 4. Seed per-service API keys from env (create-if-absent). Scopes are
+        #    derived server-side from each service name. Only non-empty keys are
+        #    sent; the endpoint skips blanks and never clobbers existing keys.
+        KEYS=""
+        add_key() {
+          [ -n "$$2" ] || return 0
+          [ -n "$$KEYS" ] && KEYS="$$KEYS,"
+          KEYS="$$KEYS{\"name\":\"$$1\",\"key\":\"$$2\"}"
+        }
+        add_key river-scan "$$RIVER_SCAN_API_KEY"
+        add_key river-video-trans "$$RIVER_VIDEO_TRANS_API_KEY"
+        add_key river-audio-trans "$$RIVER_AUDIO_TRANS_API_KEY"
+        add_key river-meta-movie "$$RIVER_META_MOVIE_API_KEY"
+        add_key river-meta-tv "$$RIVER_META_TV_API_KEY"
+        add_key river-meta-book "$$RIVER_META_BOOK_API_KEY"
+        add_key river-meta-music "$$RIVER_META_MUSIC_API_KEY"
+        if [ -n "$$KEYS" ]; then
+          wget -qO/dev/null \
+            --header="Content-Type: application/json" \
+            --header="Authorization: Bearer $$TOKEN" \
+            --post-data="{\"keys\":[$$KEYS]}" \
+            http://river-api:8080/api/admin/service-keys/seed || true
+        fi
+
         echo "river-init complete"
 
   # ---------------------------------------------------------------------------
@@ -144,6 +179,10 @@ services:
       RIVER_API_URL: http://river-api:8080
       RIVER_API_USERNAME: ${SERVICE_USERNAME:-river-service}
       RIVER_API_PASSWORD: ${SERVICE_PASSWORD:-${ADMIN_PASSWORD:?ADMIN_PASSWORD is required}}
+      # Optional per-service API key (service-role Phase 2). When set, the
+      # service authenticates with this scoped key instead of the shared
+      # password; unset falls back to password login (non-destructive).
+      RIVER_API_KEY: ${RIVER_SCAN_API_KEY:-}
       RABBITMQ_URL: amqp://${RABBITMQ_USER:-river}:${RABBITMQ_PASSWORD:-river}@rabbitmq:5672/
       RABBITMQ_EXCHANGE: river.media
       # SCAN_INTERVAL now lives in river-api's settings store (seeded by
@@ -168,6 +207,10 @@ services:
       RIVER_API_URL: http://river-api:8080
       RIVER_API_USERNAME: ${SERVICE_USERNAME:-river-service}
       RIVER_API_PASSWORD: ${SERVICE_PASSWORD:-${ADMIN_PASSWORD:?ADMIN_PASSWORD is required}}
+      # Optional per-service API key (service-role Phase 2). When set, the
+      # service authenticates with this scoped key instead of the shared
+      # password; unset falls back to password login (non-destructive).
+      RIVER_API_KEY: ${RIVER_VIDEO_TRANS_API_KEY:-}
       RABBITMQ_URL: amqp://${RABBITMQ_USER:-river}:${RABBITMQ_PASSWORD:-river}@rabbitmq:5672/
       RABBITMQ_EXCHANGE: river.media
       OUTPUT_DIR: /output
@@ -196,6 +239,10 @@ services:
       RIVER_API_URL: http://river-api:8080
       RIVER_API_USERNAME: ${SERVICE_USERNAME:-river-service}
       RIVER_API_PASSWORD: ${SERVICE_PASSWORD:-${ADMIN_PASSWORD:?ADMIN_PASSWORD is required}}
+      # Optional per-service API key (service-role Phase 2). When set, the
+      # service authenticates with this scoped key instead of the shared
+      # password; unset falls back to password login (non-destructive).
+      RIVER_API_KEY: ${RIVER_AUDIO_TRANS_API_KEY:-}
       RABBITMQ_URL: amqp://${RABBITMQ_USER:-river}:${RABBITMQ_PASSWORD:-river}@rabbitmq:5672/
       RABBITMQ_EXCHANGE: river.media
       OUTPUT_DIR: /output
@@ -219,6 +266,10 @@ services:
       RIVER_API_URL: http://river-api:8080
       RIVER_API_USERNAME: ${SERVICE_USERNAME:-river-service}
       RIVER_API_PASSWORD: ${SERVICE_PASSWORD:-${ADMIN_PASSWORD:?ADMIN_PASSWORD is required}}
+      # Optional per-service API key (service-role Phase 2). When set, the
+      # service authenticates with this scoped key instead of the shared
+      # password; unset falls back to password login (non-destructive).
+      RIVER_API_KEY: ${RIVER_META_MOVIE_API_KEY:-}
       RABBITMQ_URL: amqp://${RABBITMQ_USER:-river}:${RABBITMQ_PASSWORD:-river}@rabbitmq:5672/
       RABBITMQ_EXCHANGE: river.media
       # TMDB key is fetched from river-api's settings store (seeded by the
@@ -240,6 +291,10 @@ services:
       RIVER_API_URL: http://river-api:8080
       RIVER_API_USERNAME: ${SERVICE_USERNAME:-river-service}
       RIVER_API_PASSWORD: ${SERVICE_PASSWORD:-${ADMIN_PASSWORD:?ADMIN_PASSWORD is required}}
+      # Optional per-service API key (service-role Phase 2). When set, the
+      # service authenticates with this scoped key instead of the shared
+      # password; unset falls back to password login (non-destructive).
+      RIVER_API_KEY: ${RIVER_META_TV_API_KEY:-}
       RABBITMQ_URL: amqp://${RABBITMQ_USER:-river}:${RABBITMQ_PASSWORD:-river}@rabbitmq:5672/
       RABBITMQ_EXCHANGE: river.media
       # TMDB key is fetched from river-api's settings store (seeded by the
@@ -261,6 +316,10 @@ services:
       RIVER_API_URL: http://river-api:8080
       RIVER_API_USERNAME: ${SERVICE_USERNAME:-river-service}
       RIVER_API_PASSWORD: ${SERVICE_PASSWORD:-${ADMIN_PASSWORD:?ADMIN_PASSWORD is required}}
+      # Optional per-service API key (service-role Phase 2). When set, the
+      # service authenticates with this scoped key instead of the shared
+      # password; unset falls back to password login (non-destructive).
+      RIVER_API_KEY: ${RIVER_META_BOOK_API_KEY:-}
       RABBITMQ_URL: amqp://${RABBITMQ_USER:-river}:${RABBITMQ_PASSWORD:-river}@rabbitmq:5672/
       RABBITMQ_EXCHANGE: river.media
       WORKER_COUNT: ${META_WORKERS:-2}
@@ -280,6 +339,10 @@ services:
       RIVER_API_URL: http://river-api:8080
       RIVER_API_USERNAME: ${SERVICE_USERNAME:-river-service}
       RIVER_API_PASSWORD: ${SERVICE_PASSWORD:-${ADMIN_PASSWORD:?ADMIN_PASSWORD is required}}
+      # Optional per-service API key (service-role Phase 2). When set, the
+      # service authenticates with this scoped key instead of the shared
+      # password; unset falls back to password login (non-destructive).
+      RIVER_API_KEY: ${RIVER_META_MUSIC_API_KEY:-}
       RABBITMQ_URL: amqp://${RABBITMQ_USER:-river}:${RABBITMQ_PASSWORD:-river}@rabbitmq:5672/
       RABBITMQ_EXCHANGE: river.media
       WORKER_COUNT: ${META_WORKERS:-2}

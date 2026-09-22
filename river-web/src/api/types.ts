@@ -83,6 +83,40 @@ export interface LibraryInsights {
   failed_jobs: number
 }
 
+// --- Service keys (per-service API keys) ---
+
+export interface ServiceKey {
+  id: string
+  name: string
+  key_prefix: string
+  scopes: string[]
+  revoked: boolean
+  last_used_at?: string
+  created_at: string
+}
+
+// The full canonical scope list, mirrored from the backend, for the mint form.
+export const SERVICE_KEY_SCOPES = [
+  'media:write',
+  'logs:write',
+  'jobs:write',
+  'settings:tmdb',
+  'settings:scan',
+  'tvshows:resolve',
+] as const
+
+// Recommended default scopes per known service, mirrored from the backend so
+// the mint form can pre-fill sensibly.
+export const SERVICE_KEY_DEFAULTS: Record<string, string[]> = {
+  'river-scan': ['media:write', 'logs:write', 'jobs:write', 'settings:scan', 'tvshows:resolve'],
+  'river-video-trans': ['media:write', 'logs:write', 'jobs:write'],
+  'river-audio-trans': ['media:write', 'logs:write', 'jobs:write'],
+  'river-meta-movie': ['media:write', 'logs:write', 'jobs:write', 'settings:tmdb'],
+  'river-meta-tv': ['media:write', 'logs:write', 'jobs:write', 'settings:tmdb'],
+  'river-meta-book': ['media:write', 'logs:write', 'jobs:write'],
+  'river-meta-music': ['media:write', 'logs:write', 'jobs:write'],
+}
+
 // --- Libraries ---
 
 export type LibraryType = 'movie' | 'tvshow' | 'music' | 'audiobook'

@@ -467,6 +467,17 @@ definitions:
       tmdb_api_key:
         type: string
     type: object
+  handlers.mintServiceKeyRequest:
+    properties:
+      name:
+        type: string
+      scopes:
+        items:
+          type: string
+        type: array
+    required:
+    - name
+    type: object
   handlers.movieRequest:
     properties:
       backdrop_path:
@@ -592,6 +603,22 @@ definitions:
         type: string
       year:
         type: integer
+    type: object
+  handlers.seedServiceKeysRequest:
+    properties:
+      keys:
+        items:
+          properties:
+            key:
+              type: string
+            name:
+              type: string
+            scopes:
+              items:
+                type: string
+              type: array
+          type: object
+        type: array
     type: object
   handlers.showCompletedRequest:
     properties:
@@ -1411,6 +1438,25 @@ definitions:
       scan_interval:
         type: string
     type: object
+  services.ServiceKeyView:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: string
+      key_prefix:
+        type: string
+      last_used_at:
+        type: string
+      name:
+        type: string
+      revoked:
+        type: boolean
+      scopes:
+        items:
+          type: string
+        type: array
+    type: object
   services.ShowWatchState:
     properties:
       completed:
@@ -1865,6 +1911,109 @@ paths:
       security:
       - BearerAuth: []
       summary: Forget scanner-state entries
+      tags:
+      - admin
+  /admin/service-keys:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/services.ServiceKeyView'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: List service keys
+      tags:
+      - admin
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: '{name, scopes}'
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.mintServiceKeyRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: '{key, service_key}'
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Mint a service key
+      tags:
+      - admin
+  /admin/service-keys/{id}:
+    delete:
+      parameters:
+      - description: Service key ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Revoke a service key
+      tags:
+      - admin
+  /admin/service-keys/seed:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: '{keys:[{name,key,scopes}]}'
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.seedServiceKeysRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{created}'
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Seed service keys (set-if-absent)
       tags:
       - admin
   /admin/settings/integrations:

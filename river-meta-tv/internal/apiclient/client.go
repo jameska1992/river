@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"os"
 	"sync"
 )
 
@@ -14,6 +15,7 @@ type Client struct {
 	baseURL  string
 	username string
 	password string
+	apiKey   string
 	service  string
 	token    string
 	mu       sync.Mutex
@@ -25,6 +27,7 @@ func New(baseURL, username, password, service string) *Client {
 		baseURL:  baseURL,
 		username: username,
 		password: password,
+		apiKey:   os.Getenv("RIVER_API_KEY"),
 		service:  service,
 		http:     &http.Client{},
 	}
@@ -55,6 +58,11 @@ func (c *Client) ReportFailedJob(mediaType, sourcePath, reason, routingKey strin
 }
 
 func (c *Client) Login() error {
+	// With a per-service API key configured there's no password login to do;
+	// the key is sent directly as the bearer on every request.
+	if c.apiKey != "" {
+		return nil
+	}
 	body, _ := json.Marshal(map[string]string{
 		"username": c.username,
 		"password": c.password,
@@ -99,9 +107,12 @@ func (c *Client) doWithRetry(method, path string, body interface{}, out interfac
 	if body != nil {
 		req.Header.Set("Content-Type", "application/json")
 	}
-	c.mu.Lock()
-	token := c.token
-	c.mu.Unlock()
+	token := c.apiKey
+	if token == "" {
+		c.mu.Lock()
+		token = c.token
+		c.mu.Unlock()
+	}
 	req.Header.Set("Authorization", "Bearer "+token)
 
 	resp, err := c.http.Do(req)
@@ -110,7 +121,7 @@ func (c *Client) doWithRetry(method, path string, body interface{}, out interfac
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode == http.StatusUnauthorized && retry {
+	if resp.StatusCode == http.StatusUnauthorized && retry && c.apiKey == "" {
 		if err := c.Login(); err != nil {
 			return fmt.Errorf("re-login: %w", err)
 		}

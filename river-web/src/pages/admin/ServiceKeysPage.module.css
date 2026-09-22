@@ -1,0 +1,168 @@
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.blurb {
+  color: var(--color-on-surface-variant);
+  max-width: 60ch;
+  margin: 4px 0 0;
+}
+
+.blurb code,
+.form code {
+  background: var(--color-surface-high);
+  padding: 1px 5px;
+  border-radius: var(--radius-sm);
+  font-size: 0.9em;
+}
+
+.error {
+  color: var(--color-error);
+  font-size: 13px;
+  margin-bottom: var(--space-2);
+}
+
+.empty {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-4) var(--space-2);
+  color: var(--color-on-surface-variant);
+  background: var(--color-surface-low);
+  border-radius: var(--radius-md);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: minmax(200px, 1.4fr) 2fr auto auto;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 12px var(--space-2);
+}
+
+.revoked {
+  opacity: 0.55;
+}
+
+.rowMain {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.name {
+  color: var(--color-on-surface);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.prefix {
+  color: var(--color-on-surface-variant);
+  font-family: monospace;
+}
+
+.scopes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.scope {
+  font-size: 11px;
+}
+
+.used {
+  color: var(--color-on-surface-variant);
+  white-space: nowrap;
+}
+
+/* ── modal ── */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: var(--space-3);
+}
+
+.dialog {
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  width: 100%;
+  max-width: 520px;
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: var(--space-3);
+}
+
+.dialogHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-3);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.scopeGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 6px;
+}
+
+.scopeCheck {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+.keyReveal {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  background: var(--color-surface-high);
+  border-radius: var(--radius-md);
+  padding: var(--space-2);
+}
+
+.keyText {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-family: monospace;
+  font-size: 13px;
+}

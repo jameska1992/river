@@ -3,6 +3,7 @@ package routes
 import (
 	"river-api/internal/handlers"
 	"river-api/internal/middleware"
+	"river-api/internal/services"
 
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
@@ -36,6 +37,8 @@ func Register(r *gin.Engine, secret string,
 	imageProxy *handlers.ImageProxyHandler,
 	showMerge *handlers.ShowMergeHandler,
 	insights *handlers.InsightsHandler,
+	serviceKey *handlers.ServiceKeyHandler,
+	keyAuth middleware.ServiceKeyAuthenticator,
 ) {
 	r.GET("/health", func(c *gin.Context) { c.JSON(200, gin.H{"status": "ok"}) })
 
@@ -63,7 +66,7 @@ func Register(r *gin.Engine, secret string,
 	api.GET("/image", imageProxy.Get)
 
 	// Authenticated routes
-	protected := api.Group("", middleware.Auth(secret))
+	protected := api.Group("", middleware.Auth(secret, keyAuth))
 	{
 		protected.GET("/auth/me", auth.Me)
 		protected.PUT("/auth/me", auth.UpdateMe)
@@ -72,13 +75,13 @@ func Register(r *gin.Engine, secret string,
 		// Logs
 		// Only services + admins append logs (not every authenticated user);
 		// the handler stamps the real caller as CreatedBy.
-		protected.POST("/logs", middleware.AdminOrService(), serviceLog.Create)
+		protected.POST("/logs", middleware.RequireScope(services.ScopeLogsWrite), serviceLog.Create)
 		protected.GET("/admin/logs", middleware.AdminOnly(), serviceLog.List)
 
 		// Failed ingest jobs (dead-lettered messages). Services report via
 		// POST /failed-jobs (admin-or-service, like /logs); admins list,
 		// retry, and dismiss under /admin.
-		protected.POST("/failed-jobs", middleware.AdminOrService(), failedJob.Report)
+		protected.POST("/failed-jobs", middleware.RequireScope(services.ScopeJobsWrite), failedJob.Report)
 		protected.GET("/admin/failed-jobs", middleware.AdminOnly(), failedJob.List)
 		protected.POST("/admin/failed-jobs/:id/retry", middleware.AdminOnly(), failedJob.Retry)
 		protected.DELETE("/admin/failed-jobs/:id", middleware.AdminOnly(), failedJob.Dismiss)
@@ -90,7 +93,7 @@ func Register(r *gin.Engine, secret string,
 		// Read-only path→show lookup the scanner calls on every TV scan; the
 		// scanner runs as the least-privilege `service` role, so this must allow
 		// it (merge/preview above stay admin-only — they mutate).
-		protected.GET("/admin/tvshows/resolve", middleware.AdminOrService(), showMerge.ResolvePath)
+		protected.GET("/admin/tvshows/resolve", middleware.RequireScope(services.ScopeTVShowsResolve), showMerge.ResolvePath)
 		protected.GET("/admin/settings/integrations", middleware.AdminOnly(), settings.GetIntegrations)
 		protected.PUT("/admin/settings/integrations", middleware.AdminOnly(), settings.UpdateIntegrations)
 		protected.POST("/admin/settings/integrations/seed", middleware.AdminOnly(), settings.SeedIntegrations)
@@ -113,9 +116,17 @@ func Register(r *gin.Engine, secret string,
 		// them without the full admin surface. The scanning value is
 		// non-secret; the TMDB key is a secret the meta services legitimately
 		// need (and only admin+service can read it here).
-		protected.GET("/settings/scanning", middleware.AdminOrService(), settings.GetScanning)
-		protected.GET("/settings/tmdb", middleware.AdminOrService(), settings.GetTMDBKey)
+		protected.GET("/settings/scanning", middleware.RequireScope(services.ScopeSettingsScan), settings.GetScanning)
+		protected.GET("/settings/tmdb", middleware.RequireScope(services.ScopeSettingsTMDB), settings.GetTMDBKey)
 		protected.GET("/admin/active-sessions", middleware.AdminOnly(), progress.ActiveSessions)
+
+		// Per-service API keys (service-role Phase 2). Admin-only management;
+		// the seed endpoint is the create-if-absent path the deploy init step
+		// calls to provision keys from env without clobbering UI changes.
+		protected.GET("/admin/service-keys", middleware.AdminOnly(), serviceKey.List)
+		protected.POST("/admin/service-keys", middleware.AdminOnly(), serviceKey.Mint)
+		protected.POST("/admin/service-keys/seed", middleware.AdminOnly(), serviceKey.Seed)
+		protected.DELETE("/admin/service-keys/:id", middleware.AdminOnly(), serviceKey.Revoke)
 		// Admin insights dashboard — watch analytics aggregated from watch_progress.
 		protected.GET("/admin/insights/watch", middleware.AdminOnly(), insights.GetWatch)
 		protected.GET("/admin/insights/library", middleware.AdminOnly(), insights.GetLibrary)
@@ -165,13 +176,13 @@ func Register(r *gin.Engine, secret string,
 			movies.GET("/:id/stream", movie.Stream)
 			movies.GET("/:id/download", movie.Download)
 			movies.GET("/:id/credits", credits.GetMovieCredits)
-			movies.PUT("/:id/credits", middleware.AdminOrService(), credits.SetMovieCredits)
+			movies.PUT("/:id/credits", middleware.RequireScope(services.ScopeMediaWrite), credits.SetMovieCredits)
 			movies.GET("/:id/subtitles", subtitle.ListMovieSubtitles)
 			movies.GET("/:id/audio-tracks", audioTrack.ListMovieAudioTracks)
-			movies.POST("", middleware.AdminOrService(), movie.Create)
-			movies.PUT("/:id", middleware.AdminOrService(), movie.Update)
-			movies.PATCH("/:id/file-path", middleware.AdminOrService(), movie.UpdateFilePath)
-			movies.PATCH("/:id/source-path", middleware.AdminOrService(), movie.UpdateSourcePath)
+			movies.POST("", middleware.RequireScope(services.ScopeMediaWrite), movie.Create)
+			movies.PUT("/:id", middleware.RequireScope(services.ScopeMediaWrite), movie.Update)
+			movies.PATCH("/:id/file-path", middleware.RequireScope(services.ScopeMediaWrite), movie.UpdateFilePath)
+			movies.PATCH("/:id/source-path", middleware.RequireScope(services.ScopeMediaWrite), movie.UpdateSourcePath)
 			movies.DELETE("/:id", middleware.AdminOnly(), movie.Delete)
 		}
 
@@ -183,21 +194,21 @@ func Register(r *gin.Engine, secret string,
 			shows.GET("/:id/similar", tvshow.Similar)
 			shows.GET("/:id/next-episode", progress.NextEpisode)
 			shows.GET("/:id/credits", credits.GetTVShowCredits)
-			shows.PUT("/:id/credits", middleware.AdminOrService(), credits.SetTVShowCredits)
-			shows.POST("", middleware.AdminOrService(), tvshow.CreateShow)
-			shows.PUT("/:id", middleware.AdminOrService(), tvshow.UpdateShow)
-			shows.PATCH("/:id/folder-path", middleware.AdminOrService(), tvshow.UpdateFolderPath)
+			shows.PUT("/:id/credits", middleware.RequireScope(services.ScopeMediaWrite), credits.SetTVShowCredits)
+			shows.POST("", middleware.RequireScope(services.ScopeMediaWrite), tvshow.CreateShow)
+			shows.PUT("/:id", middleware.RequireScope(services.ScopeMediaWrite), tvshow.UpdateShow)
+			shows.PATCH("/:id/folder-path", middleware.RequireScope(services.ScopeMediaWrite), tvshow.UpdateFolderPath)
 			shows.DELETE("/:id", middleware.AdminOnly(), tvshow.DeleteShow)
 
 			shows.GET("/:id/seasons", tvshow.ListSeasons)
-			shows.POST("/:id/seasons", middleware.AdminOrService(), tvshow.CreateSeason)
+			shows.POST("/:id/seasons", middleware.RequireScope(services.ScopeMediaWrite), tvshow.CreateSeason)
 			shows.PUT("/:id/seasons/:seasonId", middleware.AdminOnly(), tvshow.UpdateSeason)
 
 			shows.GET("/:id/seasons/:seasonId/episodes", tvshow.ListEpisodes)
-			shows.POST("/:id/seasons/:seasonId/episodes", middleware.AdminOrService(), tvshow.CreateEpisode)
-			shows.PUT("/:id/seasons/:seasonId/episodes/:episodeId", middleware.AdminOrService(), tvshow.UpdateEpisode)
+			shows.POST("/:id/seasons/:seasonId/episodes", middleware.RequireScope(services.ScopeMediaWrite), tvshow.CreateEpisode)
+			shows.PUT("/:id/seasons/:seasonId/episodes/:episodeId", middleware.RequireScope(services.ScopeMediaWrite), tvshow.UpdateEpisode)
 			shows.DELETE("/:id/seasons/:seasonId/episodes/:episodeId", middleware.AdminOnly(), tvshow.DeleteEpisode)
-			shows.PATCH("/:id/seasons/:seasonId/episodes/:episodeId/source-path", middleware.AdminOrService(), tvshow.UpdateEpisodeSourcePath)
+			shows.PATCH("/:id/seasons/:seasonId/episodes/:episodeId/source-path", middleware.RequireScope(services.ScopeMediaWrite), tvshow.UpdateEpisodeSourcePath)
 			shows.GET("/:id/seasons/:seasonId/episodes/:episodeId/stream", tvshow.StreamEpisode)
 			shows.GET("/:id/seasons/:seasonId/episodes/:episodeId/download", tvshow.DownloadEpisode)
 			shows.GET("/:id/seasons/:seasonId/episodes/:episodeId/subtitles", subtitle.ListEpisodeSubtitles)
@@ -210,8 +221,8 @@ func Register(r *gin.Engine, secret string,
 			artists.GET("", music.ListArtists)
 			artists.GET("/:id", music.GetArtist)
 			artists.GET("/:id/albums", music.ListArtistAlbums)
-			artists.POST("", middleware.AdminOrService(), music.CreateArtist)
-			artists.PUT("/:id", middleware.AdminOrService(), music.UpdateArtist)
+			artists.POST("", middleware.RequireScope(services.ScopeMediaWrite), music.CreateArtist)
+			artists.PUT("/:id", middleware.RequireScope(services.ScopeMediaWrite), music.UpdateArtist)
 			artists.DELETE("/:id", middleware.AdminOnly(), music.DeleteArtist)
 		}
 
@@ -221,8 +232,8 @@ func Register(r *gin.Engine, secret string,
 			albums.GET("", music.ListAlbums)
 			albums.GET("/:id", music.GetAlbum)
 			albums.GET("/:id/tracks", music.ListAlbumTracks)
-			albums.POST("", middleware.AdminOrService(), music.CreateAlbum)
-			albums.PUT("/:id", middleware.AdminOrService(), music.UpdateAlbum)
+			albums.POST("", middleware.RequireScope(services.ScopeMediaWrite), music.CreateAlbum)
+			albums.PUT("/:id", middleware.RequireScope(services.ScopeMediaWrite), music.UpdateAlbum)
 			albums.DELETE("/:id", middleware.AdminOnly(), music.DeleteAlbum)
 		}
 
@@ -231,18 +242,18 @@ func Register(r *gin.Engine, secret string,
 		{
 			tracks.GET("/:id", music.GetTrack)
 			tracks.GET("/:id/stream", music.StreamTrack)
-			tracks.POST("", middleware.AdminOrService(), music.CreateTrack)
+			tracks.POST("", middleware.RequireScope(services.ScopeMediaWrite), music.CreateTrack)
 			tracks.DELETE("/:id", middleware.AdminOnly(), music.DeleteTrack)
 		}
 
 		// Subtitles
 		protected.GET("/subtitles/:id/stream", subtitle.Stream)
-		protected.POST("/subtitles", middleware.AdminOrService(), subtitle.Create)
+		protected.POST("/subtitles", middleware.RequireScope(services.ScopeMediaWrite), subtitle.Create)
 		protected.DELETE("/subtitles/:id", middleware.AdminOnly(), subtitle.Delete)
 
 		// Audio tracks
 		protected.GET("/audio-tracks/:id/stream", audioTrack.Stream)
-		protected.POST("/audio-tracks", middleware.AdminOrService(), audioTrack.Create)
+		protected.POST("/audio-tracks", middleware.RequireScope(services.ScopeMediaWrite), audioTrack.Create)
 		protected.DELETE("/audio-tracks/:id", middleware.AdminOnly(), audioTrack.Delete)
 
 		// People
@@ -292,10 +303,10 @@ func Register(r *gin.Engine, secret string,
 			audiobooks.GET("/:id/similar", audiobook.Similar)
 			audiobooks.GET("/:id/chapters", audiobook.ListChapters)
 			audiobooks.GET("/:id/chapters/:chapterId/stream", audiobook.StreamChapter)
-			audiobooks.POST("", middleware.AdminOrService(), audiobook.Create)
-			audiobooks.PUT("/:id", middleware.AdminOrService(), audiobook.Update)
+			audiobooks.POST("", middleware.RequireScope(services.ScopeMediaWrite), audiobook.Create)
+			audiobooks.PUT("/:id", middleware.RequireScope(services.ScopeMediaWrite), audiobook.Update)
 			audiobooks.DELETE("/:id", middleware.AdminOnly(), audiobook.Delete)
-			audiobooks.POST("/:id/chapters", middleware.AdminOrService(), audiobook.CreateChapter)
+			audiobooks.POST("/:id/chapters", middleware.RequireScope(services.ScopeMediaWrite), audiobook.CreateChapter)
 			audiobooks.DELETE("/:id/chapters/:chapterId", middleware.AdminOnly(), audiobook.DeleteChapter)
 		}
 

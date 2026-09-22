@@ -357,6 +357,7 @@ type trackRequest struct {
 	DiscNumber int    `json:"disc_number"`
 	Duration   int    `json:"duration"`
 	FilePath   string `json:"file_path" binding:"required"`
+	SizeBytes  int64  `json:"size_bytes"`
 }
 
 // CreateTrack adds a new track.
@@ -390,6 +391,7 @@ func (h *MusicHandler) CreateTrack(c *gin.Context) {
 	input := services.TrackInput{
 		LibraryID: libID, AlbumID: albumID, Title: req.Title,
 		Number: req.Number, DiscNumber: req.DiscNumber, Duration: req.Duration, FilePath: req.FilePath,
+		SizeBytes: req.SizeBytes,
 	}
 	if req.ArtistID != "" {
 		if id, err := uuid.Parse(req.ArtistID); err == nil {

@@ -427,6 +427,7 @@ type episodeRequest struct {
 	Runtime     int    `json:"runtime"`
 	FilePath    string `json:"file_path"`
 	SourcePath  string `json:"source_path"`
+	SizeBytes   int64  `json:"size_bytes"`
 	AiredAt     string `json:"aired_at"` // RFC3339
 	IsSpecial   bool   `json:"is_special"`
 }
@@ -439,6 +440,7 @@ type updateEpisodeRequest struct {
 	Runtime     int    `json:"runtime"`
 	FilePath    string `json:"file_path"`
 	SourcePath  string `json:"source_path"`
+	SizeBytes   int64  `json:"size_bytes"`
 	AiredAt     string `json:"aired_at"`
 }
 
@@ -486,7 +488,7 @@ func (h *TVShowHandler) CreateEpisode(c *gin.Context) {
 	episode, err := h.svc.CreateEpisode(c.Param("id"), c.Param("seasonId"), services.EpisodeInput{
 		Number: req.Number, Title: req.Title, Description: req.Description,
 		Runtime: req.Runtime, FilePath: req.FilePath, SourcePath: req.SourcePath, AiredAt: req.AiredAt,
-		IsSpecial: req.IsSpecial,
+		SizeBytes: req.SizeBytes, IsSpecial: req.IsSpecial,
 	})
 	if err != nil {
 		c.JSON(serviceStatus(err), gin.H{"error": err.Error()})
@@ -522,6 +524,7 @@ func (h *TVShowHandler) UpdateEpisode(c *gin.Context) {
 		Number: req.Number, SeasonID: req.SeasonID,
 		Title: req.Title, Description: req.Description,
 		Runtime: req.Runtime, FilePath: req.FilePath, SourcePath: req.SourcePath, AiredAt: req.AiredAt,
+		SizeBytes: req.SizeBytes,
 	})
 	if err != nil {
 		c.JSON(serviceStatus(err), gin.H{"error": err.Error()})

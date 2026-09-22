@@ -32,6 +32,8 @@ export type {
   MovieSearchResult, ShowSearchResult, CalendarItem,
   IntegrationSettings, IntegrationUpdate, MetadataSettings, ScanningSettings,
   TranscodingSettings,
+  WatchInsights, WatchInsightsTopTitle, WatchInsightsDay, WatchInsightsUser,
+  LibraryInsights, LibraryHealth,
 } from './types'
 
 export const api = new RiverClient()

@@ -186,6 +186,7 @@ type MovieRequest struct {
 	BackdropPath  string  `json:"backdrop_path"`
 	FilePath      string  `json:"file_path"`
 	SourcePath    string  `json:"source_path,omitempty"`
+	SizeBytes     int64   `json:"size_bytes,omitempty"`
 }
 
 func (c *Client) GetMovie(id string) (*Movie, error) {
@@ -212,10 +213,15 @@ func (c *Client) UpdateMovie(id string, req MovieRequest) (*Movie, error) {
 	return &result, c.do("PUT", "/api/movies/"+id, req, &result)
 }
 
-// UpdateMovieFilePath targets only the FilePath field so a long-running
-// transcode can't clobber metadata that river-meta-movie wrote concurrently.
-func (c *Client) UpdateMovieFilePath(id, path string) error {
-	body := map[string]string{"file_path": path}
+// UpdateMovieFilePath targets only the FilePath field (plus the output size,
+// which is measured at the same moment) so a long-running transcode can't
+// clobber metadata that river-meta-movie wrote concurrently. sizeBytes is
+// omitted when 0 so the server keeps any previously recorded size.
+func (c *Client) UpdateMovieFilePath(id, path string, sizeBytes int64) error {
+	body := map[string]any{"file_path": path}
+	if sizeBytes > 0 {
+		body["size_bytes"] = sizeBytes
+	}
 	return c.do("PATCH", "/api/movies/"+id+"/file-path", body, nil)
 }
 
@@ -313,6 +319,7 @@ type EpisodeRequest struct {
 	Runtime     int    `json:"runtime"`
 	FilePath    string `json:"file_path"`
 	SourcePath  string `json:"source_path,omitempty"`
+	SizeBytes   int64  `json:"size_bytes,omitempty"`
 	IsSpecial   bool   `json:"is_special,omitempty"`
 }
 

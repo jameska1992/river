@@ -1,0 +1,291 @@
+.pageHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-3);
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.heading {
+  margin: 0;
+}
+
+.error {
+  color: var(--color-error);
+  font-size: 13px;
+  margin-bottom: var(--space-2);
+}
+
+/* ── Window tabs ── */
+
+.windowTabs {
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  border-radius: var(--radius-full);
+  background: var(--color-surface-low);
+  flex-shrink: 0;
+}
+
+.windowTab {
+  border: none;
+  background: transparent;
+  color: var(--color-on-surface-variant);
+  padding: 6px 14px;
+  border-radius: var(--radius-full);
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.windowTab:hover {
+  color: var(--color-on-surface);
+}
+
+.windowTabActive {
+  background: var(--color-primary-container);
+  color: var(--color-on-primary-container);
+}
+
+/* ── Stat tiles ── */
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: var(--space-2);
+  margin-bottom: var(--space-5);
+}
+
+.card {
+  padding: var(--space-2) var(--space-2) var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cardIcon {
+  font-size: 24px;
+  margin-bottom: 6px;
+}
+
+.cardLabel {
+  color: var(--color-on-surface-variant);
+}
+
+.cardValue {
+  color: var(--color-on-surface);
+}
+
+.cardSub {
+  color: var(--color-on-surface-variant);
+  margin-top: 2px;
+}
+
+/* ── Sections ── */
+
+.section {
+  margin-bottom: var(--space-5);
+  min-width: 0;
+}
+
+.subheading {
+  margin: 0 0 var(--space-2);
+}
+
+.twoCol {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: var(--space-4);
+}
+
+/* ── Empty state ── */
+
+.empty {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-4) var(--space-2);
+  color: var(--color-on-surface-variant);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-low);
+}
+
+/* ── Activity chart (CSS bars) ── */
+
+.chartCard {
+  padding: var(--space-3) var(--space-2) var(--space-2);
+  border-radius: var(--radius-md);
+}
+
+.chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 140px;
+}
+
+.barWrap {
+  flex: 1;
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
+  min-width: 2px;
+}
+
+.bar {
+  width: 100%;
+  background: var(--color-primary);
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  min-height: 2px;
+  transition: opacity 0.15s;
+}
+
+.bar:hover {
+  opacity: 0.75;
+}
+
+.chartAxis {
+  display: flex;
+  justify-content: space-between;
+  margin-top: var(--space-1);
+  color: var(--color-on-surface-variant);
+}
+
+/* ── Lists (top titles + per-user) ── */
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.topItem,
+.userItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 12px var(--space-2);
+}
+
+.rank {
+  width: 24px;
+  flex-shrink: 0;
+  text-align: center;
+  font-weight: 700;
+  color: var(--color-on-surface-variant);
+}
+
+.userAvatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--color-primary-container);
+  color: var(--color-on-primary-container);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.topMeta {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.topTitle {
+  color: var(--color-on-surface);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.topSub {
+  color: var(--color-on-surface-variant);
+}
+
+.topTime {
+  color: var(--color-on-surface-variant);
+  white-space: nowrap;
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Library health ── */
+
+.libHeaderRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.libSummary {
+  display: flex;
+  gap: var(--space-1);
+  align-items: center;
+  margin-bottom: var(--space-2);
+}
+
+.storageBadge,
+.failedBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.failedBadge {
+  background: var(--color-error-container, rgba(255, 90, 90, 0.15));
+  color: var(--color-error);
+}
+
+.libTable {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.libHead {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1.2fr;
+  gap: var(--space-2);
+  padding: 0 var(--space-2);
+  color: var(--color-on-surface-variant);
+}
+
+.libRow {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1.2fr;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 12px var(--space-2);
+}
+
+.libName {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.libIcon {
+  display: flex;
+  color: var(--color-on-surface-variant);
+  flex-shrink: 0;
+}
+
+.libNum {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-on-surface-variant);
+}
+
+.warn {
+  color: var(--color-error);
+}

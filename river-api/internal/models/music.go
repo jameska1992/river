@@ -14,15 +14,15 @@ type Artist struct {
 
 type Album struct {
 	Base
-	LibraryID  uuid.UUID `gorm:"type:varchar(36);not null;index" json:"library_id"`
-	Library    Library   `gorm:"foreignKey:LibraryID" json:"-"`
-	ArtistID   uuid.UUID `gorm:"type:varchar(36);index" json:"artist_id"`
-	Artist     Artist    `gorm:"foreignKey:ArtistID" json:"-"`
-	Title      string    `gorm:"not null" json:"title"`
-	Year       int       `json:"year"`
-	Genre      string    `json:"genre"`
-	CoverPath  string    `json:"cover_path"`
-	Tracks     []Track   `gorm:"foreignKey:AlbumID" json:"tracks,omitempty"`
+	LibraryID uuid.UUID `gorm:"type:varchar(36);not null;index" json:"library_id"`
+	Library   Library   `gorm:"foreignKey:LibraryID" json:"-"`
+	ArtistID  uuid.UUID `gorm:"type:varchar(36);index" json:"artist_id"`
+	Artist    Artist    `gorm:"foreignKey:ArtistID" json:"-"`
+	Title     string    `gorm:"not null" json:"title"`
+	Year      int       `json:"year"`
+	Genre     string    `json:"genre"`
+	CoverPath string    `json:"cover_path"`
+	Tracks    []Track   `gorm:"foreignKey:AlbumID" json:"tracks,omitempty"`
 }
 
 type Track struct {
@@ -36,4 +36,8 @@ type Track struct {
 	DiscNumber int       `json:"disc_number"`
 	Duration   int       `json:"duration"` // seconds
 	FilePath   string    `gorm:"not null" json:"file_path"`
+	// SizeBytes is the on-disk size of the transcoded output (FilePath),
+	// recorded at transcode time for the admin storage dashboard. 0 means
+	// "not yet measured" — the river-api size backfill fills it from FilePath.
+	SizeBytes int64 `gorm:"not null;default:0" json:"size_bytes"`
 }

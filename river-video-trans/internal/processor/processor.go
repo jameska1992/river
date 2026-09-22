@@ -17,6 +17,18 @@ import (
 	"river-video-trans/internal/transcoder"
 )
 
+// fileSizeBytes returns the on-disk size of path, or 0 if it can't be stat'd.
+// Used to record the transcoded output size on the media record at ingest so
+// the admin storage dashboard can sum sizes without walking the disk. A 0 is
+// harmless — river-api treats it as "unmeasured" and the boot backfill retries.
+func fileSizeBytes(path string) int64 {
+	info, err := os.Stat(path)
+	if err != nil {
+		return 0
+	}
+	return info.Size()
+}
+
 // maxPostTranscodeConcurrency bounds parallel ffmpeg helpers (audio-variant
 // creation, subtitle extraction) within a single event. Multiple events
 // still run in parallel across WORKER_COUNT goroutines, so the total
@@ -148,7 +160,7 @@ func (p *Processor) processMovie(event consumer.MediaDiscoveredEvent) error {
 			// Targeted PATCH — sending the full MovieRequest here would race
 			// with river-meta-movie writing TMDB data during the transcode
 			// window and clobber whatever metadata landed in the meantime.
-			if err := p.api.UpdateMovieFilePath(existing.ID, finalPath); err != nil {
+			if err := p.api.UpdateMovieFilePath(existing.ID, finalPath, fileSizeBytes(finalPath)); err != nil {
 				return err
 			}
 		}
@@ -160,6 +172,7 @@ func (p *Processor) processMovie(event consumer.MediaDiscoveredEvent) error {
 			Year:       year,
 			FilePath:   finalPath,
 			SourcePath: videoFile,
+			SizeBytes:  fileSizeBytes(finalPath),
 		})
 		if err != nil {
 			return err
@@ -300,6 +313,7 @@ func (p *Processor) processTVShow(event consumer.MediaDiscoveredEvent) error {
 			_, err = p.api.UpdateEpisode(showID, seasonID, existing, apiclient.EpisodeRequest{
 				FilePath:   finalPath,
 				SourcePath: file,
+				SizeBytes:  fileSizeBytes(finalPath),
 			})
 			if err != nil {
 				log.Printf("ERROR update episode S%02dE%02d: %v", seasonNum, epNum, err)
@@ -312,6 +326,7 @@ func (p *Processor) processTVShow(event consumer.MediaDiscoveredEvent) error {
 				Number:     epNum,
 				FilePath:   finalPath,
 				SourcePath: file,
+				SizeBytes:  fileSizeBytes(finalPath),
 			})
 			if err != nil {
 				log.Printf("ERROR create episode S%02dE%02d: %v", seasonNum, epNum, err)
@@ -352,6 +367,7 @@ func (p *Processor) processSpecialFile(
 	if _, err := p.api.UpdateEpisode(showID, seasonID, ep.ID, apiclient.EpisodeRequest{
 		FilePath:   finalPath,
 		SourcePath: file,
+		SizeBytes:  fileSizeBytes(finalPath),
 	}); err != nil {
 		return fmt.Errorf("update special S%02dSP%02d: %w", seasonNum, ep.Number, err)
 	}

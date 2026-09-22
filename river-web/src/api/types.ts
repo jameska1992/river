@@ -31,6 +31,58 @@ export interface ActivityItem {
   updated_at: string
 }
 
+// --- Admin insights ---
+
+export interface WatchInsightsTopTitle {
+  media_type: string
+  media_id: string
+  title: string
+  show_title?: string
+  plays: number
+  completions: number
+  watch_seconds: number
+}
+
+export interface WatchInsightsDay {
+  date: string
+  watch_seconds: number
+  plays: number
+}
+
+export interface WatchInsightsUser {
+  user_id: string
+  username: string
+  watch_seconds: number
+  item_count: number
+}
+
+export interface WatchInsights {
+  window: string
+  total_watch_seconds: number
+  started: number
+  completed: number
+  completion_rate: number
+  top_titles: WatchInsightsTopTitle[]
+  activity: WatchInsightsDay[]
+  per_user: WatchInsightsUser[]
+}
+
+export interface LibraryHealth {
+  id: string
+  name: string
+  type: LibraryType
+  item_count: number
+  size_bytes: number
+  untranscoded: number
+}
+
+export interface LibraryInsights {
+  libraries: LibraryHealth[]
+  total_size_bytes: number
+  untranscoded_total: number
+  failed_jobs: number
+}
+
 // --- Libraries ---
 
 export type LibraryType = 'movie' | 'tvshow' | 'music' | 'audiobook'

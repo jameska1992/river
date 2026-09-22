@@ -340,6 +340,17 @@ export class RiverClient {
     return this.request('GET', '/admin/active-sessions')
   }
 
+  // Watch analytics for the admin Insights dashboard. `window` is '7d',
+  // '30d' (default), '90d', or 'all'.
+  async getWatchInsights(window = '30d'): Promise<import('./types').WatchInsights> {
+    return this.request('GET', this.buildUrl('/admin/insights/watch', { window }))
+  }
+
+  // Library & storage health for the admin Insights dashboard.
+  async getLibraryInsights(): Promise<import('./types').LibraryInsights> {
+    return this.request('GET', '/admin/insights/library')
+  }
+
   // --- Watchlist ---
 
   async getWatchlist(): Promise<import('./types').WatchlistItem[]> {

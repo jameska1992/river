@@ -30,6 +30,7 @@ import { HistoryPage } from './pages/HistoryPage'
 import { AdminLayout } from './pages/admin/AdminLayout'
 import { MergeTVShowsPage } from './pages/admin/MergeTVShowsPage'
 import { OverviewPage } from './pages/admin/OverviewPage'
+import { InsightsPage } from './pages/admin/InsightsPage'
 import { LibrariesPage } from './pages/admin/LibrariesPage'
 import { UploadPage } from './pages/admin/UploadPage'
 import { UsersPage } from './pages/admin/UsersPage'
@@ -120,6 +121,7 @@ export default function App() {
             <Route element={<AdminRoute />}>
               <Route path="/admin" element={<AdminLayout />}>
                 <Route index element={<OverviewPage />} />
+                <Route path="insights" element={<InsightsPage />} />
                 <Route path="libraries" element={<LibrariesPage />} />
                 <Route path="upload" element={<UploadPage />} />
                 <Route path="unidentified" element={<UnidentifiedPage />} />

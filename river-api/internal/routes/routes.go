@@ -35,6 +35,7 @@ func Register(r *gin.Engine, secret string,
 	settings *handlers.SettingsHandler,
 	imageProxy *handlers.ImageProxyHandler,
 	showMerge *handlers.ShowMergeHandler,
+	insights *handlers.InsightsHandler,
 ) {
 	r.GET("/health", func(c *gin.Context) { c.JSON(200, gin.H{"status": "ok"}) })
 
@@ -115,6 +116,9 @@ func Register(r *gin.Engine, secret string,
 		protected.GET("/settings/scanning", middleware.AdminOrService(), settings.GetScanning)
 		protected.GET("/settings/tmdb", middleware.AdminOrService(), settings.GetTMDBKey)
 		protected.GET("/admin/active-sessions", middleware.AdminOnly(), progress.ActiveSessions)
+		// Admin insights dashboard — watch analytics aggregated from watch_progress.
+		protected.GET("/admin/insights/watch", middleware.AdminOnly(), insights.GetWatch)
+		protected.GET("/admin/insights/library", middleware.AdminOnly(), insights.GetLibrary)
 		protected.POST("/admin/scan", middleware.AdminOnly(), admin.TriggerScan)
 		protected.POST("/admin/requeue-untranscoded", middleware.AdminOnly(), admin.RequeueUntranscoded)
 		protected.GET("/admin/scanner-state", middleware.AdminOnly(), admin.ScannerState)

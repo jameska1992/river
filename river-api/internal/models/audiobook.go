@@ -4,16 +4,16 @@ import "github.com/google/uuid"
 
 type Audiobook struct {
 	Base
-	LibraryID uuid.UUID          `gorm:"type:varchar(36);not null;index" json:"library_id"`
-	Library   Library            `gorm:"foreignKey:LibraryID" json:"-"`
-	Title     string             `gorm:"not null" json:"title"`
-	Author    string             `json:"author"`
-	Narrator  string             `json:"narrator"`
-	Description string           `json:"description"`
-	Year      int                `json:"year"`
-	Genre     string             `json:"genre"`
-	CoverPath string             `json:"cover_path"`
-	Duration  int                `json:"duration"` // seconds
+	LibraryID   uuid.UUID `gorm:"type:varchar(36);not null;index" json:"library_id"`
+	Library     Library   `gorm:"foreignKey:LibraryID" json:"-"`
+	Title       string    `gorm:"not null" json:"title"`
+	Author      string    `json:"author"`
+	Narrator    string    `json:"narrator"`
+	Description string    `json:"description"`
+	Year        int       `json:"year"`
+	Genre       string    `json:"genre"`
+	CoverPath   string    `json:"cover_path"`
+	Duration    int       `json:"duration"` // seconds
 	// OpenLibraryKey is the resolved Open Library work key (e.g.
 	// "/works/OL45804W"). It's the stable anchor for re-enrichment — sticky
 	// once set (Update only overwrites it when non-empty) so a rescan can't
@@ -33,4 +33,8 @@ type AudiobookChapter struct {
 	Title       string    `json:"title"`
 	Duration    int       `json:"duration"` // seconds
 	FilePath    string    `gorm:"not null" json:"file_path"`
+	// SizeBytes is the on-disk size of the transcoded output (FilePath),
+	// recorded at transcode time for the admin storage dashboard. 0 means
+	// "not yet measured" — the river-api size backfill fills it from FilePath.
+	SizeBytes int64 `gorm:"not null;default:0" json:"size_bytes"`
 }

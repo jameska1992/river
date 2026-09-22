@@ -229,6 +229,7 @@ type TrackRequest struct {
 	DiscNumber int    `json:"disc_number,omitempty"`
 	Duration   int    `json:"duration,omitempty"`
 	FilePath   string `json:"file_path"`
+	SizeBytes  int64  `json:"size_bytes,omitempty"`
 }
 
 func (c *Client) ListAlbumTracks(albumID string) ([]Track, error) {
@@ -283,10 +284,11 @@ type Chapter struct {
 }
 
 type ChapterRequest struct {
-	Number   int    `json:"number"`
-	Title    string `json:"title,omitempty"`
-	Duration int    `json:"duration,omitempty"`
-	FilePath string `json:"file_path"`
+	Number    int    `json:"number"`
+	Title     string `json:"title,omitempty"`
+	Duration  int    `json:"duration,omitempty"`
+	FilePath  string `json:"file_path"`
+	SizeBytes int64  `json:"size_bytes,omitempty"`
 }
 
 func (c *Client) ListChapters(audiobookID string) ([]Chapter, error) {

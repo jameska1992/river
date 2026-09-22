@@ -352,7 +352,7 @@ func (s *TVShowService) UpdateSeason(showID, seasonID string, input SeasonInput)
 // --- Episodes ---
 
 type EpisodeInput struct {
-	Number      int
+	Number int
 	// SeasonID lets an admin move an episode to a different season — used
 	// to fix mis-detected season assignment without recreating the row.
 	// Empty means "leave as-is". When non-empty the service verifies the
@@ -363,7 +363,10 @@ type EpisodeInput struct {
 	Runtime     int
 	FilePath    string
 	SourcePath  string
-	AiredAt     string // RFC3339; empty means zero time
+	// SizeBytes is the transcoded output size in bytes; only applied when
+	// non-zero so a metadata-only update can't zero a measured value.
+	SizeBytes int64
+	AiredAt   string // RFC3339; empty means zero time
 	// IsSpecial marks an episode whose filename didn't match a standard
 	// number pattern. The CreateEpisode upsert disambiguates regular ep N
 	// from special N via this flag.
@@ -412,6 +415,7 @@ func (s *TVShowService) CreateEpisode(showID, seasonID string, input EpisodeInpu
 		Runtime:     input.Runtime,
 		FilePath:    input.FilePath,
 		SourcePath:  input.SourcePath,
+		SizeBytes:   input.SizeBytes,
 		IsSpecial:   input.IsSpecial,
 	}
 	if input.AiredAt != "" {
@@ -485,6 +489,9 @@ func (s *TVShowService) updateEpisodeFields(episode *models.Episode, input Episo
 	}
 	if input.FilePath != "" {
 		episode.FilePath = input.FilePath
+	}
+	if input.SizeBytes > 0 {
+		episode.SizeBytes = input.SizeBytes
 	}
 	if input.AiredAt != "" {
 		if t, err := time.Parse(time.RFC3339, input.AiredAt); err == nil {

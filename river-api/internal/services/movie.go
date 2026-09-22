@@ -58,6 +58,10 @@ type MovieInput struct {
 	TMDBID     int
 	FilePath   string
 	SourcePath string
+	// SizeBytes is the transcoded output size in bytes. Like FilePath it's
+	// only overwritten by Update when non-zero, so a metadata edit that
+	// carries no size can't zero out a measured value.
+	SizeBytes int64
 }
 
 func (s *MovieService) List(f MovieFilter) ([]models.Movie, error) {
@@ -135,6 +139,7 @@ func (s *MovieService) Create(input MovieInput) (*models.Movie, error) {
 		TMDBID:        input.TMDBID,
 		FilePath:      input.FilePath,
 		SourcePath:    input.SourcePath,
+		SizeBytes:     input.SizeBytes,
 	}
 	return &movie, s.repo.Create(&movie)
 }
@@ -166,6 +171,9 @@ func (s *MovieService) Update(id string, input MovieInput) (*models.Movie, error
 	if input.SourcePath != "" {
 		movie.SourcePath = input.SourcePath
 	}
+	if input.SizeBytes > 0 {
+		movie.SizeBytes = input.SizeBytes
+	}
 	if input.Genres != "" {
 		movie.Genres = input.Genres
 	}
@@ -195,12 +203,18 @@ func (s *MovieService) UpdateSourcePath(id, path string) (*models.Movie, error) 
 // field untouched. Used by river-video-trans so a long-running transcode
 // can't clobber metadata that river-meta-movie wrote during the window
 // between the transcoder's GetMovie and its post-transcode update.
-func (s *MovieService) UpdateFilePath(id, path string) (*models.Movie, error) {
+func (s *MovieService) UpdateFilePath(id, path string, sizeBytes int64) (*models.Movie, error) {
 	movie, err := s.repo.FindByID(id)
 	if err != nil {
 		return nil, err
 	}
 	movie.FilePath = path
+	// Record the transcoded output size alongside the path (they're set
+	// together at transcode time). Only when >0 so a caller that doesn't
+	// measure can't zero an existing value.
+	if sizeBytes > 0 {
+		movie.SizeBytes = sizeBytes
+	}
 	return movie, s.repo.Save(movie)
 }
 

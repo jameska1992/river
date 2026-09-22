@@ -4,6 +4,7 @@ import (
 	"log"
 	"time"
 
+	"river-api/internal/backfill"
 	"river-api/internal/config"
 	"river-api/internal/database"
 	"river-api/internal/handlers"
@@ -47,6 +48,10 @@ func main() {
 	if err := database.Migrate(db); err != nil {
 		log.Fatalf("failed to run migrations: %v", err)
 	}
+	// Populate size_bytes for file-bearing rows created before the column
+	// existed (or by producers that didn't send a size, e.g. pre-transcoded
+	// libraries). Idempotent + best-effort; safe on every boot.
+	backfill.Sizes(db)
 
 	// Repositories
 	userRepo := repository.NewUserRepository(db)
@@ -101,6 +106,7 @@ func main() {
 	searchRepo := repository.NewSearchRepository(db)
 	searchSvc := services.NewSearchService(searchRepo)
 	statsRepo := repository.NewStatsRepository(db)
+	insightsSvc := services.NewInsightsService(repository.NewInsightsRepository(db), movieRepo, episodeRepo, tvShowRepo, audiobookRepo, chapterRepo, userRepo)
 
 	// Handlers
 	watchPartyHub := handlers.NewWatchPartyHub()
@@ -154,6 +160,7 @@ func main() {
 		handlers.NewSettingsHandler(settingsSvc),
 		handlers.NewImageProxyHandler(),
 		handlers.NewShowMergeHandler(showMergeSvc),
+		handlers.NewInsightsHandler(insightsSvc),
 	)
 
 	log.Printf("River API listening on :%s", cfg.Port)

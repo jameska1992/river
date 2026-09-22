@@ -307,10 +307,11 @@ func (h *AudiobookHandler) DeleteChapter(c *gin.Context) {
 // --- Chapters ---
 
 type chapterRequest struct {
-	Number   int    `json:"number" binding:"required"`
-	Title    string `json:"title"`
-	Duration int    `json:"duration"`
-	FilePath string `json:"file_path" binding:"required"`
+	Number    int    `json:"number" binding:"required"`
+	Title     string `json:"title"`
+	Duration  int    `json:"duration"`
+	FilePath  string `json:"file_path" binding:"required"`
+	SizeBytes int64  `json:"size_bytes"`
 }
 
 // ListChapters returns all chapters of an audiobook.
@@ -353,6 +354,7 @@ func (h *AudiobookHandler) CreateChapter(c *gin.Context) {
 	}
 	chapter, err := h.svc.CreateChapter(c.Param("id"), services.ChapterInput{
 		Number: req.Number, Title: req.Title, Duration: req.Duration, FilePath: req.FilePath,
+		SizeBytes: req.SizeBytes,
 	})
 	if err != nil {
 		c.JSON(serviceStatus(err), gin.H{"error": err.Error()})

@@ -167,10 +167,11 @@ func (s *AudiobookService) Delete(id string) error {
 // --- Chapters ---
 
 type ChapterInput struct {
-	Number   int
-	Title    string
-	Duration int
-	FilePath string
+	Number    int
+	Title     string
+	Duration  int
+	FilePath  string
+	SizeBytes int64
 }
 
 func (s *AudiobookService) ListChapters(audiobookID string) ([]models.AudiobookChapter, error) {
@@ -188,6 +189,7 @@ func (s *AudiobookService) CreateChapter(audiobookID string, input ChapterInput)
 		Title:       input.Title,
 		Duration:    input.Duration,
 		FilePath:    input.FilePath,
+		SizeBytes:   input.SizeBytes,
 	}
 	return &chapter, s.chapters.Create(&chapter)
 }

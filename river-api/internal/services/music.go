@@ -155,13 +155,14 @@ type TrackInput struct {
 	DiscNumber int
 	Duration   int
 	FilePath   string
+	SizeBytes  int64
 }
 
 func (s *MusicService) CreateTrack(input TrackInput) (*models.Track, error) {
 	track := models.Track{
 		LibraryID: input.LibraryID, AlbumID: input.AlbumID, ArtistID: input.ArtistID,
 		Title: input.Title, Number: input.Number, DiscNumber: input.DiscNumber,
-		Duration: input.Duration, FilePath: input.FilePath,
+		Duration: input.Duration, FilePath: input.FilePath, SizeBytes: input.SizeBytes,
 	}
 	return &track, s.tracks.Create(&track)
 }

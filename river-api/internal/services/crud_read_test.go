@@ -52,13 +52,14 @@ func TestMovieService_UpdateSourceAndFilePath(t *testing.T) {
 	assert.Equal(t, "/src/keep.mkv", got.SourcePath)
 	assert.Equal(t, "Keep", got.Title, "title must be untouched")
 
-	got, err = svc.UpdateFilePath(m.ID.String(), "/out/keep.mp4")
+	got, err = svc.UpdateFilePath(m.ID.String(), "/out/keep.mp4", 4096)
 	require.NoError(t, err)
 	assert.Equal(t, "/out/keep.mp4", got.FilePath)
+	assert.Equal(t, int64(4096), got.SizeBytes)
 
 	_, err = svc.UpdateSourcePath(uuid.NewString(), "/x")
 	assert.Error(t, err)
-	_, err = svc.UpdateFilePath(uuid.NewString(), "/x")
+	_, err = svc.UpdateFilePath(uuid.NewString(), "/x", 0)
 	assert.Error(t, err)
 }
 

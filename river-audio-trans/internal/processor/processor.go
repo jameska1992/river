@@ -23,6 +23,18 @@ type Processor struct {
 	settings    *settingsCache
 }
 
+// fileSizeBytes returns the on-disk size of path, or 0 if it can't be stat'd.
+// Recorded on the track/chapter record at ingest so the admin storage
+// dashboard can sum sizes without walking the disk; 0 is treated as
+// "unmeasured" by river-api and retried by its boot backfill.
+func fileSizeBytes(path string) int64 {
+	info, err := os.Stat(path)
+	if err != nil {
+		return 0
+	}
+	return info.Size()
+}
+
 func New(api *apiclient.Client, outputDir string, concurrency int) *Processor {
 	if concurrency < 1 {
 		concurrency = 1
@@ -129,6 +141,7 @@ func (p *Processor) processMusic(event consumer.MediaDiscoveredEvent) error {
 					Number:    job.num,
 					Duration:  duration,
 					FilePath:  finalPath,
+					SizeBytes: fileSizeBytes(finalPath),
 				}); err != nil {
 					log.Printf("ERROR create track %q: %v", title, err)
 				}
@@ -199,10 +212,11 @@ func (p *Processor) processAudiobook(event consumer.MediaDiscoveredEvent) error 
 			chTitle := parseAudioTitle(job.file)
 			log.Printf("INFO creating chapter %d %q (audiobook %s)", job.num, chTitle, book.ID)
 			if _, err := p.api.CreateChapter(book.ID, apiclient.ChapterRequest{
-				Number:   job.num,
-				Title:    chTitle,
-				Duration: duration,
-				FilePath: finalPath,
+				Number:    job.num,
+				Title:     chTitle,
+				Duration:  duration,
+				FilePath:  finalPath,
+				SizeBytes: fileSizeBytes(finalPath),
 			}); err != nil {
 				log.Printf("ERROR create chapter %d: %v", job.num, err)
 			}

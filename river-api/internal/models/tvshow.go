@@ -20,10 +20,10 @@ type TVShow struct {
 	// Certification is the BBFC (GB) content rating from TMDB. Populated by
 	// the metadata service; only set/updated on a metadata fetch, so existing
 	// shows stay blank until a refresh/re-scan.
-	Certification string    `json:"certification"`
-	PosterPath    string    `json:"poster_path"`
-	BackdropPath  string    `json:"backdrop_path"`
-	TrailerURL    string    `json:"trailer_url"`
+	Certification string `json:"certification"`
+	PosterPath    string `json:"poster_path"`
+	BackdropPath  string `json:"backdrop_path"`
+	TrailerURL    string `json:"trailer_url"`
 	// TMDBID is the show's TMDB identifier, set once enrichment resolves
 	// the show (whether via title search, IMDb hint, or admin override).
 	// Subsequent enrichments use it directly so a rescan or refresh can't
@@ -66,8 +66,12 @@ type Episode struct {
 	// transcoding/copying. Stream/download fall back to it when FilePath
 	// isn't yet pointing at a real file (transcode hasn't finished). See
 	// the matching field on Movie for the full rationale.
-	SourcePath string    `json:"source_path"`
-	AiredAt    time.Time `json:"aired_at"`
+	SourcePath string `json:"source_path"`
+	// SizeBytes is the on-disk size of the transcoded output (FilePath),
+	// recorded at transcode time for the admin storage dashboard. 0 means
+	// "not yet measured" — the river-api size backfill fills it from FilePath.
+	SizeBytes int64     `gorm:"not null;default:0" json:"size_bytes"`
+	AiredAt   time.Time `json:"aired_at"`
 	// IsSpecial flags episodes whose filename didn't yield a SxxExx / NxNN /
 	// Exx number. We still ingest them so they surface in the season's
 	// episode list; clients render "SPEC" instead of "E${number}". Number is

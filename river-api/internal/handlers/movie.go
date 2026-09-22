@@ -40,6 +40,7 @@ type movieRequest struct {
 	TMDBID        int     `json:"tmdb_id"`
 	FilePath      string  `json:"file_path"`
 	SourcePath    string  `json:"source_path"`
+	SizeBytes     int64   `json:"size_bytes"`
 }
 
 // List returns a paginated, optionally library-filtered movie list.
@@ -109,6 +110,7 @@ func (h *MovieHandler) Create(c *gin.Context) {
 		Rating: req.Rating, Certification: req.Certification, Runtime: req.Runtime, PosterPath: req.PosterPath,
 		BackdropPath: req.BackdropPath, TrailerURL: req.TrailerURL,
 		TMDBID: req.TMDBID, FilePath: req.FilePath, SourcePath: req.SourcePath,
+		SizeBytes: req.SizeBytes,
 	})
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create movie"})
@@ -188,6 +190,7 @@ func (h *MovieHandler) Update(c *gin.Context) {
 		Rating: req.Rating, Certification: req.Certification, Runtime: req.Runtime, PosterPath: req.PosterPath,
 		BackdropPath: req.BackdropPath, TrailerURL: req.TrailerURL,
 		TMDBID: req.TMDBID, FilePath: req.FilePath, SourcePath: req.SourcePath,
+		SizeBytes: req.SizeBytes,
 	})
 	if err != nil {
 		c.JSON(serviceStatus(err), gin.H{"error": err.Error()})
@@ -212,13 +215,14 @@ func (h *MovieHandler) Update(c *gin.Context) {
 // @Router       /movies/{id}/file-path [patch]
 func (h *MovieHandler) UpdateFilePath(c *gin.Context) {
 	var req struct {
-		FilePath string `json:"file_path" binding:"required"`
+		FilePath  string `json:"file_path" binding:"required"`
+		SizeBytes int64  `json:"size_bytes"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	movie, err := h.svc.UpdateFilePath(c.Param("id"), req.FilePath)
+	movie, err := h.svc.UpdateFilePath(c.Param("id"), req.FilePath, req.SizeBytes)
 	if err != nil {
 		c.JSON(serviceStatus(err), gin.H{"error": err.Error()})
 		return

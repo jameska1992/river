@@ -23,7 +23,8 @@ import { MediaDetailsModal } from '../components/MediaDetailsModal'
 import { SimilarCarousel } from '../components/SimilarCarousel'
 import { DeleteMediaModal } from '../components/DeleteMediaModal'
 import { CastEditorModal } from '../components/CastEditorModal'
-import { creditsToRequest, dedupeCrew } from '../util/credits'
+import { creditsToRequest } from '../util/credits'
+import { CrewCarousel } from '../components/CrewCarousel'
 import { useBackTo } from '../hooks/useBackTo'
 import styles from './TVShowDetailPage.module.css'
 
@@ -367,6 +368,8 @@ export function TVShowDetailPage() {
         </div>
       )}
 
+      {credits && <CrewCarousel crew={credits.crew} />}
+
       {show && <SimilarCarousel sourceId={show.id} type="tvshow" />}
 
       {editOpen && show && (
@@ -507,7 +510,6 @@ function TVShowCreditsSection({ credits, isAdmin, locked, onEditCast, onUnlock }
   onEditCast?: () => void; onUnlock?: () => void
 }) {
   const creators = credits.crew.filter(c => c.job === 'Creator' || c.job === 'Executive Producer')
-  const crew = dedupeCrew(credits.crew)
 
   return (
     <div className={styles.creditsSection}>
@@ -548,27 +550,6 @@ function TVShowCreditsSection({ credits, isAdmin, locked, onEditCast, onUnlock }
             </Link>
           ))}
         </div>
-      )}
-      {crew.length > 0 && (
-        <>
-          <h3 className={`label-sm ${styles.creditsGroupTitle}`}>Crew</h3>
-          <div className={styles.castGrid}>
-            {crew.map(c => {
-              const inner = (
-                <>
-                  <div className={styles.castPhoto}>
-                    {c.profile_path ? <img src={imageUrl(c.profile_path)} alt={c.name} /> : <RiUserLine size={24} />}
-                  </div>
-                  <span className={`label-sm ${styles.castName}`}>{c.name}</span>
-                  {c.jobs && <span className={`label-sm ${styles.castCharacter}`}>{c.jobs}</span>}
-                </>
-              )
-              return c.person_id
-                ? <Link key={c.person_id} to={`/person/${c.person_id}`} className={styles.castCard}>{inner}</Link>
-                : <div key={c.name} className={styles.castCard}>{inner}</div>
-            })}
-          </div>
-        </>
       )}
     </div>
   )

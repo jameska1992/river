@@ -165,6 +165,17 @@ definitions:
     - library_id
     - name
     type: object
+  handlers.attachSubtitleRequest:
+    properties:
+      label:
+        type: string
+      language:
+        type: string
+      url:
+        type: string
+    required:
+    - url
+    type: object
   handlers.audiobookRequest:
     properties:
       author:
@@ -402,6 +413,8 @@ definitions:
       sonarr_api_key:
         type: string
       sonarr_url:
+        type: string
+      subdl_api_key:
         type: string
       tmdb_api_key:
         type: string
@@ -1360,6 +1373,8 @@ definitions:
         type: boolean
       sonarr_url:
         type: string
+      subdl_has_key:
+        type: boolean
     type: object
   services.LibraryInsights:
     properties:
@@ -1556,6 +1571,31 @@ definitions:
         description: |-
           Window is the normalized window that was applied ("7d", "30d", "all"…),
           echoed back so the client can confirm what it got.
+        type: string
+    type: object
+  subdl.Subtitle:
+    properties:
+      author:
+        type: string
+      episode:
+        type: integer
+      hi:
+        description: hearing-impaired
+        type: boolean
+      lang:
+        description: language code, e.g. "EN"
+        type: string
+      language:
+        description: display name, e.g. "English"
+        type: string
+      name:
+        type: string
+      release_name:
+        type: string
+      season:
+        type: integer
+      url:
+        description: path under downloadHost; points to a .zip
         type: string
     type: object
 host: localhost:8080
@@ -4821,6 +4861,84 @@ paths:
       summary: List movie subtitles
       tags:
       - subtitles
+  /movies/{id}/subtitles/download:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Movie ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: '{url, language, label}'
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.attachSubtitleRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.Subtitle'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Attach a provider subtitle to a movie
+      tags:
+      - subtitles
+  /movies/{id}/subtitles/search:
+    get:
+      parameters:
+      - description: Movie ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Comma-separated language codes, e.g. EN,FR
+        in: query
+        name: languages
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/subdl.Subtitle'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Search subtitles for a movie
+      tags:
+      - subtitles
   /people/{id}:
     get:
       parameters:
@@ -6602,6 +6720,104 @@ paths:
       security:
       - BearerAuth: []
       summary: List episode subtitles
+      tags:
+      - subtitles
+  /tvshows/{id}/seasons/{seasonId}/episodes/{episodeId}/subtitles/download:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: TV show ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Season ID
+        in: path
+        name: seasonId
+        required: true
+        type: string
+      - description: Episode ID
+        in: path
+        name: episodeId
+        required: true
+        type: string
+      - description: '{url, language, label}'
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.attachSubtitleRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.Subtitle'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Attach a provider subtitle to an episode
+      tags:
+      - subtitles
+  /tvshows/{id}/seasons/{seasonId}/episodes/{episodeId}/subtitles/search:
+    get:
+      parameters:
+      - description: TV show ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Season ID
+        in: path
+        name: seasonId
+        required: true
+        type: string
+      - description: Episode ID
+        in: path
+        name: episodeId
+        required: true
+        type: string
+      - description: Comma-separated language codes, e.g. EN,FR
+        in: query
+        name: languages
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/subdl.Subtitle'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Search subtitles for an episode
       tags:
       - subtitles
   /tvshows/{id}/similar:

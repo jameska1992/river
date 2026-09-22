@@ -572,6 +572,24 @@ export class RiverClient {
     return this.streamUrl(`/subtitles/${id}/stream`)
   }
 
+  // --- Subtitle search & download (SubDL, admin-only) ---
+
+  async searchMovieSubtitles(id: string, languages?: string): Promise<import('./types').SubtitleSearchResult[]> {
+    return this.request('GET', this.buildUrl(`/movies/${id}/subtitles/search`, { languages }))
+  }
+
+  async downloadMovieSubtitle(id: string, body: import('./types').SubtitleAttachRequest): Promise<Subtitle> {
+    return this.request<Subtitle>('POST', `/movies/${id}/subtitles/download`, body)
+  }
+
+  async searchEpisodeSubtitles(showId: string, seasonId: string, episodeId: string, languages?: string): Promise<import('./types').SubtitleSearchResult[]> {
+    return this.request('GET', this.buildUrl(`/tvshows/${showId}/seasons/${seasonId}/episodes/${episodeId}/subtitles/search`, { languages }))
+  }
+
+  async downloadEpisodeSubtitle(showId: string, seasonId: string, episodeId: string, body: import('./types').SubtitleAttachRequest): Promise<Subtitle> {
+    return this.request<Subtitle>('POST', `/tvshows/${showId}/seasons/${seasonId}/episodes/${episodeId}/subtitles/download`, body)
+  }
+
   async getMovieAudioTracks(id: string): Promise<AudioTrack[]> {
     return this.request<AudioTrack[]>('GET', `/movies/${id}/audio-tracks`)
   }

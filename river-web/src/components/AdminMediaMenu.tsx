@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { RiMoreLine, RiRefreshLine, RiEditLine, RiSearchLine, RiInformationLine, RiRestartLine, RiDeleteBin6Line } from 'react-icons/ri'
+import { RiMoreLine, RiRefreshLine, RiEditLine, RiSearchLine, RiInformationLine, RiRestartLine, RiDeleteBin6Line, RiClosedCaptioningLine } from 'react-icons/ri'
 import styles from './AdminMediaMenu.module.css'
 
 interface Props {
@@ -14,6 +14,8 @@ interface Props {
   // existing output. Optional — only wired where a source file exists to
   // re-process (e.g. the movie page).
   onReTranscode?: () => void
+  // onSearchSubtitles opens the subtitle search-and-attach modal (SubDL).
+  onSearchSubtitles?: () => void
   // onDelete opens a confirmation modal that lets the admin pick between
   // remove-from-db and remove-and-delete-files. Left optional so existing
   // call sites that haven't wired it up yet still compile.
@@ -24,7 +26,7 @@ interface Props {
   identifyLabel?: string
 }
 
-export function AdminMediaMenu({ onRefresh, onEdit, onIdentify, onShowDetails, onReTranscode, onDelete, identifyLabel }: Props) {
+export function AdminMediaMenu({ onRefresh, onEdit, onIdentify, onShowDetails, onReTranscode, onSearchSubtitles, onDelete, identifyLabel }: Props) {
   const [open, setOpen] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
   const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle')
@@ -77,6 +79,11 @@ export function AdminMediaMenu({ onRefresh, onEdit, onIdentify, onShowDetails, o
     onReTranscode?.()
   }
 
+  const handleSearchSubtitles = () => {
+    setOpen(false)
+    onSearchSubtitles?.()
+  }
+
   const handleDelete = () => {
     setOpen(false)
     onDelete?.()
@@ -120,6 +127,12 @@ export function AdminMediaMenu({ onRefresh, onEdit, onIdentify, onShowDetails, o
             <button className={styles.item} onClick={handleReTranscode} role="menuitem">
               <RiRestartLine size={16} />
               <span>Re-transcode</span>
+            </button>
+          )}
+          {onSearchSubtitles && (
+            <button className={styles.item} onClick={handleSearchSubtitles} role="menuitem">
+              <RiClosedCaptioningLine size={16} />
+              <span>Search subtitles</span>
             </button>
           )}
           {onDelete && (

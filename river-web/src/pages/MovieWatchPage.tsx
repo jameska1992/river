@@ -11,6 +11,7 @@ import {
   RiReplay10Fill, RiForward10Fill,
   RiRestartLine,
   RiDownloadLine,
+  RiTimeLine,
 } from 'react-icons/ri'
 import { useMovies } from '../context/MoviesContext'
 import { useAuth } from '../context/AuthContext'
@@ -104,6 +105,10 @@ export function MovieWatchPage() {
   const [subMenuOpen, setSubMenuOpen] = useState(false)
   const [activeSubtitleId, setActiveSubtitleId] = useState<string | null>(null)
   const [subtitleText, setSubtitleText] = useState('')
+  // Per-session subtitle timing offset in seconds; positive delays subtitles.
+  const [subtitleOffset, setSubtitleOffset] = useState(0)
+  const [offsetMenuOpen, setOffsetMenuOpen] = useState(false)
+  const stepOffset = (delta: number) => setSubtitleOffset(o => Math.round((o + delta) * 10) / 10)
   const [audioTracks, setAudioTracks] = useState<AudioTrack[]>([])
   const [audioMenuOpen, setAudioMenuOpen] = useState(false)
   const [activeAudioIdx, setActiveAudioIdx] = useState(0)
@@ -238,7 +243,8 @@ export function MovieWatchPage() {
     }
     const cues = subtitleCuesRef.current
     if (cues.length > 0) {
-      const t = v.currentTime
+      // Subtract the offset so a positive value shows each cue that much later.
+      const t = v.currentTime - subtitleOffset
       const cue = cues.find(c => t >= c.start && t <= c.end)
       setSubtitleText(cue?.text ?? '')
     } else if (subtitleText) {
@@ -618,6 +624,38 @@ export function MovieWatchPage() {
                         {sub.label || sub.language}
                       </button>
                     ))}
+                  </div>
+                )}
+              </div>
+            )}
+            {activeSubtitleId && (
+              <div className={styles.subMenu}>
+                <button
+                  className={`btn btn-icon ${styles.controlBtn}`}
+                  onClick={e => { e.stopPropagation(); setOffsetMenuOpen(o => !o) }}
+                  aria-label="Subtitle timing"
+                  title="Subtitle sync"
+                >
+                  <RiTimeLine size={20} />
+                </button>
+                {offsetMenuOpen && (
+                  <div className={styles.subMenuList} onClick={e => e.stopPropagation()} style={{ minWidth: 190, padding: 'var(--space-2)' }}>
+                    <div className="label-sm" style={{ textAlign: 'center', marginBottom: 8 }}>
+                      Subtitle delay: {subtitleOffset >= 0 ? '+' : ''}{subtitleOffset.toFixed(1)}s
+                    </div>
+                    <div style={{ display: 'flex', gap: 4, justifyContent: 'center' }}>
+                      <button className="btn" onClick={() => stepOffset(-0.5)}>−0.5</button>
+                      <button className="btn" onClick={() => stepOffset(-0.1)}>−0.1</button>
+                      <button className="btn" onClick={() => stepOffset(0.1)}>+0.1</button>
+                      <button className="btn" onClick={() => stepOffset(0.5)}>+0.5</button>
+                    </div>
+                    <button
+                      className={styles.subMenuOption}
+                      style={{ marginTop: 8, width: '100%' }}
+                      onClick={() => setSubtitleOffset(0)}
+                    >
+                      Reset
+                    </button>
                   </div>
                 )}
               </div>

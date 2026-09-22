@@ -16,7 +16,7 @@ export type {
   SimilarItem,
   WatchlistItem,
   ActiveSession,
-  Subtitle, AudioTrack,
+  Subtitle, SubtitleSearchResult, SubtitleAttachRequest, AudioTrack,
   ServiceKey,
   Collection, CollectionItem, CollectionDetail,
   PaginationParams, SortParams, SortOrder,

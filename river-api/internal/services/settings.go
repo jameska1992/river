@@ -16,6 +16,7 @@ const (
 	keySonarrURL    = "sonarr.url"
 	keySonarrKey    = "sonarr.api_key"
 	keyTMDBKey      = "tmdb.api_key"
+	keySubDLKey     = "subdl.api_key"
 	keyScanInterval = "scan.interval"
 
 	keyTransMaxHeight    = "transcoding.max_height"
@@ -301,6 +302,12 @@ func containsString(xs []string, v string) bool {
 	return false
 }
 
+// SubDLKey returns the raw SubDL API key (empty when unset). Consumed by the
+// subtitle-search service to authenticate against the SubDL API.
+func (s *SettingsService) SubDLKey() string {
+	return s.get(keySubDLKey)
+}
+
 // IntegrationSettings is the admin-facing view. Secrets are never
 // returned — only whether a key is set.
 type IntegrationSettings struct {
@@ -308,6 +315,7 @@ type IntegrationSettings struct {
 	RadarrHasKey bool   `json:"radarr_has_key"`
 	SonarrURL    string `json:"sonarr_url"`
 	SonarrHasKey bool   `json:"sonarr_has_key"`
+	SubDLHasKey  bool   `json:"subdl_has_key"`
 }
 
 func (s *SettingsService) Integrations() IntegrationSettings {
@@ -318,6 +326,7 @@ func (s *SettingsService) Integrations() IntegrationSettings {
 		RadarrHasKey: rk != "",
 		SonarrURL:    su,
 		SonarrHasKey: sk != "",
+		SubDLHasKey:  s.get(keySubDLKey) != "",
 	}
 }
 
@@ -325,7 +334,7 @@ func (s *SettingsService) Integrations() IntegrationSettings {
 // (an empty URL clears/disables that integration). API keys are only
 // written when non-empty, so an admin can change a URL without having to
 // re-enter the key; the key is left untouched otherwise.
-func (s *SettingsService) UpdateIntegrations(radarrURL, radarrKey, sonarrURL, sonarrKey string) error {
+func (s *SettingsService) UpdateIntegrations(radarrURL, radarrKey, sonarrURL, sonarrKey, subdlKey string) error {
 	if err := s.repo.Set(keyRadarrURL, strings.TrimSpace(radarrURL)); err != nil {
 		return err
 	}
@@ -342,6 +351,12 @@ func (s *SettingsService) UpdateIntegrations(radarrURL, radarrKey, sonarrURL, so
 			return err
 		}
 	}
+	// SubDL has no URL (fixed API host) — just the write-if-non-empty key.
+	if subdlKey != "" {
+		if err := s.repo.Set(keySubDLKey, subdlKey); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -349,13 +364,14 @@ func (s *SettingsService) UpdateIntegrations(radarrURL, radarrKey, sonarrURL, so
 // is not already set in the DB. Used by the deployment init step to
 // bootstrap from environment variables without ever overwriting values
 // an admin has changed via the UI.
-func (s *SettingsService) SeedIntegrations(radarrURL, radarrKey, sonarrURL, sonarrKey, tmdbKey, scanInterval string) error {
+func (s *SettingsService) SeedIntegrations(radarrURL, radarrKey, sonarrURL, sonarrKey, tmdbKey, subdlKey, scanInterval string) error {
 	seeds := []struct{ key, value string }{
 		{keyRadarrURL, strings.TrimSpace(radarrURL)},
 		{keyRadarrKey, radarrKey},
 		{keySonarrURL, strings.TrimSpace(sonarrURL)},
 		{keySonarrKey, sonarrKey},
 		{keyTMDBKey, tmdbKey},
+		{keySubDLKey, strings.TrimSpace(subdlKey)},
 		{keyScanInterval, strings.TrimSpace(scanInterval)},
 	}
 	for _, sd := range seeds {

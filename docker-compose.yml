@@ -103,6 +103,7 @@ services:
       SONARR_URL: ${SONARR_URL:-}
       SONARR_API_KEY: ${SONARR_API_KEY:-}
       TMDB_API_KEY: ${TMDB_API_KEY:-}
+      SUBDL_API_KEY: ${SUBDL_API_KEY:-}
       SCAN_INTERVAL: ${SCAN_INTERVAL:-3600s}
       # Optional per-service API keys (service-role Phase 2). Set any of these
       # to a value starting with "rvk_" to provision a scoped key for that
@@ -137,7 +138,7 @@ services:
         wget -qO/dev/null \
           --header="Content-Type: application/json" \
           --header="Authorization: Bearer $$TOKEN" \
-          --post-data="{\"radarr_url\":\"$$RADARR_URL\",\"radarr_api_key\":\"$$RADARR_API_KEY\",\"sonarr_url\":\"$$SONARR_URL\",\"sonarr_api_key\":\"$$SONARR_API_KEY\",\"tmdb_api_key\":\"$$TMDB_API_KEY\",\"scan_interval\":\"$$SCAN_INTERVAL\"}" \
+          --post-data="{\"radarr_url\":\"$$RADARR_URL\",\"radarr_api_key\":\"$$RADARR_API_KEY\",\"sonarr_url\":\"$$SONARR_URL\",\"sonarr_api_key\":\"$$SONARR_API_KEY\",\"tmdb_api_key\":\"$$TMDB_API_KEY\",\"subdl_api_key\":\"$$SUBDL_API_KEY\",\"scan_interval\":\"$$SCAN_INTERVAL\"}" \
           http://river-api:8080/api/admin/settings/integrations/seed || true
 
         # 4. Seed per-service API keys from env (create-if-absent). Scopes are

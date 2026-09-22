@@ -1,5 +1,5 @@
 import { type FormEvent, useEffect, useState } from 'react'
-import { RiCheckLine, RiCloseLine, RiExchangeFundsLine, RiFilmLine, RiMusic2Line, RiTimeLine, RiShieldCheckLine } from 'react-icons/ri'
+import { RiCheckLine, RiCloseLine, RiExchangeFundsLine, RiFilmLine, RiMusic2Line, RiTimeLine, RiShieldCheckLine, RiClosedCaptioningLine } from 'react-icons/ri'
 import { api, ApiError } from '../../api'
 import type { IntegrationSettings, TranscodingSettings } from '../../api'
 import styles from './AdminSettingsPage.module.css'
@@ -415,6 +415,7 @@ function IntegrationsTab() {
   const [radarrKey, setRadarrKey] = useState('')
   const [sonarrUrl, setSonarrUrl] = useState('')
   const [sonarrKey, setSonarrKey] = useState('')
+  const [subdlKey, setSubdlKey] = useState('')
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState('')
@@ -439,10 +440,12 @@ function IntegrationsTab() {
         radarr_api_key: radarrKey,
         sonarr_url: sonarrUrl.trim(),
         sonarr_api_key: sonarrKey,
+        subdl_api_key: subdlKey,
       })
       setSettings(s)
       setRadarrKey('')
       setSonarrKey('')
+      setSubdlKey('')
       setSaved(true)
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Failed to save settings')
@@ -465,7 +468,8 @@ function IntegrationsTab() {
     <form onSubmit={handleSave}>
       <p className={`body-md ${styles.blurb}`}>
         Connect Radarr and Sonarr to enable the Requests feature and the upcoming-releases
-        calendar. Leave a URL blank to disable that integration.
+        calendar. Leave a URL blank to disable that integration. Add a SubDL API key to enable
+        subtitle search &amp; download on movie and episode pages.
       </p>
 
       <div className={styles.cards}>
@@ -485,6 +489,26 @@ function IntegrationsTab() {
           apiKey={sonarrKey} setApiKey={setSonarrKey}
           hasKey={settings?.sonarr_has_key ?? false}
         />
+        <div className={`card ${styles.card}`}>
+          <div className={styles.cardHead}>
+            <span className={styles.cardIcon} aria-hidden><RiClosedCaptioningLine size={18} /></span>
+            <div>
+              <h2 className={`label-lg ${styles.cardTitle}`}>SubDL</h2>
+              <p className={`label-sm ${styles.cardSubtitle}`}>Subtitles</p>
+            </div>
+          </div>
+          <label className={styles.field}>
+            <span className="label-sm">API key</span>
+            <input
+              className="input"
+              type="password"
+              autoComplete="off"
+              value={subdlKey}
+              onChange={e => setSubdlKey(e.target.value)}
+              placeholder={settings?.subdl_has_key ? '•••••••••••• (leave blank to keep)' : 'Enter API key'}
+            />
+          </label>
+        </div>
       </div>
 
       {error && <p className={styles.formError}>{error}</p>}

@@ -14,6 +14,7 @@ import type { TVShow, Season, Episode, Credits } from '../api'
 import { api } from '../api'
 import { AdminMediaMenu } from '../components/AdminMediaMenu'
 import { EpisodeActionsMenu } from '../components/EpisodeActionsMenu'
+import { SubtitleSearchModal } from '../components/SubtitleSearchModal'
 import { MetadataModal } from '../components/MetadataModal'
 import { IdentifyTVShowModal } from '../components/IdentifyTVShowModal'
 import { EpisodeMetadataModal } from '../components/EpisodeMetadataModal'
@@ -54,6 +55,7 @@ export function TVShowDetailPage() {
   const [editingSeason, setEditingSeason] = useState<Season | null>(null)
   const [editingEpisode, setEditingEpisode] = useState<{ seasonId: string; episode: Episode } | null>(null)
   const [deletingEpisode, setDeletingEpisode] = useState<{ seasonId: string; episode: Episode } | null>(null)
+  const [subtitleEpisode, setSubtitleEpisode] = useState<{ seasonId: string; episode: Episode } | null>(null)
   const [playNextLoading, setPlayNextLoading] = useState(false)
   // Watched state for the show is the "all episodes completed" summary;
   // null until first fetch resolves so the button can render its loading
@@ -356,6 +358,7 @@ export function TVShowDetailPage() {
                 onEditSeason={() => setEditingSeason(season)}
                 onEditEpisode={ep => setEditingEpisode({ seasonId: season.id, episode: ep })}
                 onDeleteEpisode={ep => setDeletingEpisode({ seasonId: season.id, episode: ep })}
+                onSearchSubtitlesEpisode={ep => setSubtitleEpisode({ seasonId: season.id, episode: ep })}
                 watchedEpisodes={watchedEpisodes}
                 onToggleWatched={toggleEpisodeWatched}
               />
@@ -451,6 +454,17 @@ export function TVShowDetailPage() {
             })
           }}
           onClose={() => setDeletingEpisode(null)}
+        />
+      )}
+
+      {subtitleEpisode && (
+        <SubtitleSearchModal
+          title={subtitleEpisode.episode.title
+            ? `E${subtitleEpisode.episode.number} · ${subtitleEpisode.episode.title}`
+            : `Episode ${subtitleEpisode.episode.number}`}
+          onSearch={langs => api.searchEpisodeSubtitles(id!, subtitleEpisode.seasonId, subtitleEpisode.episode.id, langs)}
+          onAttach={r => api.downloadEpisodeSubtitle(id!, subtitleEpisode.seasonId, subtitleEpisode.episode.id, { url: r.url, language: r.lang }).then(() => {})}
+          onClose={() => setSubtitleEpisode(null)}
         />
       )}
 
@@ -573,6 +587,7 @@ interface SeasonRowProps {
   onEditSeason: () => void
   onEditEpisode: (ep: Episode) => void
   onDeleteEpisode: (ep: Episode) => void
+  onSearchSubtitlesEpisode: (ep: Episode) => void
   watchedEpisodes: Set<string>
   onToggleWatched: (ep: Episode, next: boolean) => void
 }
@@ -601,7 +616,7 @@ async function reTranscodeEpisode(showId: string, seasonId: string, episodeId: s
   }
 }
 
-function SeasonRow({ showId, season, episodes, loading, expanded, onToggle, isAdmin, onEditSeason, onEditEpisode, onDeleteEpisode, watchedEpisodes, onToggleWatched }: SeasonRowProps) {
+function SeasonRow({ showId, season, episodes, loading, expanded, onToggle, isAdmin, onEditSeason, onEditEpisode, onDeleteEpisode, onSearchSubtitlesEpisode, watchedEpisodes, onToggleWatched }: SeasonRowProps) {
   const label = season.title && season.title !== `Season ${season.number}`
     ? season.title
     : `Season ${season.number}`
@@ -646,6 +661,7 @@ function SeasonRow({ showId, season, episodes, loading, expanded, onToggle, isAd
                 isAdmin={isAdmin}
                 onEdit={() => onEditEpisode(ep)}
                 onDelete={() => onDeleteEpisode(ep)}
+                onSearchSubtitles={() => onSearchSubtitlesEpisode(ep)}
                 watched={watchedEpisodes.has(ep.id)}
                 onToggleWatched={next => onToggleWatched(ep, next)}
               />
@@ -662,7 +678,7 @@ function SeasonRow({ showId, season, episodes, loading, expanded, onToggle, isAd
 
 // ── Episode row ──────────────────────────────────────────
 
-function EpisodeRow({ showId, seasonId, episode, isAdmin, onEdit, onDelete, watched, onToggleWatched }: { showId: string; seasonId: string; episode: Episode; isAdmin: boolean; onEdit: () => void; onDelete: () => void; watched: boolean; onToggleWatched: (next: boolean) => void }) {
+function EpisodeRow({ showId, seasonId, episode, isAdmin, onEdit, onDelete, onSearchSubtitles, watched, onToggleWatched }: { showId: string; seasonId: string; episode: Episode; isAdmin: boolean; onEdit: () => void; onDelete: () => void; onSearchSubtitles: () => void; watched: boolean; onToggleWatched: (next: boolean) => void }) {
   const navigate = useNavigate()
   const runtime = episode.runtime > 0
     ? `${Math.floor(episode.runtime / 60) > 0 ? `${Math.floor(episode.runtime / 60)}h ` : ''}${episode.runtime % 60}m`
@@ -729,6 +745,7 @@ function EpisodeRow({ showId, seasonId, episode, isAdmin, onEdit, onDelete, watc
           isAdmin={isAdmin}
           onEdit={onEdit}
           onReTranscode={() => reTranscodeEpisode(showId, seasonId, episode.id)}
+          onSearchSubtitles={onSearchSubtitles}
           onDelete={onDelete}
         />
       </div>

@@ -159,6 +159,80 @@ const docTemplate = `{
                 }
             }
         },
+        "/admin/insights/library": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "Library \u0026 storage health",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/services.LibraryInsights"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/insights/watch": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "Watch analytics",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Time window: '7d', '30d' (default), '90d', or 'all'",
+                        "name": "window",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/services.WatchInsights"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/admin/logs": {
             "get": {
                 "security": [
@@ -8469,6 +8543,9 @@ const docTemplate = `{
                 "number": {
                     "type": "integer"
                 },
+                "size_bytes": {
+                    "type": "integer"
+                },
                 "title": {
                     "type": "string"
                 }
@@ -8677,6 +8754,9 @@ const docTemplate = `{
                 "runtime": {
                     "type": "integer"
                 },
+                "size_bytes": {
+                    "type": "integer"
+                },
                 "source_path": {
                     "type": "string"
                 },
@@ -8812,6 +8892,9 @@ const docTemplate = `{
                     "type": "number"
                 },
                 "runtime": {
+                    "type": "integer"
+                },
+                "size_bytes": {
                     "type": "integer"
                 },
                 "source_path": {
@@ -9023,6 +9106,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "number": {
+                    "type": "integer"
+                },
+                "size_bytes": {
                     "type": "integer"
                 },
                 "title": {
@@ -9377,6 +9463,10 @@ const docTemplate = `{
                 "number": {
                     "type": "integer"
                 },
+                "size_bytes": {
+                    "description": "SizeBytes is the on-disk size of the transcoded output (FilePath),\nrecorded at transcode time for the admin storage dashboard. 0 means\n\"not yet measured\" — the river-api size backfill fills it from FilePath.",
+                    "type": "integer"
+                },
                 "title": {
                     "type": "string"
                 },
@@ -9466,6 +9556,10 @@ const docTemplate = `{
                 },
                 "season_id": {
                     "type": "string"
+                },
+                "size_bytes": {
+                    "description": "SizeBytes is the on-disk size of the transcoded output (FilePath),\nrecorded at transcode time for the admin storage dashboard. 0 means\n\"not yet measured\" — the river-api size backfill fills it from FilePath.",
+                    "type": "integer"
                 },
                 "source_path": {
                     "description": "SourcePath is the original on-disk location of this episode before\ntranscoding/copying. Stream/download fall back to it when FilePath\nisn't yet pointing at a real file (transcode hasn't finished). See\nthe matching field on Movie for the full rationale.",
@@ -9569,6 +9663,10 @@ const docTemplate = `{
                 },
                 "runtime": {
                     "description": "minutes",
+                    "type": "integer"
+                },
+                "size_bytes": {
+                    "description": "SizeBytes is the on-disk size of the transcoded output (FilePath),\nrecorded at transcode time so the admin storage dashboard can SUM it\nwithout walking the disk. 0 means \"not yet measured\" — the river-api\nsize backfill populates such rows from FilePath on boot.",
                     "type": "integer"
                 },
                 "source_path": {
@@ -9778,6 +9876,10 @@ const docTemplate = `{
                 "number": {
                     "type": "integer"
                 },
+                "size_bytes": {
+                    "description": "SizeBytes is the on-disk size of the transcoded output (FilePath),\nrecorded at transcode time for the admin storage dashboard. 0 means\n\"not yet measured\" — the river-api size backfill fills it from FilePath.",
+                    "type": "integer"
+                },
                 "title": {
                     "type": "string"
                 },
@@ -9899,6 +10001,29 @@ const docTemplate = `{
                 }
             }
         },
+        "repository.LibraryHealth": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "item_count": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "size_bytes": {
+                    "type": "integer"
+                },
+                "type": {
+                    "type": "string"
+                },
+                "untranscoded": {
+                    "type": "integer"
+                }
+            }
+        },
         "services.IntegrationSettings": {
             "type": "object",
             "properties": {
@@ -9913,6 +10038,26 @@ const docTemplate = `{
                 },
                 "sonarr_url": {
                     "type": "string"
+                }
+            }
+        },
+        "services.LibraryInsights": {
+            "type": "object",
+            "properties": {
+                "failed_jobs": {
+                    "type": "integer"
+                },
+                "libraries": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/repository.LibraryHealth"
+                    }
+                },
+                "total_size_bytes": {
+                    "type": "integer"
+                },
+                "untranscoded_total": {
+                    "type": "integer"
                 }
             }
         },
@@ -9967,6 +10112,23 @@ const docTemplate = `{
                 }
             }
         },
+        "services.PerUserWatchItem": {
+            "type": "object",
+            "properties": {
+                "item_count": {
+                    "type": "integer"
+                },
+                "user_id": {
+                    "type": "string"
+                },
+                "username": {
+                    "type": "string"
+                },
+                "watch_seconds": {
+                    "type": "number"
+                }
+            }
+        },
         "services.ScanningSettings": {
             "type": "object",
             "properties": {
@@ -10013,6 +10175,32 @@ const docTemplate = `{
                 }
             }
         },
+        "services.TopTitleItem": {
+            "type": "object",
+            "properties": {
+                "completions": {
+                    "type": "integer"
+                },
+                "media_id": {
+                    "type": "string"
+                },
+                "media_type": {
+                    "type": "string"
+                },
+                "plays": {
+                    "type": "integer"
+                },
+                "show_title": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "watch_seconds": {
+                    "type": "number"
+                }
+            }
+        },
         "services.TranscodingSettings": {
             "type": "object",
             "properties": {
@@ -10052,6 +10240,59 @@ const docTemplate = `{
                 },
                 "x264_preset": {
                     "description": "ultrafast..veryslow",
+                    "type": "string"
+                }
+            }
+        },
+        "services.WatchActivityDay": {
+            "type": "object",
+            "properties": {
+                "date": {
+                    "type": "string"
+                },
+                "plays": {
+                    "type": "integer"
+                },
+                "watch_seconds": {
+                    "type": "number"
+                }
+            }
+        },
+        "services.WatchInsights": {
+            "type": "object",
+            "properties": {
+                "activity": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/services.WatchActivityDay"
+                    }
+                },
+                "completed": {
+                    "type": "integer"
+                },
+                "completion_rate": {
+                    "type": "number"
+                },
+                "per_user": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/services.PerUserWatchItem"
+                    }
+                },
+                "started": {
+                    "type": "integer"
+                },
+                "top_titles": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/services.TopTitleItem"
+                    }
+                },
+                "total_watch_seconds": {
+                    "type": "number"
+                },
+                "window": {
+                    "description": "Window is the normalized window that was applied (\"7d\", \"30d\", \"all\"…),\nechoed back so the client can confirm what it got.",
                     "type": "string"
                 }
             }

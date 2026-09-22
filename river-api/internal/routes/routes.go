@@ -25,6 +25,7 @@ func Register(r *gin.Engine, secret string,
 	credits *handlers.CreditsHandler,
 	search *handlers.SearchHandler,
 	subtitle *handlers.SubtitleHandler,
+	subtitleSearch *handlers.SubtitleSearchHandler,
 	audioTrack *handlers.AudioTrackHandler,
 	collection *handlers.CollectionHandler,
 	watchlist *handlers.WatchlistHandler,
@@ -167,6 +168,8 @@ func Register(r *gin.Engine, secret string,
 			movies.GET("/:id/credits", credits.GetMovieCredits)
 			movies.PUT("/:id/credits", middleware.AdminOrService(), credits.SetMovieCredits)
 			movies.GET("/:id/subtitles", subtitle.ListMovieSubtitles)
+			movies.GET("/:id/subtitles/search", middleware.AdminOnly(), subtitleSearch.SearchMovie)
+			movies.POST("/:id/subtitles/download", middleware.AdminOnly(), subtitleSearch.DownloadMovie)
 			movies.GET("/:id/audio-tracks", audioTrack.ListMovieAudioTracks)
 			movies.POST("", middleware.AdminOrService(), movie.Create)
 			movies.PUT("/:id", middleware.AdminOrService(), movie.Update)
@@ -201,6 +204,8 @@ func Register(r *gin.Engine, secret string,
 			shows.GET("/:id/seasons/:seasonId/episodes/:episodeId/stream", tvshow.StreamEpisode)
 			shows.GET("/:id/seasons/:seasonId/episodes/:episodeId/download", tvshow.DownloadEpisode)
 			shows.GET("/:id/seasons/:seasonId/episodes/:episodeId/subtitles", subtitle.ListEpisodeSubtitles)
+			shows.GET("/:id/seasons/:seasonId/episodes/:episodeId/subtitles/search", middleware.AdminOnly(), subtitleSearch.SearchEpisode)
+			shows.POST("/:id/seasons/:seasonId/episodes/:episodeId/subtitles/download", middleware.AdminOnly(), subtitleSearch.DownloadEpisode)
 			shows.GET("/:id/seasons/:seasonId/episodes/:episodeId/audio-tracks", audioTrack.ListEpisodeAudioTracks)
 		}
 

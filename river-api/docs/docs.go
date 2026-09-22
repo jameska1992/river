@@ -5017,6 +5017,129 @@ const docTemplate = `{
                 }
             }
         },
+        "/movies/{id}/subtitles/download": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "subtitles"
+                ],
+                "summary": "Attach a provider subtitle to a movie",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Movie ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "{url, language, label}",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.attachSubtitleRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/models.Subtitle"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/movies/{id}/subtitles/search": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "subtitles"
+                ],
+                "summary": "Search subtitles for a movie",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Movie ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Comma-separated language codes, e.g. EN,FR",
+                        "name": "languages",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/subdl.Subtitle"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/people/{id}": {
             "get": {
                 "security": [
@@ -7839,6 +7962,157 @@ const docTemplate = `{
                 }
             }
         },
+        "/tvshows/{id}/seasons/{seasonId}/episodes/{episodeId}/subtitles/download": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "subtitles"
+                ],
+                "summary": "Attach a provider subtitle to an episode",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "TV show ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Season ID",
+                        "name": "seasonId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Episode ID",
+                        "name": "episodeId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "{url, language, label}",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.attachSubtitleRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/models.Subtitle"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/tvshows/{id}/seasons/{seasonId}/episodes/{episodeId}/subtitles/search": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "subtitles"
+                ],
+                "summary": "Search subtitles for an episode",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "TV show ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Season ID",
+                        "name": "seasonId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Episode ID",
+                        "name": "episodeId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Comma-separated language codes, e.g. EN,FR",
+                        "name": "languages",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/subdl.Subtitle"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/tvshows/{id}/similar": {
             "get": {
                 "security": [
@@ -8442,6 +8716,23 @@ const docTemplate = `{
                 }
             }
         },
+        "handlers.attachSubtitleRequest": {
+            "type": "object",
+            "required": [
+                "url"
+            ],
+            "properties": {
+                "label": {
+                    "type": "string"
+                },
+                "language": {
+                    "type": "string"
+                },
+                "url": {
+                    "type": "string"
+                }
+            }
+        },
         "handlers.audiobookRequest": {
             "type": "object",
             "required": [
@@ -8781,6 +9072,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "sonarr_url": {
+                    "type": "string"
+                },
+                "subdl_api_key": {
                     "type": "string"
                 },
                 "tmdb_api_key": {
@@ -10038,6 +10332,9 @@ const docTemplate = `{
                 },
                 "sonarr_url": {
                     "type": "string"
+                },
+                "subdl_has_key": {
+                    "type": "boolean"
                 }
             }
         },
@@ -10293,6 +10590,42 @@ const docTemplate = `{
                 },
                 "window": {
                     "description": "Window is the normalized window that was applied (\"7d\", \"30d\", \"all\"…),\nechoed back so the client can confirm what it got.",
+                    "type": "string"
+                }
+            }
+        },
+        "subdl.Subtitle": {
+            "type": "object",
+            "properties": {
+                "author": {
+                    "type": "string"
+                },
+                "episode": {
+                    "type": "integer"
+                },
+                "hi": {
+                    "description": "hearing-impaired",
+                    "type": "boolean"
+                },
+                "lang": {
+                    "description": "language code, e.g. \"EN\"",
+                    "type": "string"
+                },
+                "language": {
+                    "description": "display name, e.g. \"English\"",
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "release_name": {
+                    "type": "string"
+                },
+                "season": {
+                    "type": "integer"
+                },
+                "url": {
+                    "description": "path under downloadHost; points to a .zip",
                     "type": "string"
                 }
             }

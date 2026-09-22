@@ -11,6 +11,7 @@ import (
 	"river-api/internal/repository"
 	"river-api/internal/routes"
 	"river-api/internal/services"
+	"river-api/internal/subdl"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -106,6 +107,7 @@ func main() {
 	serviceLogSvc := services.NewServiceLogService(serviceLogRepo)
 	failedJobSvc := services.NewFailedJobService(repository.NewFailedJobRepository(db))
 	settingsSvc := services.NewSettingsService(settingRepo)
+	subtitleSearchSvc := services.NewSubtitleSearchService(subdl.NewClient(), settingsSvc, movieRepo, episodeRepo, seasonRepo, tvShowRepo, subtitleRepo, cfg.MediaBasePath)
 	searchRepo := repository.NewSearchRepository(db)
 	searchSvc := services.NewSearchService(searchRepo)
 	statsRepo := repository.NewStatsRepository(db)
@@ -153,6 +155,7 @@ func main() {
 		handlers.NewCreditsHandler(creditsSvc),
 		handlers.NewSearchHandler(searchSvc),
 		handlers.NewSubtitleHandler(subtitleSvc),
+		handlers.NewSubtitleSearchHandler(subtitleSearchSvc),
 		handlers.NewAudioTrackHandler(audioTrackSvc),
 		handlers.NewCollectionHandler(collectionSvc),
 		handlers.NewWatchlistHandler(watchlistSvc),

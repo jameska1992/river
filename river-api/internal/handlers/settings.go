@@ -28,6 +28,7 @@ type integrationsRequest struct {
 	SonarrURL    string `json:"sonarr_url"`
 	SonarrAPIKey string `json:"sonarr_api_key"`
 	TMDBAPIKey   string `json:"tmdb_api_key"`
+	SubDLAPIKey  string `json:"subdl_api_key"`
 	ScanInterval string `json:"scan_interval"`
 }
 
@@ -89,7 +90,7 @@ func (h *SettingsHandler) UpdateIntegrations(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	if err := h.svc.UpdateIntegrations(req.RadarrURL, req.RadarrAPIKey, req.SonarrURL, req.SonarrAPIKey); err != nil {
+	if err := h.svc.UpdateIntegrations(req.RadarrURL, req.RadarrAPIKey, req.SonarrURL, req.SonarrAPIKey, req.SubDLAPIKey); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to save settings"})
 		return
 	}
@@ -116,7 +117,7 @@ func (h *SettingsHandler) SeedIntegrations(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	if err := h.svc.SeedIntegrations(req.RadarrURL, req.RadarrAPIKey, req.SonarrURL, req.SonarrAPIKey, req.TMDBAPIKey, req.ScanInterval); err != nil {
+	if err := h.svc.SeedIntegrations(req.RadarrURL, req.RadarrAPIKey, req.SonarrURL, req.SonarrAPIKey, req.TMDBAPIKey, req.SubDLAPIKey, req.ScanInterval); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to seed settings"})
 		return
 	}

@@ -682,6 +682,26 @@ export interface Subtitle extends BaseModel {
   file_path: string
 }
 
+// One SubDL search result (external provider), before it's attached.
+export interface SubtitleSearchResult {
+  release_name: string
+  name: string
+  lang: string
+  language: string
+  author: string
+  url: string
+  season: number
+  episode: number
+  hi: boolean
+}
+
+// Body for downloading + attaching a chosen search result.
+export interface SubtitleAttachRequest {
+  url: string
+  language: string
+  label?: string
+}
+
 // --- Collections ---
 
 export interface Collection extends BaseModel {
@@ -798,6 +818,7 @@ export interface IntegrationSettings {
   radarr_has_key: boolean
   sonarr_url: string
   sonarr_has_key: boolean
+  subdl_has_key: boolean
 }
 
 export interface IntegrationUpdate {
@@ -805,6 +826,7 @@ export interface IntegrationUpdate {
   radarr_api_key: string
   sonarr_url: string
   sonarr_api_key: string
+  subdl_api_key: string
 }
 
 export interface MetadataSettings {

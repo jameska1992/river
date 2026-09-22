@@ -69,13 +69,13 @@ func TestSettingsService_Update_EmptyKeyPreservesExisting(t *testing.T) {
 	svc := NewSettingsService(repo)
 
 	// URL set, empty key must not wipe the stored key.
-	require.NoError(t, svc.UpdateIntegrations("http://new", "", "", ""))
+	require.NoError(t, svc.UpdateIntegrations("http://new", "", "", "", ""))
 	url, key, _ := svc.RadarrConfig()
 	assert.Equal(t, "http://new", url)
 	assert.Equal(t, "oldkey", key, "empty key on update preserves the existing key")
 
 	// A non-empty key replaces it.
-	require.NoError(t, svc.UpdateIntegrations("http://new", "newkey", "", ""))
+	require.NoError(t, svc.UpdateIntegrations("http://new", "newkey", "", "", ""))
 	_, key2, _ := svc.RadarrConfig()
 	assert.Equal(t, "newkey", key2)
 }
@@ -84,7 +84,7 @@ func TestSettingsService_Seed_DoesNotOverwriteExisting(t *testing.T) {
 	repo := &memSettingRepo{m: map[string]string{keyRadarrURL: "http://existing"}}
 	svc := NewSettingsService(repo)
 
-	require.NoError(t, svc.SeedIntegrations("http://from-env", "envkey", "http://sonarr", "sonarrkey", "tmdbkey", "1h"))
+	require.NoError(t, svc.SeedIntegrations("http://from-env", "envkey", "http://sonarr", "sonarrkey", "tmdbkey", "subdlkey", "1h"))
 
 	ru, rk, _ := svc.RadarrConfig()
 	assert.Equal(t, "http://existing", ru, "an already-set value is never overwritten by seed")
@@ -99,7 +99,7 @@ func TestSettingsService_Seed_SkipsEmptyValues(t *testing.T) {
 	repo := &memSettingRepo{m: map[string]string{}}
 	svc := NewSettingsService(repo)
 
-	require.NoError(t, svc.SeedIntegrations("", "", "", "", "", ""))
+	require.NoError(t, svc.SeedIntegrations("", "", "", "", "", "", ""))
 	_, _, radarrEnabled := svc.RadarrConfig()
 	_, _, sonarrEnabled := svc.SonarrConfig()
 	assert.False(t, radarrEnabled)
@@ -129,8 +129,27 @@ func TestSettingsService_UpdateMetadata_EmptyPreserves(t *testing.T) {
 func TestSettingsService_Seed_IncludesTMDB(t *testing.T) {
 	repo := &memSettingRepo{m: map[string]string{}}
 	svc := NewSettingsService(repo)
-	require.NoError(t, svc.SeedIntegrations("", "", "", "", "seeded-tmdb", ""))
+	require.NoError(t, svc.SeedIntegrations("", "", "", "", "seeded-tmdb", "", ""))
 	assert.Equal(t, "seeded-tmdb", svc.TMDBKey())
+}
+
+func TestSettingsService_SubDL(t *testing.T) {
+	repo := &memSettingRepo{m: map[string]string{}}
+	svc := NewSettingsService(repo)
+
+	assert.Empty(t, svc.SubDLKey())
+	assert.False(t, svc.Integrations().SubDLHasKey)
+
+	// Seed sets it when absent; the masked view reports it's set.
+	require.NoError(t, svc.SeedIntegrations("", "", "", "", "", "seeded-subdl", ""))
+	assert.Equal(t, "seeded-subdl", svc.SubDLKey())
+	assert.True(t, svc.Integrations().SubDLHasKey)
+
+	// Update leaves it untouched on an empty key, replaces on a non-empty one.
+	require.NoError(t, svc.UpdateIntegrations("", "", "", "", ""))
+	assert.Equal(t, "seeded-subdl", svc.SubDLKey(), "empty key preserves existing")
+	require.NoError(t, svc.UpdateIntegrations("", "", "", "", "new-subdl"))
+	assert.Equal(t, "new-subdl", svc.SubDLKey())
 }
 
 func TestSettingsService_Scanning(t *testing.T) {
@@ -146,7 +165,7 @@ func TestSettingsService_Scanning(t *testing.T) {
 func TestSettingsService_Seed_IncludesScanInterval(t *testing.T) {
 	repo := &memSettingRepo{m: map[string]string{}}
 	svc := NewSettingsService(repo)
-	require.NoError(t, svc.SeedIntegrations("", "", "", "", "", "1h"))
+	require.NoError(t, svc.SeedIntegrations("", "", "", "", "", "", "1h"))
 	assert.Equal(t, "1h", svc.ScanInterval())
 }
 

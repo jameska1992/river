@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { RiMoreLine, RiGroupLine, RiCheckLine, RiCloseCircleLine, RiDownloadLine, RiHdLine, RiEditLine, RiRestartLine, RiRewindStartLine, RiDeleteBin6Line } from 'react-icons/ri'
+import { RiMoreLine, RiGroupLine, RiCheckLine, RiCloseCircleLine, RiDownloadLine, RiHdLine, RiEditLine, RiRestartLine, RiRewindStartLine, RiDeleteBin6Line, RiClosedCaptioningLine } from 'react-icons/ri'
 import { DropdownMenu } from './DropdownMenu'
 import dropdownStyles from './DropdownMenu.module.css'
 import styles from './EpisodeActionsMenu.module.css'
@@ -21,6 +21,7 @@ interface Props {
   isAdmin: boolean
   onEdit: () => void
   onReTranscode: () => void
+  onSearchSubtitles: () => void
   onDelete: () => void
 }
 
@@ -29,7 +30,7 @@ interface Props {
 // buttons (watch party, edit, delete) and navigations (download link, original
 // source), all sharing one item style so the menu reads consistently. The
 // portal/positioning/close mechanics live in DropdownMenu.
-export function EpisodeActionsMenu({ startFromPath, onWatchParty, watched, onToggleWatched, downloadUrl, originalPath, isAdmin, onEdit, onReTranscode, onDelete }: Props) {
+export function EpisodeActionsMenu({ startFromPath, onWatchParty, watched, onToggleWatched, downloadUrl, originalPath, isAdmin, onEdit, onReTranscode, onSearchSubtitles, onDelete }: Props) {
   return (
     <DropdownMenu
       menuLabel="Episode options"
@@ -91,6 +92,10 @@ export function EpisodeActionsMenu({ startFromPath, onWatchParty, watched, onTog
                 <button className={dropdownStyles.item} onClick={run(onReTranscode)} role="menuitem">
                   <RiRestartLine size={16} />
                   <span>Re-transcode</span>
+                </button>
+                <button className={dropdownStyles.item} onClick={run(onSearchSubtitles)} role="menuitem">
+                  <RiClosedCaptioningLine size={16} />
+                  <span>Search subtitles</span>
                 </button>
                 <button className={`${dropdownStyles.item} ${dropdownStyles.itemDanger}`} onClick={run(onDelete)} role="menuitem">
                   <RiDeleteBin6Line size={16} />

@@ -13,6 +13,7 @@ import { IdentifyMovieModal } from '../components/IdentifyMovieModal'
 import { MediaDetailsModal } from '../components/MediaDetailsModal'
 import { DeleteMediaModal } from '../components/DeleteMediaModal'
 import { CastEditorModal } from '../components/CastEditorModal'
+import { SubtitleSearchModal } from '../components/SubtitleSearchModal'
 import { creditsToRequest, dedupeCrew } from '../util/credits'
 import { SimilarCarousel } from '../components/SimilarCarousel'
 import { DropdownMenu } from '../components/DropdownMenu'
@@ -58,6 +59,7 @@ export function MovieDetailPage() {
   const [detailsOpen, setDetailsOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [castEditOpen, setCastEditOpen] = useState(false)
+  const [subtitleSearchOpen, setSubtitleSearchOpen] = useState(false)
   const [progress, setProgress] = useState<WatchProgress | null>(null)
   const [watchedSaving, setWatchedSaving] = useState(false)
 
@@ -193,6 +195,7 @@ export function MovieDetailPage() {
                   onIdentify={() => setIdentifyOpen(true)}
                   onShowDetails={() => setDetailsOpen(true)}
                   onReTranscode={() => reTranscodeMovie(id!)}
+                  onSearchSubtitles={() => setSubtitleSearchOpen(true)}
                   onDelete={() => setDeleteOpen(true)}
                   identifyLabel="Identify movie"
                 />
@@ -406,6 +409,15 @@ export function MovieDetailPage() {
             setMovie(m => (m ? { ...m, credits_locked: true } : m))
           }}
           onClose={() => setCastEditOpen(false)}
+        />
+      )}
+
+      {subtitleSearchOpen && movie && (
+        <SubtitleSearchModal
+          title={movie.title}
+          onSearch={langs => api.searchMovieSubtitles(movie.id, langs)}
+          onAttach={r => api.downloadMovieSubtitle(movie.id, { url: r.url, language: r.lang }).then(() => {})}
+          onClose={() => setSubtitleSearchOpen(false)}
         />
       )}
 

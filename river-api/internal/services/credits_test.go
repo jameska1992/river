@@ -1,6 +1,7 @@
 package services
 
 import (
+	"strings"
 	"testing"
 
 	"river-api/internal/models"
@@ -33,6 +34,7 @@ type memCreditsRepo struct {
 	tmdbLookups int
 	creates     int
 	byTmdb      map[int]uuid.UUID
+	byName      map[string]uuid.UUID
 }
 
 func (m *memCreditsRepo) GetMovieCredits(id uuid.UUID) ([]models.MovieCast, []models.MovieCrew, error) {
@@ -51,9 +53,17 @@ func (m *memCreditsRepo) FindOrCreatePersonByTmdbID(tmdbID int, name, profilePat
 	}
 	return &models.Person{Base: models.Base{ID: id}, Name: name, ProfilePath: profilePath}, nil
 }
-func (m *memCreditsRepo) CreatePerson(name, profilePath string) (*models.Person, error) {
+func (m *memCreditsRepo) FindOrCreatePersonByName(name, profilePath string) (*models.Person, error) {
 	m.creates++
-	return &models.Person{Base: models.Base{ID: uuid.New()}, Name: name, ProfilePath: profilePath}, nil
+	if m.byName == nil {
+		m.byName = map[string]uuid.UUID{}
+	}
+	id, ok := m.byName[strings.ToLower(name)]
+	if !ok {
+		id = uuid.New()
+		m.byName[strings.ToLower(name)] = id
+	}
+	return &models.Person{Base: models.Base{ID: id}, Name: name, ProfilePath: profilePath}, nil
 }
 func (m *memCreditsRepo) FindPersonByID(uuid.UUID) (*models.Person, error) {
 	return m.person, m.personErr
@@ -136,7 +146,7 @@ func TestCreditsService_SetMovieCredits_ResolvesPersonsAndPersists(t *testing.T)
 	// tmdb-backed cast member is resolved via the tmdb lookup; the
 	// tmdb-less crew member is created fresh.
 	assert.Equal(t, 1, repo.tmdbLookups, "cast with a TMDB id uses FindOrCreatePersonByTmdbID")
-	assert.Equal(t, 1, repo.creates, "crew without a TMDB id uses CreatePerson")
+	assert.Equal(t, 1, repo.creates, "crew without a TMDB id uses FindOrCreatePersonByName")
 	require.NotNil(t, repo.setLocked, "locked flag threaded to the repo")
 	assert.True(t, *repo.setLocked, "manual save passes locked=true through")
 
@@ -241,7 +251,7 @@ func TestCreditsService_SetTVShowCredits_ResolvesPersonsAndPersists(t *testing.T
 	require.NoError(t, svc.SetTVShowCredits(uuid.New().String(), cast, crew, nil))
 
 	assert.Equal(t, 1, repo.tmdbLookups, "cast with a TMDB id uses FindOrCreatePersonByTmdbID")
-	assert.Equal(t, 1, repo.creates, "crew without a TMDB id uses CreatePerson")
+	assert.Equal(t, 1, repo.creates, "crew without a TMDB id uses FindOrCreatePersonByName")
 
 	require.Len(t, repo.setTVCast, 1)
 	assert.Equal(t, "Scully", repo.setTVCast[0].Character)

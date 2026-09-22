@@ -283,5 +283,7 @@ func (s *CreditsService) findOrCreatePerson(tmdbID int, name, profilePath, biogr
 	if tmdbID > 0 {
 		return s.repo.FindOrCreatePersonByTmdbID(tmdbID, name, profilePath, biography)
 	}
-	return s.repo.CreatePerson(name, profilePath)
+	// Manual entry (no TMDB id): reuse an existing manual person with the same
+	// name instead of always inserting a duplicate (#193).
+	return s.repo.FindOrCreatePersonByName(name, profilePath)
 }

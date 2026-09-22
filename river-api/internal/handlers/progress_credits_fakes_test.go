@@ -47,7 +47,7 @@ type fakeCreditsRepo struct {
 func (f *fakeCreditsRepo) FindOrCreatePersonByTmdbID(_ int, name, profilePath, _ string) (*models.Person, error) {
 	return &models.Person{Base: models.Base{ID: uuid.New()}, Name: name, ProfilePath: profilePath}, nil
 }
-func (f *fakeCreditsRepo) CreatePerson(name, profilePath string) (*models.Person, error) {
+func (f *fakeCreditsRepo) FindOrCreatePersonByName(name, profilePath string) (*models.Person, error) {
 	return &models.Person{Base: models.Base{ID: uuid.New()}, Name: name, ProfilePath: profilePath}, nil
 }
 func (f *fakeCreditsRepo) FindPersonByID(uuid.UUID) (*models.Person, error) {

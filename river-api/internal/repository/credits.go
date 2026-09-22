@@ -2,6 +2,7 @@ package repository
 
 import (
 	"errors"
+	"strings"
 
 	"river-api/internal/apperrors"
 	"river-api/internal/models"
@@ -50,7 +51,7 @@ type PersonTVShowCrewRow struct {
 
 type CreditsRepository interface {
 	FindOrCreatePersonByTmdbID(tmdbID int, name, profilePath, biography string) (*models.Person, error)
-	CreatePerson(name, profilePath string) (*models.Person, error)
+	FindOrCreatePersonByName(name, profilePath string) (*models.Person, error)
 	FindPersonByID(personID uuid.UUID) (*models.Person, error)
 	GetPersonFilmography(personID uuid.UUID) ([]PersonMovieCastRow, []PersonMovieCrewRow, []PersonTVShowCastRow, []PersonTVShowCrewRow, error)
 	SetMovieCredits(movieID uuid.UUID, cast []models.MovieCast, crew []models.MovieCrew, locked *bool) error
@@ -195,9 +196,45 @@ func (r *gormCreditsRepository) FindOrCreatePersonByTmdbID(tmdbID int, name, pro
 	return &p, nil
 }
 
-func (r *gormCreditsRepository) CreatePerson(name, profilePath string) (*models.Person, error) {
+// FindOrCreatePersonByName resolves a manually-entered person (no TMDB id).
+// It reuses an existing manual person whose name matches case-insensitively —
+// scoped to tmdb_id IS NULL so a manual credit is never folded into a
+// TMDB-sourced person, and vice-versa. Without this the manual path inserted a
+// brand-new Person on every credit, so the same human added to several titles
+// surfaced multiple times in search (#193).
+//
+// A blank name is never deduped (it would collapse unrelated unnamed rows) —
+// it falls straight through to a plain insert.
+func (r *gormCreditsRepository) FindOrCreatePersonByName(name, profilePath string) (*models.Person, error) {
+	if strings.TrimSpace(name) == "" {
+		p := models.Person{Name: name, ProfilePath: profilePath}
+		return &p, r.db.Create(&p).Error
+	}
+
+	var existing models.Person
+	err := r.db.Where("tmdb_id IS NULL AND LOWER(name) = LOWER(?)", name).First(&existing).Error
+	if err == nil {
+		// Backfill a profile image if the existing row has none and we now
+		// have one — best-effort enrichment that never blanks a set value.
+		if existing.ProfilePath == "" && profilePath != "" {
+			r.db.Model(&existing).Update("profile_path", profilePath)
+		}
+		return &existing, nil
+	}
+	if !errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, err
+	}
+
 	p := models.Person{Name: name, ProfilePath: profilePath}
-	return &p, r.db.Create(&p).Error
+	if err := r.db.Create(&p).Error; err != nil {
+		// Race: another writer may have just created the same manual person.
+		var existing2 models.Person
+		if r.db.Where("tmdb_id IS NULL AND LOWER(name) = LOWER(?)", name).First(&existing2).Error == nil {
+			return &existing2, nil
+		}
+		return nil, err
+	}
+	return &p, nil
 }
 
 func (r *gormCreditsRepository) SetMovieCredits(movieID uuid.UUID, cast []models.MovieCast, crew []models.MovieCrew, locked *bool) error {

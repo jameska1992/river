@@ -52,6 +52,9 @@ func main() {
 	// existed (or by producers that didn't send a size, e.g. pre-transcoded
 	// libraries). Idempotent + best-effort; safe on every boot.
 	backfill.Sizes(db)
+	// Collapse pre-existing duplicate manually-added people (same name, no TMDB
+	// id) that accumulated before the find-or-create fix (#193). Idempotent.
+	backfill.MergeDuplicatePeople(db)
 
 	// Repositories
 	userRepo := repository.NewUserRepository(db)

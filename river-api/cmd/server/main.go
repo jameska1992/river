@@ -110,6 +110,7 @@ func main() {
 	searchSvc := services.NewSearchService(searchRepo)
 	statsRepo := repository.NewStatsRepository(db)
 	insightsSvc := services.NewInsightsService(repository.NewInsightsRepository(db), movieRepo, episodeRepo, tvShowRepo, audiobookRepo, chapterRepo, userRepo)
+	serviceKeySvc := services.NewServiceKeyService(repository.NewServiceKeyRepository(db))
 
 	// Handlers
 	watchPartyHub := handlers.NewWatchPartyHub()
@@ -164,6 +165,8 @@ func main() {
 		handlers.NewImageProxyHandler(),
 		handlers.NewShowMergeHandler(showMergeSvc),
 		handlers.NewInsightsHandler(insightsSvc),
+		handlers.NewServiceKeyHandler(serviceKeySvc),
+		serviceKeySvc,
 	)
 
 	log.Printf("River API listening on :%s", cfg.Port)

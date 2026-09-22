@@ -17,6 +17,7 @@ export type {
   WatchlistItem,
   ActiveSession,
   Subtitle, AudioTrack,
+  ServiceKey,
   Collection, CollectionItem, CollectionDetail,
   PaginationParams, SortParams, SortOrder,
   CreateLibraryRequest, UpdateLibraryRequest,

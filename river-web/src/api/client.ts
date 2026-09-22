@@ -970,6 +970,21 @@ export class RiverClient {
     return this.request<ActivityItem[]>('GET', `/admin/users/${id}/activity`)
   }
 
+  // --- Service keys (per-service API keys) ---
+
+  async listServiceKeys(): Promise<import('./types').ServiceKey[]> {
+    return this.request('GET', '/admin/service-keys')
+  }
+
+  // Mint returns the plaintext key exactly once, alongside the stored record.
+  async mintServiceKey(name: string, scopes: string[]): Promise<{ key: string; service_key: import('./types').ServiceKey }> {
+    return this.request('POST', '/admin/service-keys', { name, scopes })
+  }
+
+  async revokeServiceKey(id: string): Promise<void> {
+    return this.request('DELETE', `/admin/service-keys/${id}`)
+  }
+
   // --- Watch Party ---
 
   async createWatchParty(input: { media_type: string; media_id: string; show_id?: string; season_id?: string }): Promise<WatchParty> {

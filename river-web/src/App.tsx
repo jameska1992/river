@@ -31,6 +31,7 @@ import { AdminLayout } from './pages/admin/AdminLayout'
 import { MergeTVShowsPage } from './pages/admin/MergeTVShowsPage'
 import { OverviewPage } from './pages/admin/OverviewPage'
 import { InsightsPage } from './pages/admin/InsightsPage'
+import { ServiceKeysPage } from './pages/admin/ServiceKeysPage'
 import { LibrariesPage } from './pages/admin/LibrariesPage'
 import { UploadPage } from './pages/admin/UploadPage'
 import { UsersPage } from './pages/admin/UsersPage'
@@ -130,6 +131,7 @@ export default function App() {
                 <Route path="logs" element={<LogsPage />} />
                 <Route path="failed-jobs" element={<FailedJobsPage />} />
                 <Route path="scanner-state" element={<ScannerStatePage />} />
+                <Route path="service-keys" element={<ServiceKeysPage />} />
                 <Route path="settings" element={<AdminSettingsPage />} />
               </Route>
             </Route>

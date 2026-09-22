@@ -278,11 +278,13 @@ func (p *Processor) processTVShow(event consumer.MediaDiscoveredEvent) error {
 		episodeIDByNum[ep.Number] = ep.ID
 	}
 
-	// deferredErr collects special-episode failures. We still process every
-	// other file in the season, then return the error so the whole event is
-	// retried (already-transcoded files short-circuit on the retry). This is
-	// what lets a special that meta-tv hadn't created yet succeed on a later
-	// attempt instead of being dropped forever.
+	// deferredErr collects per-file failures across the whole season — regular
+	// episodes AND specials. We still process every other file first, then
+	// return the joined error so the event is retried with backoff and
+	// eventually dead-lettered rather than silently dropped (#137).
+	// Already-transcoded outputs short-circuit on the retry, so the files that
+	// did succeed aren't redone. This is also what lets a special that meta-tv
+	// hadn't created yet succeed on a later attempt.
 	var deferredErr error
 	for _, file := range event.Files {
 		if !isVideoFile(file) {
@@ -300,6 +302,7 @@ func (p *Processor) processTVShow(event consumer.MediaDiscoveredEvent) error {
 		info, finalPath, err := p.processEpisodeFile(file, showName, seasonNum, epNum, event.ForceTranscode)
 		if err != nil {
 			log.Printf("ERROR processing file %q: %v", file, err)
+			deferredErr = errors.Join(deferredErr, fmt.Errorf("episode S%02dE%02d: %w", seasonNum, epNum, err))
 			continue
 		}
 
@@ -317,6 +320,7 @@ func (p *Processor) processTVShow(event consumer.MediaDiscoveredEvent) error {
 			})
 			if err != nil {
 				log.Printf("ERROR update episode S%02dE%02d: %v", seasonNum, epNum, err)
+				deferredErr = errors.Join(deferredErr, fmt.Errorf("update episode S%02dE%02d: %w", seasonNum, epNum, err))
 				continue
 			}
 			epID = existing
@@ -330,6 +334,7 @@ func (p *Processor) processTVShow(event consumer.MediaDiscoveredEvent) error {
 			})
 			if err != nil {
 				log.Printf("ERROR create episode S%02dE%02d: %v", seasonNum, epNum, err)
+				deferredErr = errors.Join(deferredErr, fmt.Errorf("create episode S%02dE%02d: %w", seasonNum, epNum, err))
 				continue
 			}
 			epID = ep.ID

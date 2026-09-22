@@ -1,6 +1,7 @@
 package processor
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -84,22 +85,47 @@ func (p *Processor) processMusic(event consumer.MediaDiscoveredEvent) error {
 		}
 	}
 
+	// deferredErr collects per-album and per-track failures across the whole
+	// event, then is returned so the message is retried with backoff and
+	// eventually dead-lettered rather than silently dropped (#137). Guarded by
+	// mu because tracks are created from parallel goroutines. Already-registered
+	// tracks and existing transcode outputs short-circuit, so a retry doesn't
+	// redo work that already succeeded.
+	var (
+		mu          sync.Mutex
+		deferredErr error
+	)
+	addErr := func(err error) {
+		mu.Lock()
+		deferredErr = errors.Join(deferredErr, err)
+		mu.Unlock()
+	}
+
 	for albumName, files := range groupByAlbum(event.DirectoryPath, event.Files) {
 		albumTitle, albumYear := parseDirName(albumName)
 		album, err := p.findOrCreateAlbum(event.LibraryID, artist.ID, albumTitle, albumYear)
 		if err != nil {
 			log.Printf("ERROR find/create album %q: %v", albumTitle, err)
+			addErr(fmt.Errorf("album %q: %w", albumTitle, err))
 			continue
 		}
 
 		existing, err := p.api.ListAlbumTracks(album.ID)
 		if err != nil {
 			log.Printf("ERROR list tracks for album %s: %v", album.ID, err)
+			addErr(fmt.Errorf("list tracks for album %q: %w", albumTitle, err))
 			continue
 		}
 		registered := make(map[int]bool, len(existing))
+		// registeredPath dedupes on retry by output path — needed for tracks
+		// whose filename yields no number (num==0), which registered[num]
+		// can't key on and would otherwise re-create on every retry.
+		registeredPath := make(map[string]bool, len(existing))
 		for _, t := range existing {
 			registered[t.Number] = true
+			if t.FilePath != "" {
+				registeredPath[t.FilePath] = true
+			}
 		}
 
 		type trackJob struct {
@@ -129,6 +155,11 @@ func (p *Processor) processMusic(event consumer.MediaDiscoveredEvent) error {
 				finalPath, duration, err := p.processFile(job.file, event.LibraryType, event.LibraryPath)
 				if err != nil {
 					log.Printf("ERROR processing %q: %v", job.file, err)
+					addErr(fmt.Errorf("track %q: %w", filepath.Base(job.file), err))
+					return
+				}
+				if registeredPath[finalPath] {
+					log.Printf("INFO track already registered at %q, skipping", filepath.Base(finalPath))
 					return
 				}
 				title := parseAudioTitle(job.file)
@@ -144,12 +175,13 @@ func (p *Processor) processMusic(event consumer.MediaDiscoveredEvent) error {
 					SizeBytes: fileSizeBytes(finalPath),
 				}); err != nil {
 					log.Printf("ERROR create track %q: %v", title, err)
+					addErr(fmt.Errorf("create track %q: %w", title, err))
 				}
 			}()
 		}
 		wg.Wait()
 	}
-	return nil
+	return deferredErr
 }
 
 // processAudiobook treats all files in the event as chapters of a single
@@ -171,6 +203,20 @@ func (p *Processor) processAudiobook(event consumer.MediaDiscoveredEvent) error 
 	existing, err := p.api.ListChapters(book.ID)
 	if err != nil {
 		return fmt.Errorf("list chapters: %w", err)
+	}
+	// deferredErr collects per-chapter failures so the event is retried and
+	// eventually dead-lettered rather than silently dropped (#137). Guarded by
+	// mu because chapters are created from parallel goroutines. Chapters already
+	// registered (by number) are skipped before transcode, so a retry only
+	// redoes the ones that failed.
+	var (
+		mu          sync.Mutex
+		deferredErr error
+	)
+	addErr := func(err error) {
+		mu.Lock()
+		deferredErr = errors.Join(deferredErr, err)
+		mu.Unlock()
 	}
 	registered := make(map[int]bool, len(existing))
 	for _, ch := range existing {
@@ -207,6 +253,7 @@ func (p *Processor) processAudiobook(event consumer.MediaDiscoveredEvent) error 
 			finalPath, duration, err := p.processFile(job.file, event.LibraryType, event.LibraryPath)
 			if err != nil {
 				log.Printf("ERROR processing %q: %v", job.file, err)
+				addErr(fmt.Errorf("chapter %d %q: %w", job.num, filepath.Base(job.file), err))
 				return
 			}
 			chTitle := parseAudioTitle(job.file)
@@ -219,11 +266,12 @@ func (p *Processor) processAudiobook(event consumer.MediaDiscoveredEvent) error 
 				SizeBytes: fileSizeBytes(finalPath),
 			}); err != nil {
 				log.Printf("ERROR create chapter %d: %v", job.num, err)
+				addErr(fmt.Errorf("create chapter %d: %w", job.num, err))
 			}
 		}()
 	}
 	wg.Wait()
-	return nil
+	return deferredErr
 }
 
 // processFile probes the file, transcodes if necessary, and returns the

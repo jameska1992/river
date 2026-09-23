@@ -10,4 +10,8 @@ var (
 	// (enum/range check). Handlers map it to 400; wrap it with a message
 	// describing what was invalid.
 	ErrInvalidInput = errors.New("invalid input")
+	// ErrRegistrationDisabled signals self-signup is turned off by the admin.
+	// Handlers map it to 403. Never returned while the instance still has no
+	// admin (the first-user bootstrap is always allowed).
+	ErrRegistrationDisabled = errors.New("registration disabled")
 )

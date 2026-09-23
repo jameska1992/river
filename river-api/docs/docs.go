@@ -1077,6 +1077,75 @@ const docTemplate = `{
                 }
             }
         },
+        "/admin/settings/security": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "settings"
+                ],
+                "summary": "Get security settings",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/services.SecuritySettings"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "settings"
+                ],
+                "summary": "Update security settings",
+                "parameters": [
+                    {
+                        "description": "Security settings",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.securityRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/services.SecuritySettings"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/admin/settings/tmdb": {
             "get": {
                 "security": [
@@ -3827,6 +3896,29 @@ const docTemplate = `{
                             "type": "object",
                             "additionalProperties": {
                                 "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/registration-status": {
+            "get": {
+                "description": "Public. Whether new-account registration is currently allowed.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Registration status",
+                "responses": {
+                    "200": {
+                        "description": "{allow_registration}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "boolean"
                             }
                         }
                     }
@@ -9949,6 +10041,14 @@ const docTemplate = `{
                 }
             }
         },
+        "handlers.securityRequest": {
+            "type": "object",
+            "properties": {
+                "allow_registration": {
+                    "type": "boolean"
+                }
+            }
+        },
         "handlers.seedServiceKeysRequest": {
             "type": "object",
             "properties": {
@@ -11189,6 +11289,14 @@ const docTemplate = `{
             "properties": {
                 "scan_interval": {
                     "type": "string"
+                }
+            }
+        },
+        "services.SecuritySettings": {
+            "type": "object",
+            "properties": {
+                "allow_registration": {
+                    "type": "boolean"
                 }
             }
         },

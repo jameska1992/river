@@ -51,6 +51,20 @@ func (h *AuthHandler) Register(c *gin.Context) {
 	c.JSON(http.StatusCreated, user)
 }
 
+// RegistrationStatus reports whether self-signup is currently open, so the web
+// app can show or hide the sign-up form. Public (no auth) — it exposes only a
+// single boolean, no settings detail.
+//
+// @Summary      Registration status
+// @Description  Public. Whether new-account registration is currently allowed.
+// @Tags         auth
+// @Produce      json
+// @Success      200  {object}  map[string]bool  "{allow_registration}"
+// @Router       /auth/registration-status [get]
+func (h *AuthHandler) RegistrationStatus(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{"allow_registration": h.svc.RegistrationAllowed()})
+}
+
 type loginRequest struct {
 	Username string `json:"username" binding:"required"`
 	Password string `json:"password" binding:"required"`

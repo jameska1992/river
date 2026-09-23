@@ -14,6 +14,13 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+// RegistrationPolicy reports whether self-signup is currently allowed. It's an
+// interface so the auth service doesn't depend on the settings service directly;
+// SettingsService satisfies it via AllowRegistration().
+type RegistrationPolicy interface {
+	AllowRegistration() bool
+}
+
 type AuthService struct {
 	users         repository.UserRepository
 	refreshTokens repository.RefreshTokenRepository
@@ -21,6 +28,32 @@ type AuthService struct {
 	accessExpiry  time.Duration
 	refreshExpiry time.Duration
 	streamExpiry  time.Duration
+	// registration gates self-signup. Optional: when nil, registration is
+	// always allowed (backwards-compatible default).
+	registration RegistrationPolicy
+}
+
+// SetRegistrationPolicy wires the registration gate (called from main after the
+// settings service is built). A nil policy leaves registration open.
+func (s *AuthService) SetRegistrationPolicy(p RegistrationPolicy) {
+	s.registration = p
+}
+
+// registrationEnabled is the raw admin toggle (nil policy → open).
+func (s *AuthService) registrationEnabled() bool {
+	return s.registration == nil || s.registration.AllowRegistration()
+}
+
+// RegistrationAllowed reports the effective self-signup state for a would-be
+// registrant: the admin toggle, OR always true while no admin exists yet
+// (bootstrap). Used by the public registration-status endpoint so the web app
+// can show/hide the sign-up form. Fails open if the admin count can't be read.
+func (s *AuthService) RegistrationAllowed() bool {
+	adminCount, err := s.users.CountByRole(models.RoleAdmin)
+	if err != nil {
+		return true
+	}
+	return adminCount == 0 || s.registrationEnabled()
 }
 
 func NewAuthService(
@@ -54,11 +87,6 @@ type LoginResult struct {
 }
 
 func (s *AuthService) Register(username, email, password string) (*models.User, error) {
-	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-	if err != nil {
-		return nil, fmt.Errorf("hash password: %w", err)
-	}
-
 	// The first human to register becomes admin. Key this off "no admin
 	// exists yet" rather than "no users at all", so a boot-seeded service
 	// account (role=service) doesn't consume the admin bootstrap and leave
@@ -66,6 +94,18 @@ func (s *AuthService) Register(username, email, password string) (*models.User, 
 	adminCount, err := s.users.CountByRole(models.RoleAdmin)
 	if err != nil {
 		return nil, err
+	}
+
+	// Gate self-signup when the admin has disabled it — but never block the
+	// very first admin (adminCount == 0), so a fresh install can always be
+	// bootstrapped and an operator can't lock themselves out.
+	if adminCount > 0 && !s.registrationEnabled() {
+		return nil, ErrRegistrationDisabled
+	}
+
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return nil, fmt.Errorf("hash password: %w", err)
 	}
 
 	role := models.RoleUser

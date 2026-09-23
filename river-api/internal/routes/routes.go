@@ -58,6 +58,7 @@ func Register(r *gin.Engine, secret string,
 	authGroup := api.Group("/auth")
 	{
 		authGroup.POST("/register", auth.Register)
+		authGroup.GET("/registration-status", auth.RegistrationStatus)
 		authGroup.POST("/login", auth.Login)
 		authGroup.POST("/refresh", auth.Refresh)
 		authGroup.POST("/logout", auth.Logout)
@@ -109,6 +110,8 @@ func Register(r *gin.Engine, secret string,
 		protected.PUT("/admin/settings/scanning", middleware.AdminOnly(), settings.UpdateScanning)
 		protected.GET("/admin/settings/transcoding", middleware.AdminOnly(), settings.GetTranscoding)
 		protected.PUT("/admin/settings/transcoding", middleware.AdminOnly(), settings.UpdateTranscoding)
+		protected.GET("/admin/settings/security", middleware.AdminOnly(), settings.GetSecurity)
+		protected.PUT("/admin/settings/security", middleware.AdminOnly(), settings.UpdateSecurity)
 		// Resolved transcoding config for the transcoders. Authenticated
 		// but not admin-only: the transcode services read it at job time
 		// with their own service account, which need not be an admin. It

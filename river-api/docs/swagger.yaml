@@ -639,6 +639,11 @@ definitions:
       year:
         type: integer
     type: object
+  handlers.securityRequest:
+    properties:
+      allow_registration:
+        type: boolean
+    type: object
   handlers.seedServiceKeysRequest:
     properties:
       keys:
@@ -1550,6 +1555,11 @@ definitions:
       scan_interval:
         type: string
     type: object
+  services.SecuritySettings:
+    properties:
+      allow_registration:
+        type: boolean
+    type: object
   services.ServiceKeyView:
     properties:
       created_at:
@@ -2399,6 +2409,48 @@ paths:
       security:
       - BearerAuth: []
       summary: Update scan settings
+      tags:
+      - settings
+  /admin/settings/security:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/services.SecuritySettings'
+      security:
+      - BearerAuth: []
+      summary: Get security settings
+      tags:
+      - settings
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Security settings
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.securityRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/services.SecuritySettings'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update security settings
       tags:
       - settings
   /admin/settings/tmdb:
@@ -4138,6 +4190,21 @@ paths:
               type: string
             type: object
       summary: Register a new user
+      tags:
+      - auth
+  /auth/registration-status:
+    get:
+      description: Public. Whether new-account registration is currently allowed.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{allow_registration}'
+          schema:
+            additionalProperties:
+              type: boolean
+            type: object
+      summary: Registration status
       tags:
       - auth
   /collections:

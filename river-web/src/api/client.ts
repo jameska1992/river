@@ -325,6 +325,22 @@ export class RiverClient {
     return this.request('PUT', '/admin/settings/transcoding', body)
   }
 
+  async getSecuritySettings(): Promise<import('./types').SecuritySettings> {
+    return this.request('GET', '/admin/settings/security')
+  }
+
+  async updateSecuritySettings(
+    allowRegistration: boolean,
+  ): Promise<import('./types').SecuritySettings> {
+    return this.request('PUT', '/admin/settings/security', { allow_registration: allowRegistration })
+  }
+
+  // Public: whether self-signup is currently open (no auth required), so the
+  // register page can show or hide the form.
+  async getRegistrationStatus(): Promise<{ allow_registration: boolean }> {
+    return this.request('GET', '/auth/registration-status')
+  }
+
   async getScannerState(): Promise<{
     directories: Record<string, { library_id: string; content_hash: string; last_scanned: string }>
     shows:       Record<string, string>

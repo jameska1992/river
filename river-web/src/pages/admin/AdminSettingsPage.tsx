@@ -4,13 +4,14 @@ import { api, ApiError } from '../../api'
 import type { IntegrationSettings, TranscodingSettings } from '../../api'
 import styles from './AdminSettingsPage.module.css'
 
-type Tab = 'integrations' | 'metadata' | 'scanning' | 'transcoding'
+type Tab = 'integrations' | 'metadata' | 'scanning' | 'transcoding' | 'security'
 
 const TABS: { id: Tab; label: string }[] = [
   { id: 'integrations', label: 'Integrations' },
   { id: 'metadata', label: 'Metadata' },
   { id: 'scanning', label: 'Scanning' },
   { id: 'transcoding', label: 'Transcoding' },
+  { id: 'security', label: 'Security' },
 ]
 
 export function AdminSettingsPage() {
@@ -38,6 +39,7 @@ export function AdminSettingsPage() {
       {tab === 'metadata' && <MetadataTab />}
       {tab === 'scanning' && <ScanningTab />}
       {tab === 'transcoding' && <TranscodingTab />}
+      {tab === 'security' && <SecurityTab />}
     </div>
   )
 }
@@ -313,6 +315,79 @@ function ScanningTab() {
             onChange={e => setInterval(e.target.value)}
             placeholder="1h"
           />
+        </label>
+      </div>
+
+      {error && <p className={styles.formError}>{error}</p>}
+
+      <div className={styles.footer}>
+        {saved && <span className={styles.savedNote}><RiCheckLine size={15} /> Saved</span>}
+        <button type="submit" className="btn btn-primary" disabled={saving}>
+          {saving ? 'Saving…' : 'Save changes'}
+        </button>
+      </div>
+    </form>
+  )
+}
+
+// ── Security tab ──────────────────────────────────────────
+
+function SecurityTab() {
+  const [loading, setLoading] = useState(true)
+  const [allowRegistration, setAllowRegistration] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    api.getSecuritySettings()
+      .then(s => setAllowRegistration(s.allow_registration))
+      .catch(err => setError(err instanceof Error ? err.message : 'Failed to load settings'))
+      .finally(() => setLoading(false))
+  }, [])
+
+  async function handleSave(e: FormEvent) {
+    e.preventDefault()
+    setSaving(true); setSaved(false); setError('')
+    try {
+      const s = await api.updateSecuritySettings(allowRegistration)
+      setAllowRegistration(s.allow_registration)
+      setSaved(true)
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Failed to save settings')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  if (loading) {
+    return <div className={`${styles.skeletonCard} skeleton`} style={{ maxWidth: 400 }} />
+  }
+
+  return (
+    <form onSubmit={handleSave}>
+      <p className={`body-md ${styles.blurb}`}>
+        Control who can create an account on this server. Turning registration off
+        blocks new sign-ups — existing users are unaffected, and you can always create
+        users yourself under <strong>Admin → Users</strong>.
+      </p>
+
+      <div className={`card ${styles.card}`} style={{ maxWidth: 400 }}>
+        <div className={styles.cardHead}>
+          <span className={styles.cardIcon} aria-hidden><RiShieldCheckLine size={18} /></span>
+          <div>
+            <h2 className={`label-lg ${styles.cardTitle}`}>Account registration</h2>
+            <p className={`label-sm ${styles.cardSubtitle}`}>Public self-signup</p>
+          </div>
+        </div>
+
+        <label className={styles.checkbox}>
+          <input
+            type="checkbox"
+            checked={allowRegistration}
+            onChange={e => setAllowRegistration(e.target.checked)}
+          />
+          <span className="label-sm">Allow new users to register</span>
         </label>
       </div>
 

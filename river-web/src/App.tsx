@@ -32,6 +32,8 @@ import { MergeTVShowsPage } from './pages/admin/MergeTVShowsPage'
 import { OverviewPage } from './pages/admin/OverviewPage'
 import { InsightsPage } from './pages/admin/InsightsPage'
 import { ServiceKeysPage } from './pages/admin/ServiceKeysPage'
+import { WebhooksPage } from './pages/admin/WebhooksPage'
+import { ApiTokensPage } from './pages/admin/ApiTokensPage'
 import { LibrariesPage } from './pages/admin/LibrariesPage'
 import { UploadPage } from './pages/admin/UploadPage'
 import { UsersPage } from './pages/admin/UsersPage'
@@ -132,6 +134,8 @@ export default function App() {
                 <Route path="failed-jobs" element={<FailedJobsPage />} />
                 <Route path="scanner-state" element={<ScannerStatePage />} />
                 <Route path="service-keys" element={<ServiceKeysPage />} />
+                <Route path="webhooks" element={<WebhooksPage />} />
+                <Route path="api-tokens" element={<ApiTokensPage />} />
                 <Route path="settings" element={<AdminSettingsPage />} />
               </Route>
             </Route>

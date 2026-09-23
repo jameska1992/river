@@ -1,5 +1,5 @@
 import { NavLink, Outlet } from 'react-router-dom'
-import { RiDashboard2Line, RiFolder3Line, RiUploadCloud2Line, RiTeamLine, RiFileListLine, RiQuestionLine, RiDatabase2Line, RiSettings3Line, RiGitMergeLine, RiErrorWarningLine, RiLineChartLine, RiKey2Line } from 'react-icons/ri'
+import { RiDashboard2Line, RiFolder3Line, RiUploadCloud2Line, RiTeamLine, RiFileListLine, RiQuestionLine, RiDatabase2Line, RiSettings3Line, RiGitMergeLine, RiErrorWarningLine, RiLineChartLine, RiKey2Line, RiWebhookLine, RiShieldKeyholeLine } from 'react-icons/ri'
 import styles from './AdminLayout.module.css'
 
 const navItems = [
@@ -14,6 +14,8 @@ const navItems = [
   { to: '/admin/logs',           label: 'Logs',          icon: <RiFileListLine /> },
   { to: '/admin/failed-jobs',    label: 'Failed Jobs',   icon: <RiErrorWarningLine /> },
   { to: '/admin/service-keys',   label: 'Service Keys',  icon: <RiKey2Line /> },
+  { to: '/admin/webhooks',       label: 'Webhooks',      icon: <RiWebhookLine /> },
+  { to: '/admin/api-tokens',     label: 'API Tokens',    icon: <RiShieldKeyholeLine /> },
   { to: '/admin/settings',       label: 'Settings',      icon: <RiSettings3Line /> },
 ]
 

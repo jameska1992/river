@@ -39,7 +39,10 @@ func Register(r *gin.Engine, secret string,
 	showMerge *handlers.ShowMergeHandler,
 	insights *handlers.InsightsHandler,
 	serviceKey *handlers.ServiceKeyHandler,
+	webhook *handlers.WebhookHandler,
+	apiToken *handlers.APITokenHandler,
 	keyAuth middleware.ServiceKeyAuthenticator,
+	tokenAuth middleware.APITokenAuthenticator,
 ) {
 	r.GET("/health", func(c *gin.Context) { c.JSON(200, gin.H{"status": "ok"}) })
 
@@ -67,7 +70,7 @@ func Register(r *gin.Engine, secret string,
 	api.GET("/image", imageProxy.Get)
 
 	// Authenticated routes
-	protected := api.Group("", middleware.Auth(secret, keyAuth))
+	protected := api.Group("", middleware.Auth(secret, keyAuth, tokenAuth))
 	{
 		protected.GET("/auth/me", auth.Me)
 		protected.PUT("/auth/me", auth.UpdateMe)
@@ -128,6 +131,22 @@ func Register(r *gin.Engine, secret string,
 		protected.POST("/admin/service-keys", middleware.AdminOnly(), serviceKey.Mint)
 		protected.POST("/admin/service-keys/seed", middleware.AdminOnly(), serviceKey.Seed)
 		protected.DELETE("/admin/service-keys/:id", middleware.AdminOnly(), serviceKey.Revoke)
+
+		// Outbound webhooks (#195). Admin manages config; the service-facing
+		// reads/writes (active list + delivery outcomes) are how river-events
+		// fans out and reports deliveries.
+		protected.GET("/admin/webhooks", middleware.AdminOnly(), webhook.List)
+		protected.POST("/admin/webhooks", middleware.AdminOnly(), webhook.Create)
+		protected.PUT("/admin/webhooks/:id", middleware.AdminOnly(), webhook.Update)
+		protected.DELETE("/admin/webhooks/:id", middleware.AdminOnly(), webhook.Delete)
+		protected.GET("/admin/webhooks/:id/deliveries", middleware.AdminOnly(), webhook.ListDeliveries)
+		protected.GET("/webhooks/active", middleware.AdminOrService(), webhook.ListActive)
+		protected.POST("/webhooks/deliveries", middleware.AdminOrService(), webhook.RecordDelivery)
+
+		// User API tokens (#195) — long-lived, revocable, read-only in v1.
+		protected.GET("/admin/api-tokens", middleware.AdminOnly(), apiToken.List)
+		protected.POST("/admin/api-tokens", middleware.AdminOnly(), apiToken.Mint)
+		protected.DELETE("/admin/api-tokens/:id", middleware.AdminOnly(), apiToken.Revoke)
 		// Admin insights dashboard — watch analytics aggregated from watch_progress.
 		protected.GET("/admin/insights/watch", middleware.AdminOnly(), insights.GetWatch)
 		protected.GET("/admin/insights/library", middleware.AdminOnly(), insights.GetLibrary)

@@ -117,6 +117,52 @@ export const SERVICE_KEY_DEFAULTS: Record<string, string[]> = {
   'river-meta-music': ['media:write', 'logs:write', 'jobs:write'],
 }
 
+// --- Webhooks (outbound lifecycle notifications) ---
+
+export interface Webhook {
+  id: string
+  name: string
+  url: string
+  events: string[]
+  enabled: boolean
+  last_delivery_at?: string
+  last_error?: string
+  created_at: string
+}
+
+export interface WebhookDelivery {
+  id: string
+  webhook_id: string
+  event: string
+  media_id: string
+  status: string
+  attempts: number
+  response_code?: number
+  error?: string
+  created_at: string
+}
+
+// Lifecycle event kinds a webhook may subscribe to, mirrored from the backend.
+// An empty selection means "all kinds".
+export const WEBHOOK_EVENT_KINDS = [
+  'media.transcoded',
+  'media.enriched',
+  'media.ready',
+] as const
+
+// --- API tokens (inbound, read-only third-party access) ---
+
+export interface APIToken {
+  id: string
+  name: string
+  token_prefix: string
+  scopes: string[]
+  revoked: boolean
+  last_used_at?: string
+  expires_at?: string
+  created_at: string
+}
+
 // --- Libraries ---
 
 export type LibraryType = 'movie' | 'tvshow' | 'music' | 'audiobook'

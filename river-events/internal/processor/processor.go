@@ -22,6 +22,7 @@ import (
 
 	"river-events/internal/apiclient"
 	"river-events/internal/events"
+	"river-events/internal/webhooks"
 )
 
 // mediaAPI is the slice of river-api river-events needs to compute readiness.
@@ -41,27 +42,46 @@ type publisher interface {
 	Publish(ctx context.Context, e events.LifecycleEvent) error
 }
 
+// webhookSource lists the currently-active webhooks (cached).
+type webhookSource interface {
+	ActiveWebhooks() ([]apiclient.ActiveWebhook, error)
+}
+
+// deliveryPublisher enqueues one webhook delivery task.
+type deliveryPublisher interface {
+	Publish(d webhooks.Delivery) error
+}
+
 type Processor struct {
-	api mediaAPI
-	pub publisher
+	api        mediaAPI
+	pub        publisher
+	hooks      webhookSource     // may be nil (fan-out disabled)
+	deliveries deliveryPublisher // may be nil (fan-out disabled)
 
 	mu           sync.Mutex
 	readyEmitted map[string]bool // dedupe key -> emitted
 }
 
-func New(api mediaAPI, pub publisher) *Processor {
-	return &Processor{api: api, pub: pub, readyEmitted: make(map[string]bool)}
+func New(api mediaAPI, pub publisher, hooks webhookSource, deliveries deliveryPublisher) *Processor {
+	return &Processor{api: api, pub: pub, hooks: hooks, deliveries: deliveries, readyEmitted: make(map[string]bool)}
 }
 
 // Handle processes one lifecycle event. Only transcoded/enriched drive the
 // join; a stray ready event (we don't bind it, but be defensive) is ignored.
 func (p *Processor) Handle(e events.LifecycleEvent) error {
-	switch e.Kind {
-	case events.KindTranscoded, events.KindEnriched:
-	default:
-		return nil
+	// Join transcoded/enriched → ready. The emitted ready event round-trips
+	// through the exchange and is fanned out on its own delivery.
+	if e.Kind == events.KindTranscoded || e.Kind == events.KindEnriched {
+		if err := p.join(e); err != nil {
+			return err
+		}
 	}
+	// Fan out webhook deliveries for every lifecycle kind (transcoded /
+	// enriched / ready) that has a matching subscription.
+	return p.fanOut(e)
+}
 
+func (p *Processor) join(e events.LifecycleEvent) error {
 	switch e.Type {
 	case "movie":
 		return p.joinMovie(e)
@@ -74,6 +94,45 @@ func (p *Processor) Handle(e events.LifecycleEvent) error {
 	default:
 		return nil
 	}
+}
+
+// fanOut enqueues one delivery per active webhook subscribed to this event's
+// kind. No-op when fan-out isn't configured. An enqueue failure propagates so
+// the event is retried (webhook receivers must be idempotent — a retry may
+// re-enqueue deliveries that already went out).
+func (p *Processor) fanOut(e events.LifecycleEvent) error {
+	if p.hooks == nil || p.deliveries == nil {
+		return nil
+	}
+	hooks, err := p.hooks.ActiveWebhooks()
+	if err != nil {
+		return err
+	}
+	for _, w := range hooks {
+		if !matchesEvent(w.Events, e.Kind) {
+			continue
+		}
+		if err := p.deliveries.Publish(webhooks.Delivery{
+			WebhookID: w.ID, URL: w.URL, Secret: w.Secret, Event: e,
+		}); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// matchesEvent reports whether a webhook subscribed to `events` wants `kind`.
+// An empty subscription means "all kinds".
+func matchesEvent(events []string, kind string) bool {
+	if len(events) == 0 {
+		return true
+	}
+	for _, e := range events {
+		if e == kind {
+			return true
+		}
+	}
+	return false
 }
 
 // --- movie: the record carries both halves ---

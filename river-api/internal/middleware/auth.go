@@ -42,6 +42,15 @@ type ServiceKeyAuthenticator interface {
 	AuthenticateServiceKey(rawKey string) (name string, scopes []string, ok bool)
 }
 
+// AuthMethodToken marks a principal that authenticated with a user API token.
+const AuthMethodToken = "token"
+
+// APITokenAuthenticator validates a raw bearer token as a user API token.
+// Implemented by services.APITokenService.
+type APITokenAuthenticator interface {
+	AuthenticateAPIToken(raw string) (userID string, scopes []string, ok bool)
+}
+
 // TokenTypeAccess is the regular short-lived API token. Empty TokenType
 // also counts as access for back-compat with tokens minted before this
 // field existed.
@@ -58,13 +67,17 @@ const claimsKey = "claims"
 // services import cycle).
 const serviceKeyPrefix = "rvk_"
 
-// Auth authenticates every protected request. It accepts two credential
-// kinds on the same Bearer header: a per-service API key (prefix "rvk_",
-// validated via keyAuth) or a JWT (everything else — human users and the
-// legacy service-account password login). keyAuth may be nil, in which case
-// only JWTs are accepted; this keeps the JWT path completely unchanged, so the
-// API-key support is purely additive.
-func Auth(secret string, keyAuth ServiceKeyAuthenticator) gin.HandlerFunc {
+// apiTokenPrefix marks a bearer token as a user API token. Must match
+// services.APITokenPrefix.
+const apiTokenPrefix = "rvat_"
+
+// Auth authenticates every protected request. It accepts three credential
+// kinds on the same Bearer header: a per-service API key (prefix "rvk_"), a
+// user API token (prefix "rvat_"), or a JWT (everything else — human users and
+// the legacy service-account password login). keyAuth / tokenAuth may be nil,
+// in which case that path is disabled; the JWT path is always unchanged, so the
+// added credential kinds are purely additive.
+func Auth(secret string, keyAuth ServiceKeyAuthenticator, tokenAuth APITokenAuthenticator) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var tokenStr string
 		if header := c.GetHeader("Authorization"); strings.HasPrefix(header, "Bearer ") {
@@ -89,6 +102,25 @@ func Auth(secret string, keyAuth ServiceKeyAuthenticator) gin.HandlerFunc {
 				Username:   name,
 				Role:       "service",
 				AuthMethod: AuthMethodKey,
+				Scopes:     scopes,
+			})
+			c.Next()
+			return
+		}
+
+		// User API token path. Read-only in v1: the principal is role "user",
+		// so it can read the API but the existing role checks (AdminOnly /
+		// RequireScope) block writes and the admin surface.
+		if tokenAuth != nil && strings.HasPrefix(tokenStr, apiTokenPrefix) {
+			userID, scopes, ok := tokenAuth.AuthenticateAPIToken(tokenStr)
+			if !ok {
+				c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid, expired, or revoked API token"})
+				return
+			}
+			c.Set(claimsKey, &Claims{
+				UserID:     userID,
+				Role:       "user",
+				AuthMethod: AuthMethodToken,
 				Scopes:     scopes,
 			})
 			c.Next()

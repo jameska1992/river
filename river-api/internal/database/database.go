@@ -55,6 +55,9 @@ func Migrate(db *gorm.DB) error {
 		&models.Setting{},
 		&models.FailedJob{},
 		&models.ServiceKey{},
+		&models.Webhook{},
+		&models.WebhookDelivery{},
+		&models.APIToken{},
 	); err != nil {
 		return err
 	}

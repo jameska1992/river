@@ -67,7 +67,7 @@ func (f *fakeKeyAuth) AuthenticateServiceKey(raw string) (string, []string, bool
 func runAuth(secret string, keyAuth ServiceKeyAuthenticator, bearer string) (int, *Claims) {
 	r := gin.New()
 	var captured *Claims
-	r.GET("/x", Auth(secret, keyAuth), func(c *gin.Context) {
+	r.GET("/x", Auth(secret, keyAuth, nil), func(c *gin.Context) {
 		captured = GetClaims(c)
 		c.Status(http.StatusOK)
 	})

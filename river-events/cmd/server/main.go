@@ -6,11 +6,14 @@ import (
 	"os/signal"
 	"syscall"
 
+	"time"
+
 	"river-events/internal/apiclient"
 	"river-events/internal/config"
 	"river-events/internal/consumer"
 	"river-events/internal/events"
 	"river-events/internal/processor"
+	"river-events/internal/webhooks"
 )
 
 // river-events joins media.transcoded.* and media.enriched.* into
@@ -35,7 +38,37 @@ func main() {
 	}
 	defer pub.Close()
 
-	proc := processor.New(api, pub)
+	// Webhook fan-out: cache the active-webhook list (refreshed from river-api)
+	// and a publisher onto the per-delivery queue.
+	hookCache := webhooks.NewCache(api.GetActiveWebhooks, 30*time.Second)
+	deliveryPub, err := webhooks.NewPublisher(cfg.RabbitMQURL)
+	if err != nil {
+		log.Fatalf("FATAL webhook delivery publisher: %v", err)
+	}
+	defer deliveryPub.Close()
+
+	proc := processor.New(api, pub, hookCache, deliveryPub)
+
+	// Delivery workers: consume the per-delivery queue, HMAC-sign + POST each,
+	// and report the outcome back to river-api for admin observability.
+	report := func(d webhooks.Delivery, status string, attempts, code int, errMsg string) {
+		_ = api.RecordDelivery(apiclient.DeliveryOutcome{
+			WebhookID: d.WebhookID, Event: d.Event.RoutingKey(), MediaID: d.Event.MediaID,
+			Status: status, Attempts: attempts, ResponseCode: code, Error: errMsg,
+		})
+	}
+	for i := 0; i < cfg.WorkerCount; i++ {
+		dc, err := webhooks.NewConsumer(cfg.RabbitMQURL, cfg.MaxRetries, cfg.RetryBackoff, report)
+		if err != nil {
+			log.Fatalf("FATAL webhook delivery worker %d: %v", i, err)
+		}
+		go func(id int, c *webhooks.Consumer) {
+			log.Printf("INFO webhook delivery worker %d started", id)
+			if err := c.Consume(); err != nil {
+				log.Printf("ERROR webhook delivery worker %d: %v", id, err)
+			}
+		}(i, dc)
+	}
 
 	// Declare topology up-front so the exchange/queues exist before workers.
 	setup, err := consumer.New(cfg.RabbitMQURL, cfg.MaxRetries, cfg.RetryBackoff, nil)

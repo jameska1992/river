@@ -467,6 +467,21 @@ definitions:
       tmdb_api_key:
         type: string
     type: object
+  handlers.mintAPITokenRequest:
+    properties:
+      expires_in_days:
+        description: ExpiresInDays optionally expires the token after N days (0 =
+          never).
+        type: integer
+      name:
+        type: string
+      scopes:
+        items:
+          type: string
+        type: array
+    required:
+    - name
+    type: object
   handlers.mintServiceKeyRequest:
     properties:
       name:
@@ -542,6 +557,26 @@ definitions:
         type: string
       year:
         type: integer
+    type: object
+  handlers.recordDeliveryRequest:
+    properties:
+      attempts:
+        type: integer
+      error:
+        type: string
+      event:
+        type: string
+      media_id:
+        type: string
+      response_code:
+        type: integer
+      status:
+        type: string
+      webhook_id:
+        type: string
+    required:
+    - status
+    - webhook_id
     type: object
   handlers.registerRequest:
     properties:
@@ -779,6 +814,22 @@ definitions:
     required:
     - media_id
     - media_type
+    type: object
+  handlers.webhookRequest:
+    properties:
+      enabled:
+        type: boolean
+      events:
+        items:
+          type: string
+        type: array
+      name:
+        type: string
+      url:
+        type: string
+    required:
+    - name
+    - url
     type: object
   models.Album:
     properties:
@@ -1348,6 +1399,31 @@ definitions:
       userID:
         type: string
     type: object
+  models.WebhookDelivery:
+    properties:
+      attempts:
+        type: integer
+      created_at:
+        type: string
+      error:
+        type: string
+      event:
+        description: routing key, e.g. "media.ready.movie"
+        type: string
+      id:
+        type: string
+      media_id:
+        type: string
+      response_code:
+        type: integer
+      status:
+        description: '"delivered" | "failed"'
+        type: string
+      updated_at:
+        type: string
+      webhook_id:
+        type: string
+    type: object
   repository.LibraryHealth:
     properties:
       id:
@@ -1362,6 +1438,42 @@ definitions:
         type: string
       untranscoded:
         type: integer
+    type: object
+  services.APITokenView:
+    properties:
+      created_at:
+        type: string
+      expires_at:
+        type: string
+      id:
+        type: string
+      last_used_at:
+        type: string
+      name:
+        type: string
+      revoked:
+        type: boolean
+      scopes:
+        items:
+          type: string
+        type: array
+      token_prefix:
+        type: string
+    type: object
+  services.ActiveWebhook:
+    properties:
+      events:
+        items:
+          type: string
+        type: array
+      id:
+        type: string
+      name:
+        type: string
+      secret:
+        type: string
+      url:
+        type: string
     type: object
   services.IntegrationSettings:
     properties:
@@ -1573,6 +1685,27 @@ definitions:
           echoed back so the client can confirm what it got.
         type: string
     type: object
+  services.WebhookView:
+    properties:
+      created_at:
+        type: string
+      enabled:
+        type: boolean
+      events:
+        items:
+          type: string
+        type: array
+      id:
+        type: string
+      last_delivery_at:
+        type: string
+      last_error:
+        type: string
+      name:
+        type: string
+      url:
+        type: string
+    type: object
   subdl.Subtitle:
     properties:
       author:
@@ -1632,6 +1765,73 @@ paths:
       security:
       - BearerAuth: []
       summary: Active sessions
+      tags:
+      - admin
+  /admin/api-tokens:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/services.APITokenView'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: List API tokens
+      tags:
+      - admin
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: '{name, expires_in_days, scopes}'
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.mintAPITokenRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: '{token, api_token}'
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Mint an API token
+      tags:
+      - admin
+  /admin/api-tokens/{id}:
+    delete:
+      parameters:
+      - description: API token ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Revoke an API token
       tags:
       - admin
   /admin/failed-jobs:
@@ -2648,6 +2848,134 @@ paths:
       summary: Set user password
       tags:
       - admin-users
+  /admin/webhooks:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/services.WebhookView'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: List webhooks
+      tags:
+      - admin
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: '{name,url,events,enabled}'
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.webhookRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: '{secret, webhook}'
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create webhook
+      tags:
+      - admin
+  /admin/webhooks/{id}:
+    delete:
+      parameters:
+      - description: Webhook ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete webhook
+      tags:
+      - admin
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Webhook ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: fields
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.webhookRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/services.WebhookView'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update webhook
+      tags:
+      - admin
+  /admin/webhooks/{id}/deliveries:
+    get:
+      parameters:
+      - description: Webhook ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.WebhookDelivery'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: List webhook deliveries
+      tags:
+      - admin
   /albums:
     get:
       parameters:
@@ -7044,6 +7372,47 @@ paths:
       summary: Watch party WebSocket
       tags:
       - watchparty
+  /webhooks/active:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/services.ActiveWebhook'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: List active webhooks (with secrets)
+      tags:
+      - webhooks
+  /webhooks/deliveries:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: outcome
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.recordDeliveryRequest'
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Record a webhook delivery outcome
+      tags:
+      - webhooks
 securityDefinitions:
   BearerAuth:
     description: Bearer JWT — paste "Bearer <token>" or use the Authorize button.

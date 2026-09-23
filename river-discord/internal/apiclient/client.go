@@ -81,27 +81,27 @@ type Audiobook struct {
 
 func (c *Client) GetMovie(id string) (*Movie, error) {
 	var m Movie
-	return &m, c.get("/movies/"+id, &m)
+	return &m, c.get("/api/movies/"+id, &m)
 }
 
 func (c *Client) GetTVShow(id string) (*TVShow, error) {
 	var s TVShow
-	return &s, c.get("/tvshows/"+id, &s)
+	return &s, c.get("/api/tvshows/"+id, &s)
 }
 
 func (c *Client) GetAlbum(id string) (*Album, error) {
 	var a Album
-	return &a, c.get("/albums/"+id, &a)
+	return &a, c.get("/api/albums/"+id, &a)
 }
 
 func (c *Client) GetArtist(id string) (*Artist, error) {
 	var a Artist
-	return &a, c.get("/artists/"+id, &a)
+	return &a, c.get("/api/artists/"+id, &a)
 }
 
 func (c *Client) GetAudiobook(id string) (*Audiobook, error) {
 	var a Audiobook
-	return &a, c.get("/audiobooks/"+id, &a)
+	return &a, c.get("/api/audiobooks/"+id, &a)
 }
 
 // get performs an authenticated GET and decodes the JSON body into out.

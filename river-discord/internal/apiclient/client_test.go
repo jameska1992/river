@@ -24,7 +24,7 @@ func TestGetMovie_AuthAndDecode(t *testing.T) {
 	if gotAuth != "Bearer rvat_test" {
 		t.Fatalf("auth header = %q", gotAuth)
 	}
-	if gotPath != "/movies/m1" {
+	if gotPath != "/api/movies/m1" {
 		t.Fatalf("path = %q", gotPath)
 	}
 	if m.Title != "Inception" || m.Year != 2010 {
@@ -57,15 +57,15 @@ func TestOtherGetters_Paths(t *testing.T) {
 	c := New(srv.URL, "t")
 
 	_, _ = c.GetAlbum("a1")
-	if path != "/albums/a1" {
+	if path != "/api/albums/a1" {
 		t.Fatalf("album path = %q", path)
 	}
 	_, _ = c.GetArtist("ar1")
-	if path != "/artists/ar1" {
+	if path != "/api/artists/ar1" {
 		t.Fatalf("artist path = %q", path)
 	}
 	_, _ = c.GetAudiobook("b1")
-	if path != "/audiobooks/b1" {
+	if path != "/api/audiobooks/b1" {
 		t.Fatalf("audiobook path = %q", path)
 	}
 }

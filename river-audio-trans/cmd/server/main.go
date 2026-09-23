@@ -9,6 +9,7 @@ import (
 	"river-audio-trans/internal/apiclient"
 	"river-audio-trans/internal/config"
 	"river-audio-trans/internal/consumer"
+	"river-audio-trans/internal/lifecycle"
 	"river-audio-trans/internal/processor"
 )
 
@@ -33,7 +34,16 @@ func main() {
 	setupCons.Close()
 	log.Printf("INFO exchange and queue declared, exchange=%s", cfg.RabbitMQExchange)
 
-	proc := processor.New(api, cfg.OutputDir, cfg.WorkerCount)
+	// Lifecycle publisher (media.transcoded.music / .audiobook). Best-effort.
+	var lifecyclePub *lifecycle.Publisher
+	if lp, err := lifecycle.New(cfg.RabbitMQURL); err != nil {
+		log.Printf("WARN lifecycle publisher unavailable, transcoded events disabled: %v", err)
+	} else {
+		lifecyclePub = lp
+		defer lifecyclePub.Close()
+	}
+
+	proc := processor.New(api, cfg.OutputDir, cfg.WorkerCount, lifecyclePub)
 
 	errCh := make(chan error, cfg.WorkerCount)
 	workers := make([]*consumer.Consumer, cfg.WorkerCount)

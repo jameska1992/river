@@ -20,7 +20,7 @@ func TestProcessAudiobook_ChapterFailurePropagates(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	p := New(apiclient.New(srv.URL, "u", "p", "river-audio-trans"), t.TempDir(), 2)
+	p := New(apiclient.New(srv.URL, "u", "p", "river-audio-trans"), t.TempDir(), 2, nil)
 	err := p.processAudiobook(consumer.MediaDiscoveredEvent{
 		LibraryType:   "audiobook",
 		LibraryID:     "lib-1",
@@ -47,7 +47,7 @@ func TestProcessMusic_TrackFailurePropagates(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	p := New(apiclient.New(srv.URL, "u", "p", "river-audio-trans"), t.TempDir(), 2)
+	p := New(apiclient.New(srv.URL, "u", "p", "river-audio-trans"), t.TempDir(), 2, nil)
 	err := p.processMusic(consumer.MediaDiscoveredEvent{
 		LibraryType:   "music",
 		LibraryID:     "lib-1",

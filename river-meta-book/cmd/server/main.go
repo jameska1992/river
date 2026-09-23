@@ -10,6 +10,7 @@ import (
 	"river-meta-book/internal/apiclient"
 	"river-meta-book/internal/config"
 	"river-meta-book/internal/consumer"
+	"river-meta-book/internal/lifecycle"
 	"river-meta-book/internal/openlib"
 	"river-meta-book/internal/processor"
 )
@@ -37,7 +38,15 @@ func main() {
 	setupCons.Close()
 	log.Printf("INFO exchange and queue declared, exchange=%s", cfg.RabbitMQExchange)
 
-	proc := processor.New(api, ol)
+	var lifecyclePub *lifecycle.Publisher
+	if lp, err := lifecycle.New(cfg.RabbitMQURL); err != nil {
+		log.Printf("WARN lifecycle publisher unavailable, enriched events disabled: %v", err)
+	} else {
+		lifecyclePub = lp
+		defer lifecyclePub.Close()
+	}
+
+	proc := processor.New(api, ol, lifecyclePub)
 
 	go func() {
 		mux := http.NewServeMux()

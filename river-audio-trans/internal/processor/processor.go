@@ -14,6 +14,7 @@ import (
 
 	"river-audio-trans/internal/apiclient"
 	"river-audio-trans/internal/consumer"
+	"river-audio-trans/internal/lifecycle"
 	"river-audio-trans/internal/transcoder"
 )
 
@@ -22,6 +23,20 @@ type Processor struct {
 	outputDir   string
 	concurrency int // max parallel transcode operations within one event
 	settings    *settingsCache
+	// lifecycle emits media.transcoded.* after a successful transcode. May be
+	// nil (best-effort) — never fails the transcode.
+	lifecycle *lifecycle.Publisher
+}
+
+// emitTranscoded publishes a media.transcoded.* event, best-effort.
+func (p *Processor) emitTranscoded(e lifecycle.Event) {
+	if p.lifecycle == nil {
+		return
+	}
+	e.Kind = lifecycle.KindTranscoded
+	if err := p.lifecycle.Publish(e); err != nil {
+		log.Printf("WARN emit media.transcoded.%s %s: %v", e.Type, e.MediaID, err)
+	}
 }
 
 // fileSizeBytes returns the on-disk size of path, or 0 if it can't be stat'd.
@@ -36,7 +51,7 @@ func fileSizeBytes(path string) int64 {
 	return info.Size()
 }
 
-func New(api *apiclient.Client, outputDir string, concurrency int) *Processor {
+func New(api *apiclient.Client, outputDir string, concurrency int, lc *lifecycle.Publisher) *Processor {
 	if concurrency < 1 {
 		concurrency = 1
 	}
@@ -45,6 +60,7 @@ func New(api *apiclient.Client, outputDir string, concurrency int) *Processor {
 		outputDir:   outputDir,
 		concurrency: concurrency,
 		settings:    newSettingsCache(api, settingsTTL),
+		lifecycle:   lc,
 	}
 }
 
@@ -164,7 +180,7 @@ func (p *Processor) processMusic(event consumer.MediaDiscoveredEvent) error {
 				}
 				title := parseAudioTitle(job.file)
 				log.Printf("INFO creating track %q (album %s, num=%d)", title, albumID, job.num)
-				if _, err := p.api.CreateTrack(apiclient.TrackRequest{
+				track, err := p.api.CreateTrack(apiclient.TrackRequest{
 					LibraryID: event.LibraryID,
 					AlbumID:   albumID,
 					ArtistID:  artist.ID,
@@ -173,10 +189,13 @@ func (p *Processor) processMusic(event consumer.MediaDiscoveredEvent) error {
 					Duration:  duration,
 					FilePath:  finalPath,
 					SizeBytes: fileSizeBytes(finalPath),
-				}); err != nil {
+				})
+				if err != nil {
 					log.Printf("ERROR create track %q: %v", title, err)
 					addErr(fmt.Errorf("create track %q: %w", title, err))
+					return
 				}
+				p.emitTranscoded(lifecycle.Event{Type: "music", MediaID: track.ID, ParentID: albumID, LibraryID: event.LibraryID, Title: title})
 			}()
 		}
 		wg.Wait()
@@ -258,16 +277,19 @@ func (p *Processor) processAudiobook(event consumer.MediaDiscoveredEvent) error 
 			}
 			chTitle := parseAudioTitle(job.file)
 			log.Printf("INFO creating chapter %d %q (audiobook %s)", job.num, chTitle, book.ID)
-			if _, err := p.api.CreateChapter(book.ID, apiclient.ChapterRequest{
+			chapter, err := p.api.CreateChapter(book.ID, apiclient.ChapterRequest{
 				Number:    job.num,
 				Title:     chTitle,
 				Duration:  duration,
 				FilePath:  finalPath,
 				SizeBytes: fileSizeBytes(finalPath),
-			}); err != nil {
+			})
+			if err != nil {
 				log.Printf("ERROR create chapter %d: %v", job.num, err)
 				addErr(fmt.Errorf("create chapter %d: %w", job.num, err))
+				return
 			}
+			p.emitTranscoded(lifecycle.Event{Type: "audiobook", MediaID: chapter.ID, ParentID: book.ID, LibraryID: event.LibraryID, Title: chTitle})
 		}()
 	}
 	wg.Wait()

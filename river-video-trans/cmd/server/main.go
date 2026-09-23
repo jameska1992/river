@@ -10,6 +10,7 @@ import (
 	"river-video-trans/internal/apiclient"
 	"river-video-trans/internal/config"
 	"river-video-trans/internal/consumer"
+	"river-video-trans/internal/lifecycle"
 	"river-video-trans/internal/processor"
 )
 
@@ -34,7 +35,17 @@ func main() {
 	setupCons.Close()
 	log.Printf("INFO exchange and queue declared, exchange=%s", cfg.RabbitMQExchange)
 
-	proc := processor.New(api, cfg.OutputDir)
+	// Lifecycle publisher (media.transcoded.*). Best-effort: if it can't be
+	// created the transcoder still runs, it just won't emit lifecycle events.
+	var lifecyclePub *lifecycle.Publisher
+	if lp, err := lifecycle.New(cfg.RabbitMQURL); err != nil {
+		log.Printf("WARN lifecycle publisher unavailable, transcoded events disabled: %v", err)
+	} else {
+		lifecyclePub = lp
+		defer lifecyclePub.Close()
+	}
+
+	proc := processor.New(api, cfg.OutputDir, lifecyclePub)
 
 	// Each worker runs an auto-reconnect loop. A RabbitMQ blip, broker
 	// restart, or transient network failure closes the delivery channel

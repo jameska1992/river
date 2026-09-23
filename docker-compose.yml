@@ -354,6 +354,29 @@ services:
       rabbitmq:
         condition: service_healthy
 
+  # Joins media.transcoded.* + media.enriched.* into media.ready.* on the
+  # river.lifecycle exchange (reads records back from river-api). Foundation for
+  # outbound webhooks + notifications.
+  river-events:
+    build:
+      context: ./river-events
+    restart: unless-stopped
+    environment:
+      RIVER_API_URL: http://river-api:8080
+      RIVER_API_USERNAME: ${SERVICE_USERNAME:-river-service}
+      RIVER_API_PASSWORD: ${SERVICE_PASSWORD:-${ADMIN_PASSWORD:?ADMIN_PASSWORD is required}}
+      # Optional per-service API key (service-role Phase 2); unset → password auth.
+      RIVER_API_KEY: ${RIVER_EVENTS_API_KEY:-}
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-river}:${RABBITMQ_PASSWORD:-river}@rabbitmq:5672/
+      WORKER_COUNT: ${META_WORKERS:-2}
+    depends_on:
+      river-init:
+        condition: service_completed_successfully
+      river-api:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
   # ---------------------------------------------------------------------------
   # Frontend
   # ---------------------------------------------------------------------------

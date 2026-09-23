@@ -59,6 +59,7 @@ jobs:
           - river-meta-tv
           - river-meta-book
           - river-meta-music
+          - river-events
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5

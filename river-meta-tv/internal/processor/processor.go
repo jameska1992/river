@@ -13,6 +13,7 @@ import (
 
 	"river-meta-tv/internal/apiclient"
 	"river-meta-tv/internal/consumer"
+	"river-meta-tv/internal/lifecycle"
 	"river-meta-tv/internal/nameinfo"
 	tmdbpkg "river-meta-tv/internal/tmdb"
 )
@@ -34,10 +35,29 @@ var numberPattern = regexp.MustCompile(`\d+`)
 type Processor struct {
 	api  *apiclient.Client
 	tmdb *tmdbpkg.Client
+	// lifecycle emits media.enriched.tvshow after a successful enrichment. May
+	// be nil (best-effort) — never fails enrichment.
+	lifecycle *lifecycle.Publisher
 }
 
-func New(api *apiclient.Client, tmdb *tmdbpkg.Client) *Processor {
-	return &Processor{api: api, tmdb: tmdb}
+func New(api *apiclient.Client, tmdb *tmdbpkg.Client, lc *lifecycle.Publisher) *Processor {
+	return &Processor{api: api, tmdb: tmdb, lifecycle: lc}
+}
+
+// emitEnriched publishes media.enriched.tvshow, best-effort (logged on failure).
+func (p *Processor) emitEnriched(show *apiclient.TVShow) {
+	if p.lifecycle == nil {
+		return
+	}
+	if err := p.lifecycle.Publish(lifecycle.Event{
+		Kind:      lifecycle.KindEnriched,
+		Type:      "tvshow",
+		MediaID:   show.ID,
+		LibraryID: show.LibraryID,
+		Title:     show.Title,
+	}); err != nil {
+		log.Printf("WARN emit media.enriched.tvshow %s: %v", show.ID, err)
+	}
 }
 
 func (p *Processor) Handle(event consumer.MediaDiscoveredEvent) error {
@@ -89,6 +109,7 @@ func (p *Processor) Handle(event consumer.MediaDiscoveredEvent) error {
 	}
 
 	_ = meta
+	p.emitEnriched(show)
 	return nil
 }
 

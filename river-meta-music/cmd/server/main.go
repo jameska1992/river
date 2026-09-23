@@ -10,6 +10,7 @@ import (
 	"river-meta-music/internal/apiclient"
 	"river-meta-music/internal/config"
 	"river-meta-music/internal/consumer"
+	"river-meta-music/internal/lifecycle"
 	"river-meta-music/internal/musicbrainz"
 	"river-meta-music/internal/processor"
 )
@@ -37,7 +38,15 @@ func main() {
 	setupCons.Close()
 	log.Printf("INFO exchange and queue declared, exchange=%s", cfg.RabbitMQExchange)
 
-	proc := processor.New(api, mb)
+	var lifecyclePub *lifecycle.Publisher
+	if lp, err := lifecycle.New(cfg.RabbitMQURL); err != nil {
+		log.Printf("WARN lifecycle publisher unavailable, enriched events disabled: %v", err)
+	} else {
+		lifecyclePub = lp
+		defer lifecyclePub.Close()
+	}
+
+	proc := processor.New(api, mb, lifecyclePub)
 
 	go func() {
 		mux := http.NewServeMux()

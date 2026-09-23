@@ -15,6 +15,7 @@ import (
 	"river-meta-movie/internal/apiclient"
 	"river-meta-movie/internal/config"
 	"river-meta-movie/internal/consumer"
+	"river-meta-movie/internal/lifecycle"
 	"river-meta-movie/internal/processor"
 	"river-meta-movie/internal/tmdb"
 )
@@ -67,7 +68,17 @@ func main() {
 	setupCons.Close()
 	log.Printf("INFO exchange and queue declared, exchange=%s", cfg.RabbitMQExchange)
 
-	proc := processor.New(api, tmdbClient)
+	// Lifecycle publisher (media.enriched.movie). Best-effort — if it can't be
+	// created, enrichment still runs, it just won't emit lifecycle events.
+	var lifecyclePub *lifecycle.Publisher
+	if lp, err := lifecycle.New(cfg.RabbitMQURL); err != nil {
+		log.Printf("WARN lifecycle publisher unavailable, enriched events disabled: %v", err)
+	} else {
+		lifecyclePub = lp
+		defer lifecyclePub.Close()
+	}
+
+	proc := processor.New(api, tmdbClient, lifecyclePub)
 
 	// HTTP trigger server for on-demand metadata refresh.
 	go func() {

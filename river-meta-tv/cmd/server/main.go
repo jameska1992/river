@@ -15,6 +15,7 @@ import (
 	"river-meta-tv/internal/apiclient"
 	"river-meta-tv/internal/config"
 	"river-meta-tv/internal/consumer"
+	"river-meta-tv/internal/lifecycle"
 	"river-meta-tv/internal/processor"
 	"river-meta-tv/internal/tmdb"
 )
@@ -67,7 +68,15 @@ func main() {
 	setupCons.Close()
 	log.Printf("INFO exchange and queue declared, exchange=%s", cfg.RabbitMQExchange)
 
-	proc := processor.New(api, tmdbClient)
+	var lifecyclePub *lifecycle.Publisher
+	if lp, err := lifecycle.New(cfg.RabbitMQURL); err != nil {
+		log.Printf("WARN lifecycle publisher unavailable, enriched events disabled: %v", err)
+	} else {
+		lifecyclePub = lp
+		defer lifecyclePub.Close()
+	}
+
+	proc := processor.New(api, tmdbClient, lifecyclePub)
 
 	// HTTP trigger server for on-demand metadata refresh.
 	go func() {

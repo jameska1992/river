@@ -8,16 +8,36 @@ import (
 
 	"river-meta-music/internal/apiclient"
 	"river-meta-music/internal/consumer"
+	"river-meta-music/internal/lifecycle"
 	"river-meta-music/internal/musicbrainz"
 )
 
 type Processor struct {
 	api *apiclient.Client
 	mb  *musicbrainz.Client
+	// lifecycle emits media.enriched.music (per album) after a successful
+	// enrichment. May be nil (best-effort) — never fails enrichment.
+	lifecycle *lifecycle.Publisher
 }
 
-func New(api *apiclient.Client, mb *musicbrainz.Client) *Processor {
-	return &Processor{api: api, mb: mb}
+func New(api *apiclient.Client, mb *musicbrainz.Client, lc *lifecycle.Publisher) *Processor {
+	return &Processor{api: api, mb: mb, lifecycle: lc}
+}
+
+// emitAlbumEnriched publishes media.enriched.music for an album, best-effort.
+func (p *Processor) emitAlbumEnriched(albumID, libraryID, title string) {
+	if p.lifecycle == nil {
+		return
+	}
+	if err := p.lifecycle.Publish(lifecycle.Event{
+		Kind:      lifecycle.KindEnriched,
+		Type:      "music",
+		MediaID:   albumID,
+		LibraryID: libraryID,
+		Title:     title,
+	}); err != nil {
+		log.Printf("WARN emit media.enriched.music %s: %v", albumID, err)
+	}
 }
 
 func (p *Processor) Handle(event consumer.MediaDiscoveredEvent) error {
@@ -117,6 +137,7 @@ func (p *Processor) enrichAlbums(artist *apiclient.Artist, mbid string) error {
 			continue
 		}
 		log.Printf("INFO enriched album %q (id=%s) year=%d genre=%q", album.Title, album.ID, ma.Year, ma.Genre)
+		p.emitAlbumEnriched(album.ID, album.LibraryID, album.Title)
 	}
 	return nil
 }

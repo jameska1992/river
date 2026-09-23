@@ -10,6 +10,7 @@ import (
 
 	"river-meta-movie/internal/apiclient"
 	"river-meta-movie/internal/consumer"
+	"river-meta-movie/internal/lifecycle"
 	"river-meta-movie/internal/nameinfo"
 	tmdbpkg "river-meta-movie/internal/tmdb"
 )
@@ -17,10 +18,30 @@ import (
 type Processor struct {
 	api  *apiclient.Client
 	tmdb *tmdbpkg.Client
+	// lifecycle emits media.enriched.movie after a successful enrichment. May
+	// be nil (best-effort) — a lifecycle-publish problem must never fail
+	// enrichment.
+	lifecycle *lifecycle.Publisher
 }
 
-func New(api *apiclient.Client, tmdb *tmdbpkg.Client) *Processor {
-	return &Processor{api: api, tmdb: tmdb}
+func New(api *apiclient.Client, tmdb *tmdbpkg.Client, lc *lifecycle.Publisher) *Processor {
+	return &Processor{api: api, tmdb: tmdb, lifecycle: lc}
+}
+
+// emitEnriched publishes media.enriched.movie, best-effort (logged on failure).
+func (p *Processor) emitEnriched(movie *apiclient.Movie) {
+	if p.lifecycle == nil {
+		return
+	}
+	if err := p.lifecycle.Publish(lifecycle.Event{
+		Kind:      lifecycle.KindEnriched,
+		Type:      "movie",
+		MediaID:   movie.ID,
+		LibraryID: movie.LibraryID,
+		Title:     movie.Title,
+	}); err != nil {
+		log.Printf("WARN emit media.enriched.movie %s: %v", movie.ID, err)
+	}
 }
 
 func (p *Processor) Handle(event consumer.MediaDiscoveredEvent) error {
@@ -161,6 +182,7 @@ func (p *Processor) enrich(movie *apiclient.Movie, hintTMDB int, hintIMDB, paren
 		yearTag = fmt.Sprintf(" (%d)", meta.Year)
 	}
 	p.api.Log("info", fmt.Sprintf("identified movie %q%s via TMDB", meta.Title, yearTag))
+	p.emitEnriched(movie)
 	return nil
 }
 

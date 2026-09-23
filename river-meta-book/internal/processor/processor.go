@@ -11,6 +11,7 @@ import (
 
 	"river-meta-book/internal/apiclient"
 	"river-meta-book/internal/consumer"
+	"river-meta-book/internal/lifecycle"
 	"river-meta-book/internal/openlib"
 )
 
@@ -19,10 +20,29 @@ var dirPattern = regexp.MustCompile(`^(.+?)\s*\((\d{4})\)$`)
 type Processor struct {
 	api *apiclient.Client
 	ol  *openlib.Client
+	// lifecycle emits media.enriched.audiobook after a successful enrichment.
+	// May be nil (best-effort) — never fails enrichment.
+	lifecycle *lifecycle.Publisher
 }
 
-func New(api *apiclient.Client, ol *openlib.Client) *Processor {
-	return &Processor{api: api, ol: ol}
+func New(api *apiclient.Client, ol *openlib.Client, lc *lifecycle.Publisher) *Processor {
+	return &Processor{api: api, ol: ol, lifecycle: lc}
+}
+
+// emitEnriched publishes media.enriched.audiobook, best-effort.
+func (p *Processor) emitEnriched(book *apiclient.Audiobook) {
+	if p.lifecycle == nil {
+		return
+	}
+	if err := p.lifecycle.Publish(lifecycle.Event{
+		Kind:      lifecycle.KindEnriched,
+		Type:      "audiobook",
+		MediaID:   book.ID,
+		LibraryID: book.LibraryID,
+		Title:     book.Title,
+	}); err != nil {
+		log.Printf("WARN emit media.enriched.audiobook %s: %v", book.ID, err)
+	}
 }
 
 func (p *Processor) Handle(event consumer.MediaDiscoveredEvent) error {
@@ -113,6 +133,7 @@ func (p *Processor) enrich(book *apiclient.Audiobook) error {
 		authorTag = fmt.Sprintf(" by %s", meta.Author)
 	}
 	p.api.Log("info", fmt.Sprintf("identified audiobook %q%s via Open Library", book.Title, authorTag))
+	p.emitEnriched(book)
 	return nil
 }
 

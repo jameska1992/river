@@ -25,7 +25,7 @@ func TestProcessTVShow_EpisodeFailurePropagates(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	p := New(apiclient.New(srv.URL, "u", "p", "river-video-trans"), t.TempDir())
+	p := New(apiclient.New(srv.URL, "u", "p", "river-video-trans"), t.TempDir(), nil)
 	err := p.processTVShow(consumer.MediaDiscoveredEvent{
 		LibraryType: "tvshow",
 		LibraryID:   "lib-1",

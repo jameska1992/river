@@ -14,6 +14,7 @@ import (
 
 	"river-video-trans/internal/apiclient"
 	"river-video-trans/internal/consumer"
+	"river-video-trans/internal/lifecycle"
 	"river-video-trans/internal/transcoder"
 )
 
@@ -71,13 +72,30 @@ type Processor struct {
 	api       *apiclient.Client
 	outputDir string
 	settings  *settingsCache
+	// lifecycle emits media.transcoded.* after a successful transcode. May be
+	// nil (best-effort) — a lifecycle-publish problem must never break the
+	// transcode pipeline.
+	lifecycle *lifecycle.Publisher
 }
 
-func New(api *apiclient.Client, outputDir string) *Processor {
+func New(api *apiclient.Client, outputDir string, lc *lifecycle.Publisher) *Processor {
 	return &Processor{
 		api:       api,
 		outputDir: outputDir,
 		settings:  newSettingsCache(api, settingsTTL),
+		lifecycle: lc,
+	}
+}
+
+// emitTranscoded publishes a media.transcoded.* event, best-effort: a failure
+// is logged and swallowed so it can't fail the (already-completed) transcode.
+func (p *Processor) emitTranscoded(e lifecycle.Event) {
+	if p.lifecycle == nil {
+		return
+	}
+	e.Kind = lifecycle.KindTranscoded
+	if err := p.lifecycle.Publish(e); err != nil {
+		log.Printf("WARN emit media.transcoded.%s %s: %v", e.Type, e.MediaID, err)
 	}
 }
 
@@ -182,6 +200,7 @@ func (p *Processor) processMovie(event consumer.MediaDiscoveredEvent) error {
 
 	p.registerAudioTracks("movie", movieID, finalPath, info)
 	p.registerSubtitles("movie", movieID, videoFile, finalPath, info)
+	p.emitTranscoded(lifecycle.Event{Type: "movie", MediaID: movieID, LibraryID: event.LibraryID, Title: title})
 	return nil
 }
 
@@ -342,6 +361,7 @@ func (p *Processor) processTVShow(event consumer.MediaDiscoveredEvent) error {
 		}
 		p.registerAudioTracks("episode", epID, finalPath, info)
 		p.registerSubtitles("episode", epID, file, finalPath, info)
+		p.emitTranscoded(lifecycle.Event{Type: "tvshow", MediaID: epID, ParentID: showID, SeasonID: seasonID})
 	}
 	return deferredErr
 }
@@ -378,6 +398,7 @@ func (p *Processor) processSpecialFile(
 	}
 	p.registerAudioTracks("episode", ep.ID, finalPath, info)
 	p.registerSubtitles("episode", ep.ID, file, finalPath, info)
+	p.emitTranscoded(lifecycle.Event{Type: "tvshow", MediaID: ep.ID, ParentID: showID, SeasonID: seasonID})
 	return nil
 }
 

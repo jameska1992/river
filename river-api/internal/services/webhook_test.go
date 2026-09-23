@@ -62,7 +62,13 @@ func (m *memWebhookRepo) RecordDelivery(d *models.WebhookDelivery, lastError str
 	return nil
 }
 func (m *memWebhookRepo) ListDeliveries(webhookID string, limit int) ([]models.WebhookDelivery, error) {
-	return nil, nil
+	var out []models.WebhookDelivery
+	for _, d := range m.deliveries {
+		if d.WebhookID.String() == webhookID {
+			out = append(out, *d)
+		}
+	}
+	return out, nil
 }
 
 func TestWebhook_CreateGeneratesSecretAndValidates(t *testing.T) {
@@ -105,4 +111,57 @@ func TestMatchesEvent(t *testing.T) {
 	assert.True(t, MatchesEvent(nil, "media.ready"), "empty subscription = all kinds")
 	assert.True(t, MatchesEvent([]string{"media.ready"}, "media.ready"))
 	assert.False(t, MatchesEvent([]string{"media.ready"}, "media.transcoded"))
+}
+
+func TestWebhook_ListMasksSecret(t *testing.T) {
+	svc := NewWebhookService(&memWebhookRepo{})
+	_, _, err := svc.Create(WebhookInput{Name: "a", URL: "https://a", Enabled: true})
+	require.NoError(t, err)
+
+	list, err := svc.List()
+	require.NoError(t, err)
+	require.Len(t, list, 1)
+	assert.Equal(t, "a", list[0].Name)
+}
+
+func TestWebhook_UpdateAndDelete(t *testing.T) {
+	svc := NewWebhookService(&memWebhookRepo{})
+	view, _, err := svc.Create(WebhookInput{Name: "orig", URL: "https://a", Events: []string{"media.ready"}, Enabled: true})
+	require.NoError(t, err)
+
+	updated, err := svc.Update(view.ID, WebhookInput{Name: "renamed", URL: "https://b", Events: []string{"media.transcoded"}, Enabled: false})
+	require.NoError(t, err)
+	assert.Equal(t, "renamed", updated.Name)
+	assert.Equal(t, "https://b", updated.URL)
+	assert.Equal(t, []string{"media.transcoded"}, updated.Events)
+	assert.False(t, updated.Enabled)
+
+	// Update validates too.
+	_, err = svc.Update(view.ID, WebhookInput{Name: "x", URL: "bad-url"})
+	assert.ErrorIs(t, err, apperrors.ErrInvalidInput)
+
+	// Update of an unknown id surfaces not-found.
+	_, err = svc.Update("00000000-0000-0000-0000-000000000000", WebhookInput{Name: "x", URL: "https://h"})
+	assert.ErrorIs(t, err, apperrors.ErrNotFound)
+
+	require.NoError(t, svc.Delete(view.ID))
+	assert.ErrorIs(t, svc.Delete(view.ID), apperrors.ErrNotFound)
+}
+
+func TestWebhook_RecordAndListDeliveries(t *testing.T) {
+	repo := &memWebhookRepo{}
+	svc := NewWebhookService(repo)
+	view, _, err := svc.Create(WebhookInput{Name: "h", URL: "https://a", Enabled: true})
+	require.NoError(t, err)
+
+	require.NoError(t, svc.RecordDelivery(RecordDeliveryInput{
+		WebhookID: view.ID, Event: "media.ready.movie", MediaID: "m1", Status: "delivered", Attempts: 1, ResponseCode: 200,
+	}))
+	// A bad webhook id is rejected as invalid input.
+	assert.ErrorIs(t, svc.RecordDelivery(RecordDeliveryInput{WebhookID: "not-a-uuid", Status: "failed"}), apperrors.ErrInvalidInput)
+
+	list, err := svc.ListDeliveries(view.ID, 50)
+	require.NoError(t, err)
+	require.Len(t, list, 1)
+	assert.Equal(t, "media.ready.movie", list[0].Event)
 }

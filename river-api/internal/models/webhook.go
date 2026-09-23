@@ -17,11 +17,14 @@ import (
 // set, never the value.
 type Webhook struct {
 	Base
-	Name           string     `gorm:"not null" json:"name"`
-	URL            string     `gorm:"not null" json:"url"`
-	Secret         string     `gorm:"not null" json:"-"`
-	Events         string     `gorm:"not null;default:'[]'" json:"events"`
-	Enabled        bool       `gorm:"not null;default:true" json:"enabled"`
+	Name   string `gorm:"not null" json:"name"`
+	URL    string `gorm:"not null" json:"url"`
+	Secret string `gorm:"not null" json:"-"`
+	Events string `gorm:"not null;default:'[]'" json:"events"`
+	// No column default: the repository writes Enabled explicitly (Select("*")),
+	// so an admin creating a disabled webhook is honoured rather than being
+	// overridden by a default. New webhooks still default enabled via the handler.
+	Enabled        bool       `gorm:"not null" json:"enabled"`
 	LastDeliveryAt *time.Time `json:"last_delivery_at,omitempty"`
 	LastError      string     `json:"last_error,omitempty"`
 }

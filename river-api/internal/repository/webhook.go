@@ -31,7 +31,10 @@ func NewWebhookRepository(db *gorm.DB) WebhookRepository {
 }
 
 func (r *gormWebhookRepository) Create(w *models.Webhook) error {
-	return r.db.Create(w).Error
+	// Select("*") forces every column to be written, so an explicit Enabled:false
+	// isn't silently overridden by the column's default:true (GORM omits Go
+	// zero-values otherwise). Base's PK/timestamps are still handled by GORM.
+	return r.db.Select("*").Create(w).Error
 }
 
 func (r *gormWebhookRepository) List() ([]models.Webhook, error) {

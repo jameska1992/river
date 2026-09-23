@@ -94,3 +94,19 @@ func TestAPIToken_MintRequiresName(t *testing.T) {
 	_, _, err := svc.Mint(uuid.New(), "  ", nil, nil)
 	assert.ErrorIs(t, err, apperrors.ErrInvalidInput)
 }
+
+func TestAPIToken_List(t *testing.T) {
+	svc := NewAPITokenService(&memAPITokenRepo{})
+	_, _, err := svc.Mint(uuid.New(), "one", nil, nil)
+	require.NoError(t, err)
+	_, _, err = svc.Mint(uuid.New(), "two", nil, nil)
+	require.NoError(t, err)
+
+	list, err := svc.List()
+	require.NoError(t, err)
+	require.Len(t, list, 2)
+	// Views never carry the hash — only the display prefix.
+	for _, v := range list {
+		assert.NotEmpty(t, v.TokenPrefix)
+	}
+}

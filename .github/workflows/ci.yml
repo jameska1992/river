@@ -60,6 +60,7 @@ jobs:
           - river-meta-book
           - river-meta-music
           - river-events
+          - river-discord
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5

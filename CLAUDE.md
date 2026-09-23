@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository Overview
 
-River is a self-hosted media platform composed of eight independent Go microservices in a monorepo, plus web / TV / Android client apps. Each service is a standalone Go module with its own `go.mod`. Each service also has its own `CLAUDE.md` with service-specific guidance — read it before working in a service.
+River is a self-hosted media platform composed of ten independent Go microservices in a monorepo, plus web / TV / Android client apps. Each service is a standalone Go module with its own `go.mod`. Each service also has its own `CLAUDE.md` with service-specific guidance — read it before working in a service.
 
 ## Common Commands
 
@@ -38,7 +38,7 @@ git push origin v0.4.0                      # tag push → CI verifies tag == v<
 git push -u origin release-v0.4.0
 ```
 
-Conventions: tags are `v0.3.0` (with `v` prefix); release branches are `release-v0.3.0` (with `v` prefix); the `VERSION` file itself holds the bare `0.3.0` (no `v`). `river-api` deliberately has no RabbitMQ dependency, but every other service does — keep shared dependency bumps (e.g. `amqp091-go`) in sync across all affected `go.mod` files in one release.
+Conventions: tags are `v0.3.0` (with `v` prefix); release branches are `release-v0.3.0` (with `v` prefix); the `VERSION` file itself holds the bare `0.3.0` (no `v`). `river-api` and `river-discord` deliberately have no RabbitMQ dependency (river-discord is an HTTP webhook receiver), but every other service does — keep shared dependency bumps (e.g. `amqp091-go`) in sync across all affected `go.mod` files in one release.
 
 ## Architecture
 
@@ -47,12 +47,16 @@ Conventions: tags are `v0.3.0` (with `v` prefix); release branches are `release-
 ```
 Filesystem
     └─→ [river-scan] ──→ RabbitMQ (river.media topic exchange)
-                              ├─→ [river-video-trans]  → transcode + create DB records
-                              ├─→ [river-audio-trans]  → transcode + create DB records
-                              ├─→ [river-meta-movie]   → fetch TMDB metadata + update records
-                              ├─→ [river-meta-tv]      → fetch TMDB metadata + update records
-                              ├─→ [river-meta-book]    → fetch Open Library metadata + update records
-                              └─→ [river-meta-music]   → fetch MusicBrainz metadata + update records
+                              ├─→ [river-video-trans]  → transcode + create DB records → media.transcoded.*
+                              ├─→ [river-audio-trans]  → transcode + create DB records → media.transcoded.*
+                              ├─→ [river-meta-movie]   → fetch TMDB metadata + update records → media.enriched.*
+                              ├─→ [river-meta-tv]      → fetch TMDB metadata + update records → media.enriched.*
+                              ├─→ [river-meta-book]    → fetch Open Library metadata + update records → media.enriched.*
+                              └─→ [river-meta-music]   → fetch MusicBrainz metadata + update records → media.enriched.*
+
+RabbitMQ (river.lifecycle topic exchange)
+    └─→ [river-events] ── joins transcoded + enriched ──→ media.ready.*  (+ outbound webhook delivery, #195)
+                              └─→ [river-discord] (HTTP webhook receiver) → Discord embed on media.ready.*
 
 All services read/write to [river-api] via HTTP
          └─→ Clients (REST API)
@@ -70,6 +74,8 @@ All services read/write to [river-api] via HTTP
 | `river-meta-tv` | Same as river-meta-movie but handles seasons and episodes (parses `SxxExx` patterns). |
 | `river-meta-book` | Consumes `media.discovered.audiobook` events, queries Open Library API (no key required), updates audiobook records in river-api. |
 | `river-meta-music` | Consumes `media.discovered.music` events, queries MusicBrainz + Cover Art Archive (no key required), updates music records in river-api. |
+| `river-events` | Consumes `media.transcoded.*` + `media.enriched.*` on the `river.lifecycle` exchange, joins them into `media.ready.*` (reading records back from river-api), and delivers outbound webhooks (#195) with HMAC signing + retry/DLQ. river-api stays RabbitMQ-free. |
+| `river-discord` | Optional Discord notifier. HTTP receiver for River's outbound webhooks; on `media.ready.*` it reads the record from river-api and posts a rich embed to a Discord channel. No RabbitMQ, no gateway bot. Opt-in via the `discord` compose profile. |
 
 ### river-api Layer Architecture
 
@@ -118,6 +124,10 @@ Uses `http.ServeContent` for HTTP Range header support (enables seeking without 
 **river-meta-movie / river-meta-tv**: `RIVER_API_USERNAME`, `RIVER_API_PASSWORD`, `TMDB_API_KEY`, `RIVER_API_URL`, `RABBITMQ_URL`, `RABBITMQ_EXCHANGE`, `WORKER_COUNT`, `TMDB_IMAGE_BASE`, `MAX_RETRIES`, `RETRY_BACKOFF`
 
 **river-meta-book**: `RIVER_API_USERNAME`, `RIVER_API_PASSWORD`, `RIVER_API_URL`, `RABBITMQ_URL`, `RABBITMQ_EXCHANGE`, `WORKER_COUNT`, `MAX_RETRIES`, `RETRY_BACKOFF`
+
+**river-events**: `RIVER_API_USERNAME`, `RIVER_API_PASSWORD`, `RIVER_API_KEY`, `RIVER_API_URL`, `RABBITMQ_URL`, `WORKER_COUNT`, `MAX_RETRIES`, `RETRY_BACKOFF_SECONDS`
+
+**river-discord**: `PORT`, `WEBHOOK_PATH`, `RIVER_WEBHOOK_SECRET`, `RIVER_API_URL`, `RIVER_API_TOKEN`, `DISCORD_WEBHOOK_URL`, `DISCORD_ROUTES`, `BATCH_WINDOW_SECONDS`, `NOTIFY_KINDS`
 
 ## External Dependencies
 

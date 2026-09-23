@@ -377,6 +377,39 @@ services:
       rabbitmq:
         condition: service_healthy
 
+  # Optional Discord notifier. Opt-in via the "discord" profile:
+  #   docker compose --profile discord up -d
+  # It receives River's outbound webhooks (#195) over HTTP — an admin must
+  # create a webhook in river-api pointing at http://river-discord:8090/hooks/river,
+  # copy its whsec_… secret into RIVER_DISCORD_WEBHOOK_SECRET, and mint a
+  # read-only rvat_… token for RIVER_DISCORD_API_TOKEN. See river-discord/README.md.
+  river-discord:
+    build:
+      context: ./river-discord
+    restart: unless-stopped
+    profiles: ["discord"]
+    environment:
+      RIVER_API_URL: http://river-api:8080
+      # Read-only rvat_… API token (from admin → API Tokens) for embed lookups.
+      RIVER_API_TOKEN: ${RIVER_DISCORD_API_TOKEN:-}
+      # The whsec_… secret of the river-api webhook that targets this service.
+      RIVER_WEBHOOK_SECRET: ${RIVER_DISCORD_WEBHOOK_SECRET:-}
+      # Default Discord incoming-webhook URL (the channel to post to).
+      DISCORD_WEBHOOK_URL: ${DISCORD_WEBHOOK_URL:-}
+      # Optional JSON map of library-id OR media-type → Discord webhook URL.
+      DISCORD_ROUTES: ${DISCORD_ROUTES:-}
+      BATCH_WINDOW_SECONDS: ${DISCORD_BATCH_WINDOW:-10}
+      NOTIFY_KINDS: ${DISCORD_NOTIFY_KINDS:-media.ready}
+      PORT: "8090"
+    depends_on:
+      river-api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO/dev/null http://localhost:8090/healthz || exit 1"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+
   # ---------------------------------------------------------------------------
   # Frontend
   # ---------------------------------------------------------------------------

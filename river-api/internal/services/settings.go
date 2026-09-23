@@ -30,7 +30,13 @@ const (
 	keyTransValidateOutput    = "transcoding.validate_output"
 	keyTransValidateContent   = "transcoding.validate_content"
 	keyTransDurationTolerance = "transcoding.duration_tolerance_pct"
+
+	keySecurityAllowRegistration = "security.allow_registration"
 )
+
+// defaultAllowRegistration keeps self-signup open by default so existing
+// installs behave exactly as before until an admin turns it off.
+const defaultAllowRegistration = true
 
 // Transcoding defaults. These must match the compiled-in constants the
 // transcoders use today, so an unconfigured install behaves identically
@@ -306,6 +312,26 @@ func containsString(xs []string, v string) bool {
 // subtitle-search service to authenticate against the SubDL API.
 func (s *SettingsService) SubDLKey() string {
 	return s.get(keySubDLKey)
+}
+
+// SecuritySettings is the admin-facing view of security config.
+type SecuritySettings struct {
+	AllowRegistration bool `json:"allow_registration"`
+}
+
+func (s *SettingsService) Security() SecuritySettings {
+	return SecuritySettings{AllowRegistration: s.AllowRegistration()}
+}
+
+// AllowRegistration reports whether self-signup is enabled (defaults to true
+// when unset). Satisfies the auth service's registration-policy dependency.
+func (s *SettingsService) AllowRegistration() bool {
+	return s.getBool(keySecurityAllowRegistration, defaultAllowRegistration)
+}
+
+// UpdateSecurity persists the security settings.
+func (s *SettingsService) UpdateSecurity(in SecuritySettings) error {
+	return s.repo.Set(keySecurityAllowRegistration, strconv.FormatBool(in.AllowRegistration))
 }
 
 // IntegrationSettings is the admin-facing view. Secrets are never

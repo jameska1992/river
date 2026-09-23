@@ -4,8 +4,9 @@ import "river-api/internal/apperrors"
 
 // Re-export so callers (handlers) need only import services.
 var (
-	ErrNotFound     = apperrors.ErrNotFound
-	ErrConflict     = apperrors.ErrConflict
-	ErrUnauthorized = apperrors.ErrUnauthorized
-	ErrInvalidInput = apperrors.ErrInvalidInput
+	ErrNotFound             = apperrors.ErrNotFound
+	ErrConflict             = apperrors.ErrConflict
+	ErrUnauthorized         = apperrors.ErrUnauthorized
+	ErrInvalidInput         = apperrors.ErrInvalidInput
+	ErrRegistrationDisabled = apperrors.ErrRegistrationDisabled
 )

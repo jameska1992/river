@@ -46,7 +46,34 @@ func settingsRouter(repo *fakeSettingRepo) *gin.Engine {
 	r.GET("/admin/settings/integrations", h.GetIntegrations)
 	r.PUT("/admin/settings/integrations", h.UpdateIntegrations)
 	r.POST("/admin/settings/integrations/seed", h.SeedIntegrations)
+	r.GET("/admin/settings/security", h.GetSecurity)
+	r.PUT("/admin/settings/security", h.UpdateSecurity)
 	return r
+}
+
+func TestSettingsHandler_Security_GetUpdate(t *testing.T) {
+	repo := &fakeSettingRepo{m: map[string]string{}}
+	r := settingsRouter(repo)
+
+	// Default: registration open.
+	w := doJSON(r, http.MethodGet, "/admin/settings/security", "")
+	require.Equal(t, http.StatusOK, w.Code)
+	var got struct {
+		AllowRegistration bool `json:"allow_registration"`
+	}
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &got))
+	assert.True(t, got.AllowRegistration)
+
+	// Disable it.
+	w = doJSON(r, http.MethodPut, "/admin/settings/security", `{"allow_registration":false}`)
+	require.Equal(t, http.StatusOK, w.Code)
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &got))
+	assert.False(t, got.AllowRegistration)
+	assert.Equal(t, "false", repo.m["security.allow_registration"])
+
+	// Bad body → 400.
+	w = doJSON(r, http.MethodPut, "/admin/settings/security", `not json`)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
 }
 
 func TestSettingsHandler_Get_MasksSecrets(t *testing.T) {

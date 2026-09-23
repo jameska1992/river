@@ -67,6 +67,67 @@ func TestRegister_ServiceSeedDoesNotStealAdminBootstrap(t *testing.T) {
 	assert.Equal(t, models.RoleAdmin, first.Role, "first human is admin despite a pre-seeded service account")
 }
 
+// fakePolicy is a settable RegistrationPolicy for the gating tests.
+type fakePolicy struct{ allow bool }
+
+func (f fakePolicy) AllowRegistration() bool { return f.allow }
+
+func TestRegister_DisabledRejectsOnceAdminExists(t *testing.T) {
+	users := &memUserRepo{}
+	svc := newTestAuthService(users, &memRefreshRepo{})
+	svc.SetRegistrationPolicy(fakePolicy{allow: false})
+
+	// Bootstrap exception: with no admin yet, the first registration is allowed
+	// even though the policy says no — an operator can't lock themselves out.
+	first, err := svc.Register("admin", "admin@x.com", "pw")
+	require.NoError(t, err)
+	assert.Equal(t, models.RoleAdmin, first.Role)
+
+	// Now an admin exists, so self-signup is gated.
+	_, err = svc.Register("bob", "bob@x.com", "pw")
+	assert.ErrorIs(t, err, ErrRegistrationDisabled)
+}
+
+func TestRegister_EnabledAllows(t *testing.T) {
+	users := &memUserRepo{}
+	svc := newTestAuthService(users, &memRefreshRepo{})
+	svc.SetRegistrationPolicy(fakePolicy{allow: true})
+
+	_, err := svc.Register("admin", "admin@x.com", "pw")
+	require.NoError(t, err)
+	second, err := svc.Register("bob", "bob@x.com", "pw")
+	require.NoError(t, err)
+	assert.Equal(t, models.RoleUser, second.Role)
+}
+
+func TestRegister_NoPolicyAllowsByDefault(t *testing.T) {
+	// No policy wired → registration open (backwards-compatible).
+	svc := newTestAuthService(&memUserRepo{}, &memRefreshRepo{})
+	_, err := svc.Register("admin", "admin@x.com", "pw")
+	require.NoError(t, err)
+	_, err = svc.Register("bob", "bob@x.com", "pw")
+	require.NoError(t, err)
+}
+
+func TestRegistrationAllowed(t *testing.T) {
+	users := &memUserRepo{}
+	svc := newTestAuthService(users, &memRefreshRepo{})
+	svc.SetRegistrationPolicy(fakePolicy{allow: false})
+
+	// No admin yet → effectively allowed (bootstrap), regardless of the policy.
+	assert.True(t, svc.RegistrationAllowed())
+
+	_, err := svc.Register("admin", "admin@x.com", "pw")
+	require.NoError(t, err)
+
+	// Admin exists + policy off → not allowed.
+	assert.False(t, svc.RegistrationAllowed())
+
+	// Flip the policy on → allowed.
+	svc.SetRegistrationPolicy(fakePolicy{allow: true})
+	assert.True(t, svc.RegistrationAllowed())
+}
+
 func TestRegister_HashesPassword(t *testing.T) {
 	svc := newTestAuthService(&memUserRepo{}, &memRefreshRepo{})
 

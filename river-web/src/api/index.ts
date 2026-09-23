@@ -33,7 +33,7 @@ export type {
   SearchResult, LibrarySearchResult, SearchResultItem, PersonSearchResult,
   MovieSearchResult, ShowSearchResult, CalendarItem,
   IntegrationSettings, IntegrationUpdate, MetadataSettings, ScanningSettings,
-  TranscodingSettings,
+  TranscodingSettings, SecuritySettings,
   WatchInsights, WatchInsightsTopTitle, WatchInsightsDay, WatchInsightsUser,
   LibraryInsights, LibraryHealth,
 } from './types'

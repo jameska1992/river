@@ -1,6 +1,7 @@
-import { type FormEvent, useState } from 'react'
+import { type FormEvent, useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth, ApiError } from '../context/AuthContext'
+import { api } from '../api'
 import styles from './AuthPage.module.css'
 
 export function RegisterPage() {
@@ -13,6 +14,14 @@ export function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  // null = still checking; false = admin has disabled self-signup.
+  const [allowed, setAllowed] = useState<boolean | null>(null)
+
+  useEffect(() => {
+    api.getRegistrationStatus()
+      .then(s => setAllowed(s.allow_registration))
+      .catch(() => setAllowed(true)) // fail open — the backend still enforces it
+  }, [])
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
@@ -45,6 +54,18 @@ export function RegisterPage() {
 
         <h1 className={`headline-md ${styles.heading}`}>Create account</h1>
 
+        {allowed === false ? (
+          <>
+            <p className={`body-md ${styles.heading}`} role="status">
+              Registration is currently closed on this server. Ask an administrator to
+              create an account for you.
+            </p>
+            <p className={`label-sm ${styles.footer}`}>
+              Already have an account?{' '}
+              <Link to="/login" className={styles.link}>Sign in</Link>
+            </p>
+          </>
+        ) : (
         <form onSubmit={handleSubmit} className={styles.form} noValidate>
           <div className={styles.field}>
             <label htmlFor="username" className="label-md">Username</label>
@@ -108,11 +129,14 @@ export function RegisterPage() {
             {isSubmitting ? 'Creating account…' : 'Create account'}
           </button>
         </form>
+        )}
 
-        <p className={`label-sm ${styles.footer}`}>
-          Already have an account?{' '}
-          <Link to="/login" className={styles.link}>Sign in</Link>
-        </p>
+        {allowed !== false && (
+          <p className={`label-sm ${styles.footer}`}>
+            Already have an account?{' '}
+            <Link to="/login" className={styles.link}>Sign in</Link>
+          </p>
+        )}
       </div>
     </div>
   )

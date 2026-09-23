@@ -216,6 +216,47 @@ func (h *SettingsHandler) UpdateScanning(c *gin.Context) {
 	c.JSON(http.StatusOK, h.svc.Scanning())
 }
 
+// securityRequest is the write shape for security settings.
+type securityRequest struct {
+	AllowRegistration bool `json:"allow_registration"`
+}
+
+// GetSecurity returns the security settings (registration toggle).
+//
+// @Summary      Get security settings
+// @Tags         settings
+// @Produce      json
+// @Success      200  {object}  services.SecuritySettings
+// @Security     BearerAuth
+// @Router       /admin/settings/security [get]
+func (h *SettingsHandler) GetSecurity(c *gin.Context) {
+	c.JSON(http.StatusOK, h.svc.Security())
+}
+
+// UpdateSecurity sets the security settings (currently the registration toggle).
+//
+// @Summary      Update security settings
+// @Tags         settings
+// @Accept       json
+// @Produce      json
+// @Param        body  body      securityRequest  true  "Security settings"
+// @Success      200   {object}  services.SecuritySettings
+// @Failure      400   {object}  map[string]string
+// @Security     BearerAuth
+// @Router       /admin/settings/security [put]
+func (h *SettingsHandler) UpdateSecurity(c *gin.Context) {
+	var req securityRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if err := h.svc.UpdateSecurity(services.SecuritySettings{AllowRegistration: req.AllowRegistration}); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to save settings"})
+		return
+	}
+	c.JSON(http.StatusOK, h.svc.Security())
+}
+
 // GetTranscoding returns the effective transcoding config (stored values
 // with defaults filled in). Registered both admin-only (for the settings
 // UI) and as an authenticated service read (for the transcoders), which

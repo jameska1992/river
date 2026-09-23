@@ -107,6 +107,9 @@ func main() {
 	serviceLogSvc := services.NewServiceLogService(serviceLogRepo)
 	failedJobSvc := services.NewFailedJobService(repository.NewFailedJobRepository(db))
 	settingsSvc := services.NewSettingsService(settingRepo)
+	// Gate self-signup on the admin's security setting (auth service stays
+	// decoupled from settings via the RegistrationPolicy interface).
+	authSvc.SetRegistrationPolicy(settingsSvc)
 	subtitleSearchSvc := services.NewSubtitleSearchService(subdl.NewClient(), settingsSvc, movieRepo, episodeRepo, seasonRepo, tvShowRepo, subtitleRepo, cfg.MediaBasePath)
 	searchRepo := repository.NewSearchRepository(db)
 	searchSvc := services.NewSearchService(searchRepo)

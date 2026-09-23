@@ -917,6 +917,10 @@ export interface ScanningSettings {
   scan_interval: string
 }
 
+export interface SecuritySettings {
+  allow_registration: boolean
+}
+
 // TranscodingSettings mirrors the resolved config from
 // GET/PUT /admin/settings/transcoding. All fields are structured knobs
 // (never raw ffmpeg flags); quality is a single 0–51 value mapped to both

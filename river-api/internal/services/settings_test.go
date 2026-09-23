@@ -35,6 +35,24 @@ func (r *memSettingRepo) SetIfAbsent(key, value string) (bool, error) {
 	return true, nil
 }
 
+func TestSettingsService_Security_DefaultsToRegistrationOpen(t *testing.T) {
+	svc := NewSettingsService(&memSettingRepo{m: map[string]string{}})
+	assert.True(t, svc.AllowRegistration(), "registration open by default when unset")
+	assert.True(t, svc.Security().AllowRegistration)
+}
+
+func TestSettingsService_UpdateSecurity_Persists(t *testing.T) {
+	repo := &memSettingRepo{m: map[string]string{}}
+	svc := NewSettingsService(repo)
+
+	require.NoError(t, svc.UpdateSecurity(SecuritySettings{AllowRegistration: false}))
+	assert.False(t, svc.AllowRegistration())
+	assert.Equal(t, "false", repo.m[keySecurityAllowRegistration])
+
+	require.NoError(t, svc.UpdateSecurity(SecuritySettings{AllowRegistration: true}))
+	assert.True(t, svc.AllowRegistration())
+}
+
 func TestSettingsService_RadarrConfig_TrimsAndEnables(t *testing.T) {
 	repo := &memSettingRepo{m: map[string]string{}}
 	svc := NewSettingsService(repo)

@@ -70,6 +70,41 @@ func TestAuthHandler_Register_Conflict(t *testing.T) {
 	assert.Equal(t, http.StatusConflict, w.Code)
 }
 
+type regPolicy struct{ allow bool }
+
+func (p regPolicy) AllowRegistration() bool { return p.allow }
+
+func TestAuthHandler_RegistrationStatusAndDisabledRegister(t *testing.T) {
+	users := &fakeUserRepo{}
+	svc := services.NewAuthService(users, &fakeRefreshRepo{}, "test-secret", 15*time.Minute, 7*24*time.Hour, 8*time.Hour)
+	svc.SetRegistrationPolicy(regPolicy{allow: false})
+	h := NewAuthHandler(svc)
+	r := gin.New()
+	r.GET("/auth/registration-status", h.RegistrationStatus)
+	r.POST("/auth/register", h.Register)
+
+	readStatus := func() bool {
+		w := doJSON(r, http.MethodGet, "/auth/registration-status", "")
+		require.Equal(t, http.StatusOK, w.Code)
+		var s struct {
+			AllowRegistration bool `json:"allow_registration"`
+		}
+		require.NoError(t, json.Unmarshal(w.Body.Bytes(), &s))
+		return s.AllowRegistration
+	}
+
+	// No admin yet → status true and the first register succeeds (bootstrap),
+	// even though the policy is off.
+	assert.True(t, readStatus(), "bootstrap: registration open while no admin exists")
+	require.Equal(t, http.StatusCreated,
+		doJSON(r, http.MethodPost, "/auth/register", `{"username":"admin","email":"a@x.com","password":"password1"}`).Code)
+
+	// Admin now exists + policy off → status false and register is forbidden.
+	assert.False(t, readStatus())
+	w := doJSON(r, http.MethodPost, "/auth/register", `{"username":"bob","email":"b@x.com","password":"password1"}`)
+	assert.Equal(t, http.StatusForbidden, w.Code, "disabled registration returns 403")
+}
+
 func TestAuthHandler_Login(t *testing.T) {
 	users := &fakeUserRepo{}
 	r := authRouter(users, &fakeRefreshRepo{})

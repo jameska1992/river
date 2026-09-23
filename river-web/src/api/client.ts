@@ -1003,6 +1003,44 @@ export class RiverClient {
     return this.request('DELETE', `/admin/service-keys/${id}`)
   }
 
+  // --- Webhooks (outbound lifecycle notifications) ---
+
+  async listWebhooks(): Promise<import('./types').Webhook[]> {
+    return this.request('GET', '/admin/webhooks')
+  }
+
+  // Create returns the HMAC signing secret exactly once, alongside the record.
+  async createWebhook(input: { name: string; url: string; events: string[]; enabled?: boolean }): Promise<{ secret: string; webhook: import('./types').Webhook }> {
+    return this.request('POST', '/admin/webhooks', input)
+  }
+
+  async updateWebhook(id: string, input: { name: string; url: string; events: string[]; enabled: boolean }): Promise<import('./types').Webhook> {
+    return this.request('PUT', `/admin/webhooks/${id}`, input)
+  }
+
+  async deleteWebhook(id: string): Promise<void> {
+    return this.request('DELETE', `/admin/webhooks/${id}`)
+  }
+
+  async listWebhookDeliveries(id: string): Promise<import('./types').WebhookDelivery[]> {
+    return this.request('GET', `/admin/webhooks/${id}/deliveries`)
+  }
+
+  // --- API tokens (inbound, read-only third-party access) ---
+
+  async listAPITokens(): Promise<import('./types').APIToken[]> {
+    return this.request('GET', '/admin/api-tokens')
+  }
+
+  // Mint returns the plaintext token exactly once, alongside the stored record.
+  async mintAPIToken(input: { name: string; scopes?: string[]; expires_in_days?: number }): Promise<{ token: string; api_token: import('./types').APIToken }> {
+    return this.request('POST', '/admin/api-tokens', input)
+  }
+
+  async revokeAPIToken(id: string): Promise<void> {
+    return this.request('DELETE', `/admin/api-tokens/${id}`)
+  }
+
   // --- Watch Party ---
 
   async createWatchParty(input: { media_type: string; media_id: string; show_id?: string; season_id?: string }): Promise<WatchParty> {

@@ -18,6 +18,7 @@ export type {
   ActiveSession,
   Subtitle, SubtitleSearchResult, SubtitleAttachRequest, AudioTrack,
   ServiceKey,
+  Webhook, WebhookDelivery, APIToken,
   Collection, CollectionItem, CollectionDetail,
   PaginationParams, SortParams, SortOrder,
   CreateLibraryRequest, UpdateLibraryRequest,

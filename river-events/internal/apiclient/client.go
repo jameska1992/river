@@ -217,3 +217,35 @@ func (c *Client) ListChapters(audiobookID string) ([]Chapter, error) {
 	var out []Chapter
 	return out, c.do("GET", "/api/audiobooks/"+audiobookID+"/chapters?limit=200", nil, &out)
 }
+
+// --- Webhooks ---
+
+// ActiveWebhook mirrors river-api's delivery-facing shape (includes the HMAC
+// secret so river-events can sign deliveries).
+type ActiveWebhook struct {
+	ID     string   `json:"id"`
+	Name   string   `json:"name"`
+	URL    string   `json:"url"`
+	Secret string   `json:"secret"`
+	Events []string `json:"events"`
+}
+
+func (c *Client) GetActiveWebhooks() ([]ActiveWebhook, error) {
+	var out []ActiveWebhook
+	return out, c.do("GET", "/api/webhooks/active", nil, &out)
+}
+
+// DeliveryOutcome is the terminal result river-events reports per delivery.
+type DeliveryOutcome struct {
+	WebhookID    string `json:"webhook_id"`
+	Event        string `json:"event"`
+	MediaID      string `json:"media_id"`
+	Status       string `json:"status"` // "delivered" | "failed"
+	Attempts     int    `json:"attempts"`
+	ResponseCode int    `json:"response_code,omitempty"`
+	Error        string `json:"error,omitempty"`
+}
+
+func (c *Client) RecordDelivery(o DeliveryOutcome) error {
+	return c.do("POST", "/api/webhooks/deliveries", o, nil)
+}

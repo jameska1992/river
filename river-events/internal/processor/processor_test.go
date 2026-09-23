@@ -7,6 +7,7 @@ import (
 
 	"river-events/internal/apiclient"
 	"river-events/internal/events"
+	"river-events/internal/webhooks"
 )
 
 type fakeAPI struct {
@@ -83,7 +84,7 @@ func transcodedMovie(id string) events.LifecycleEvent {
 func TestJoinMovie_EmitsReadyWhenBothComplete(t *testing.T) {
 	api := &fakeAPI{movie: &apiclient.Movie{ID: "m1", Title: "Inception", LibraryID: "lib1", FilePath: "/out/m1.mp4", TMDBID: 27205}}
 	pub := &fakePub{}
-	p := New(api, pub)
+	p := New(api, pub, nil, nil)
 
 	if err := p.Handle(transcodedMovie("m1")); err != nil {
 		t.Fatalf("Handle: %v", err)
@@ -103,7 +104,7 @@ func TestJoinMovie_EmitsReadyWhenBothComplete(t *testing.T) {
 func TestJoinMovie_NoReadyWhenNotTranscoded(t *testing.T) {
 	api := &fakeAPI{movie: &apiclient.Movie{ID: "m1", FilePath: "", TMDBID: 27205}} // enriched, not transcoded
 	pub := &fakePub{}
-	p := New(api, pub)
+	p := New(api, pub, nil, nil)
 	if err := p.Handle((events.LifecycleEvent{Kind: events.KindEnriched, Type: "movie", MediaID: "m1"})); err != nil {
 		t.Fatal(err)
 	}
@@ -115,7 +116,7 @@ func TestJoinMovie_NoReadyWhenNotTranscoded(t *testing.T) {
 func TestJoinMovie_NoReadyWhenNotEnriched(t *testing.T) {
 	api := &fakeAPI{movie: &apiclient.Movie{ID: "m1", FilePath: "/out/m1.mp4", TMDBID: 0}} // transcoded, not enriched
 	pub := &fakePub{}
-	p := New(api, pub)
+	p := New(api, pub, nil, nil)
 	if err := p.Handle(transcodedMovie("m1")); err != nil {
 		t.Fatal(err)
 	}
@@ -127,7 +128,7 @@ func TestJoinMovie_NoReadyWhenNotEnriched(t *testing.T) {
 func TestJoinMovie_DedupesReady(t *testing.T) {
 	api := &fakeAPI{movie: &apiclient.Movie{ID: "m1", FilePath: "/out/m1.mp4", TMDBID: 1}}
 	pub := &fakePub{}
-	p := New(api, pub)
+	p := New(api, pub, nil, nil)
 	// Both the transcoded and enriched events find the record complete; ready
 	// must be emitted only once.
 	_ = p.Handle(transcodedMovie("m1"))
@@ -140,20 +141,119 @@ func TestJoinMovie_DedupesReady(t *testing.T) {
 func TestJoinMovie_APIErrorPropagates(t *testing.T) {
 	// A transient API error must propagate so the message is retried, not acked.
 	api := &fakeAPI{err: errors.New("api down")}
-	p := New(api, &fakePub{})
+	p := New(api, &fakePub{}, nil, nil)
 	if err := p.Handle(transcodedMovie("m1")); err == nil {
 		t.Fatal("expected error to propagate for retry")
 	}
 }
 
-func TestHandle_IgnoresReadyEvents(t *testing.T) {
+func TestHandle_ReadyEventNotRejoinedButFannedOut(t *testing.T) {
 	api := &fakeAPI{movie: &apiclient.Movie{ID: "m1", FilePath: "/x", TMDBID: 1}}
 	pub := &fakePub{}
-	p := New(api, pub)
-	// A ready event isn't re-joined (we don't bind it, but be defensive).
+	// No fan-out configured: a ready event isn't re-joined and produces nothing.
+	p := New(api, pub, nil, nil)
 	_ = p.Handle(events.LifecycleEvent{Kind: events.KindReady, Type: "movie", MediaID: "m1"})
 	if len(pub.published) != 0 || api.calls != 0 {
-		t.Fatalf("ready event should be a no-op; published=%d calls=%d", len(pub.published), api.calls)
+		t.Fatalf("ready event should not be re-joined; published=%d calls=%d", len(pub.published), api.calls)
+	}
+}
+
+type fakeHooks struct {
+	hooks []apiclient.ActiveWebhook
+	err   error
+}
+
+func (f *fakeHooks) ActiveWebhooks() ([]apiclient.ActiveWebhook, error) {
+	return f.hooks, f.err
+}
+
+type fakeDeliveries struct {
+	published []webhooks.Delivery
+	err       error
+}
+
+func (f *fakeDeliveries) Publish(d webhooks.Delivery) error {
+	if f.err != nil {
+		return f.err
+	}
+	f.published = append(f.published, d)
+	return nil
+}
+
+func TestFanOut_DeliversToMatchingWebhooks(t *testing.T) {
+	hooks := &fakeHooks{hooks: []apiclient.ActiveWebhook{
+		{ID: "w-all", URL: "https://a", Secret: "s1", Events: nil},                               // all kinds
+		{ID: "w-ready", URL: "https://b", Secret: "s2", Events: []string{events.KindReady}},      // ready only
+		{ID: "w-trans", URL: "https://c", Secret: "s3", Events: []string{events.KindTranscoded}}, // transcoded only
+	}}
+	del := &fakeDeliveries{}
+	// A movie that isn't ready yet, so the join emits nothing — we isolate fan-out.
+	api := &fakeAPI{movie: &apiclient.Movie{ID: "m1", FilePath: "", TMDBID: 0}}
+	p := New(api, &fakePub{}, hooks, del)
+
+	if err := p.Handle(events.LifecycleEvent{Kind: events.KindReady, Type: "movie", MediaID: "m1"}); err != nil {
+		t.Fatalf("Handle: %v", err)
+	}
+	// The all-kinds and ready-only hooks match; the transcoded-only hook doesn't.
+	if len(del.published) != 2 {
+		t.Fatalf("expected 2 deliveries, got %d", len(del.published))
+	}
+	got := map[string]bool{}
+	for _, d := range del.published {
+		got[d.WebhookID] = true
+		if d.Event.MediaID != "m1" {
+			t.Fatalf("delivery carries wrong event: %+v", d.Event)
+		}
+	}
+	if !got["w-all"] || !got["w-ready"] || got["w-trans"] {
+		t.Fatalf("wrong webhooks matched: %v", got)
+	}
+}
+
+func TestFanOut_CarriesSecretAndURL(t *testing.T) {
+	hooks := &fakeHooks{hooks: []apiclient.ActiveWebhook{{ID: "w1", URL: "https://hook", Secret: "shh"}}}
+	del := &fakeDeliveries{}
+	api := &fakeAPI{movie: &apiclient.Movie{ID: "m1"}}
+	p := New(api, &fakePub{}, hooks, del)
+	if err := p.Handle(events.LifecycleEvent{Kind: events.KindReady, Type: "movie", MediaID: "m1"}); err != nil {
+		t.Fatal(err)
+	}
+	if len(del.published) != 1 {
+		t.Fatalf("expected 1 delivery, got %d", len(del.published))
+	}
+	d := del.published[0]
+	if d.URL != "https://hook" || d.Secret != "shh" || d.WebhookID != "w1" {
+		t.Fatalf("delivery missing routing/signing context: %+v", d)
+	}
+}
+
+func TestFanOut_ErrorPropagatesForRetry(t *testing.T) {
+	hooks := &fakeHooks{err: errors.New("api down")}
+	api := &fakeAPI{movie: &apiclient.Movie{ID: "m1"}}
+	p := New(api, &fakePub{}, hooks, &fakeDeliveries{})
+	if err := p.Handle(events.LifecycleEvent{Kind: events.KindReady, Type: "movie", MediaID: "m1"}); err == nil {
+		t.Fatal("expected fan-out error to propagate for retry")
+	}
+}
+
+func TestFanOut_JoinEmitsReadyThenSeparateEventFansOut(t *testing.T) {
+	// A transcoded movie that IS ready: the join emits ready (published to the
+	// exchange), and fan-out runs for the transcoded event itself.
+	hooks := &fakeHooks{hooks: []apiclient.ActiveWebhook{{ID: "w1", URL: "https://h", Secret: "s"}}}
+	del := &fakeDeliveries{}
+	api := &fakeAPI{movie: &apiclient.Movie{ID: "m1", Title: "T", FilePath: "/out/m1.mp4", TMDBID: 1}}
+	pub := &fakePub{}
+	p := New(api, pub, hooks, del)
+	if err := p.Handle(transcodedMovie("m1")); err != nil {
+		t.Fatal(err)
+	}
+	if len(pub.published) != 1 {
+		t.Fatalf("expected join to emit 1 ready event, got %d", len(pub.published))
+	}
+	// Fan-out for the transcoded event goes to the all-kinds webhook. The ready
+	// event fans out on its own round-trip (not exercised here).
+	if len(del.published) != 1 || del.published[0].Event.Kind != events.KindTranscoded {
+		t.Fatalf("expected 1 transcoded delivery, got %+v", del.published)
 	}
 }
 
@@ -162,7 +262,7 @@ func TestHandle_IgnoresReadyEvents(t *testing.T) {
 func TestJoinTVShow_TranscodedEpisodeReadyWhenShowEnriched(t *testing.T) {
 	api := &fakeAPI{show: &apiclient.TVShow{ID: "s1", Title: "The Wire", LibraryID: "lib", TMDBID: 1438}}
 	pub := &fakePub{}
-	p := New(api, pub)
+	p := New(api, pub, nil, nil)
 	err := p.Handle(events.LifecycleEvent{Kind: events.KindTranscoded, Type: "tvshow", MediaID: "ep1", ParentID: "s1", SeasonID: "se1"})
 	if err != nil {
 		t.Fatal(err)
@@ -179,7 +279,7 @@ func TestJoinTVShow_TranscodedEpisodeReadyWhenShowEnriched(t *testing.T) {
 func TestJoinTVShow_TranscodedNoReadyWhenShowNotEnriched(t *testing.T) {
 	api := &fakeAPI{show: &apiclient.TVShow{ID: "s1", TMDBID: 0}}
 	pub := &fakePub{}
-	p := New(api, pub)
+	p := New(api, pub, nil, nil)
 	_ = p.Handle(events.LifecycleEvent{Kind: events.KindTranscoded, Type: "tvshow", MediaID: "ep1", ParentID: "s1"})
 	if len(pub.published) != 0 {
 		t.Fatalf("expected no ready, got %d", len(pub.published))
@@ -196,7 +296,7 @@ func TestJoinTVShow_EnrichedFansOutOverTranscodedEpisodes(t *testing.T) {
 		},
 	}
 	pub := &fakePub{}
-	p := New(api, pub)
+	p := New(api, pub, nil, nil)
 	if err := p.Handle(events.LifecycleEvent{Kind: events.KindEnriched, Type: "tvshow", MediaID: "s1"}); err != nil {
 		t.Fatal(err)
 	}
@@ -211,7 +311,7 @@ func TestJoinTVShow_EnrichedFansOutOverTranscodedEpisodes(t *testing.T) {
 func TestJoinMusic_TrackReadyWhenAlbumEnriched(t *testing.T) {
 	api := &fakeAPI{album: &apiclient.Album{ID: "al1", LibraryID: "lib", CoverPath: "/cover.jpg"}}
 	pub := &fakePub{}
-	p := New(api, pub)
+	p := New(api, pub, nil, nil)
 	if err := p.Handle(events.LifecycleEvent{Kind: events.KindTranscoded, Type: "music", MediaID: "t1", ParentID: "al1"}); err != nil {
 		t.Fatal(err)
 	}
@@ -223,7 +323,7 @@ func TestJoinMusic_TrackReadyWhenAlbumEnriched(t *testing.T) {
 func TestJoinMusic_NoReadyWhenAlbumNotEnriched(t *testing.T) {
 	api := &fakeAPI{album: &apiclient.Album{ID: "al1", CoverPath: ""}}
 	pub := &fakePub{}
-	p := New(api, pub)
+	p := New(api, pub, nil, nil)
 	_ = p.Handle(events.LifecycleEvent{Kind: events.KindTranscoded, Type: "music", MediaID: "t1", ParentID: "al1"})
 	if len(pub.published) != 0 {
 		t.Fatalf("expected no ready, got %d", len(pub.published))
@@ -236,7 +336,7 @@ func TestJoinMusic_EnrichedFansOutOverTracks(t *testing.T) {
 		tracks: []apiclient.Track{{ID: "t1", FilePath: "/t1.m4a"}, {ID: "t2", FilePath: ""}},
 	}
 	pub := &fakePub{}
-	p := New(api, pub)
+	p := New(api, pub, nil, nil)
 	if err := p.Handle(events.LifecycleEvent{Kind: events.KindEnriched, Type: "music", MediaID: "al1"}); err != nil {
 		t.Fatal(err)
 	}
@@ -250,7 +350,7 @@ func TestJoinMusic_EnrichedFansOutOverTracks(t *testing.T) {
 func TestJoinAudiobook_ReadyOnTranscodedWhenEnriched(t *testing.T) {
 	api := &fakeAPI{audiobook: &apiclient.Audiobook{ID: "b1", LibraryID: "lib", Title: "Dune", OpenLibraryKey: "/works/OL1W"}}
 	pub := &fakePub{}
-	p := New(api, pub)
+	p := New(api, pub, nil, nil)
 	if err := p.Handle(events.LifecycleEvent{Kind: events.KindTranscoded, Type: "audiobook", MediaID: "ch1", ParentID: "b1"}); err != nil {
 		t.Fatal(err)
 	}
@@ -266,7 +366,7 @@ func TestJoinAudiobook_EnrichedNeedsTranscodedChapter(t *testing.T) {
 		chapters:  []apiclient.Chapter{{ID: "ch1", FilePath: ""}},
 	}
 	pub := &fakePub{}
-	p := New(api, pub)
+	p := New(api, pub, nil, nil)
 	_ = p.Handle(events.LifecycleEvent{Kind: events.KindEnriched, Type: "audiobook", MediaID: "b1"})
 	if len(pub.published) != 0 {
 		t.Fatalf("expected no ready without a transcoded chapter, got %d", len(pub.published))
@@ -284,7 +384,7 @@ func TestJoinAudiobook_EnrichedNeedsTranscodedChapter(t *testing.T) {
 func TestJoinAudiobook_ReadyDedupedPerBook(t *testing.T) {
 	api := &fakeAPI{audiobook: &apiclient.Audiobook{ID: "b1", OpenLibraryKey: "/works/OL1W"}}
 	pub := &fakePub{}
-	p := New(api, pub)
+	p := New(api, pub, nil, nil)
 	// Two chapters transcode; the book should emit ready only once.
 	_ = p.Handle(events.LifecycleEvent{Kind: events.KindTranscoded, Type: "audiobook", MediaID: "ch1", ParentID: "b1"})
 	_ = p.Handle(events.LifecycleEvent{Kind: events.KindTranscoded, Type: "audiobook", MediaID: "ch2", ParentID: "b1"})

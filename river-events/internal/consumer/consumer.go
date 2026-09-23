@@ -61,8 +61,9 @@ func New(url string, maxRetries int, backoff time.Duration, reporter DeadLetterR
 		conn.Close()
 		return nil, fmt.Errorf("declare queue: %w", err)
 	}
-	// We join transcode + enrich signals; ready is published, not consumed.
-	for _, key := range []string{events.KindTranscoded + ".#", events.KindEnriched + ".#"} {
+	// Bind transcode + enrich (for the join) and ready (so ready events, which
+	// the join publishes, are fanned out to subscribed webhooks).
+	for _, key := range []string{events.KindTranscoded + ".#", events.KindEnriched + ".#", events.KindReady + ".#"} {
 		if err := ch.QueueBind(q.Name, key, events.Exchange, false, nil); err != nil {
 			ch.Close()
 			conn.Close()

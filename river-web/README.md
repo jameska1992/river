@@ -14,6 +14,24 @@ npm run preview  # preview the production bundle
 
 The dev server proxies `/api` to `http://localhost:8080` by default (see `vite.config.ts`). Point it at your own river-api instance with `RIVER_API_TARGET=http://<host>:8080 npm run dev`.
 
+## Testing
+
+```bash
+npm test            # run the unit suite once (Vitest + React Testing Library)
+npm run test:watch  # watch mode
+npm run test:coverage   # run with a v8 coverage report (text + html)
+```
+
+Tests live next to the code as `*.test.ts(x)`. The harness (jsdom, jest-dom
+matchers, in-memory storage) is set up in `src/setupTests.ts`; coverage scope
+is configured in `vitest.config.ts`.
+
+**Coverage gate.** CI (`coverage (river-web)` job) enforces an auto-ratchet:
+a PR's line coverage may not drop below the base branch's, within a 0.1%
+tolerance. There is no static threshold to maintain — the floor rises on its
+own as tests are added (mirroring the river-api coverage gate). To avoid a
+regression, cover new code with tests; to raise the floor, just add tests.
+
 ## Configuration
 
 The API base URL used at runtime is stored in `localStorage` under `river:api-base`. In dev the default is `/api` (which the Vite proxy handles). For a production deployment, the same origin is expected to serve both the built assets and the `/api` prefix (e.g. via nginx routing).

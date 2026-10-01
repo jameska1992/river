@@ -122,6 +122,56 @@ jobs:
             exit 1
           fi
 
+  coverage-web:
+    name: coverage (river-web)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # need the base commit to compare against
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: river-web/package-lock.json
+      # Auto-ratchet: front-end coverage may not drop below the base branch,
+      # mirroring the river-api gate. The floor rises on its own as tests are
+      # added — no manual threshold to maintain. TOLERANCE absorbs a single
+      # rounding tick so identical code can't flake. On push (no base PR) we
+      # only report. Uses line coverage from Vitest's json-summary.
+      - name: enforce no coverage regression
+        working-directory: river-web
+        env:
+          TOLERANCE: "0.1"
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          coverage() {
+            npm ci >/dev/null 2>&1
+            npx vitest run --coverage \
+              --coverage.reporter=json-summary \
+              --coverage.reportsDirectory=/tmp/covdir >/dev/null 2>&1
+            node -e "process.stdout.write(String(require('/tmp/covdir/coverage-summary.json').total.lines.pct))"
+          }
+          pr_cov="$(coverage)"
+          echo "this branch: ${pr_cov}% line coverage"
+
+          if [ -z "$BASE_SHA" ]; then
+            echo "no base ref (push build) — reporting only, skipping regression check"
+            exit 0
+          fi
+
+          git worktree add -q /tmp/base "$BASE_SHA"
+          base_cov="$(cd /tmp/base/river-web && coverage)"
+          echo "base ($BASE_SHA): ${base_cov}% line coverage"
+
+          if awk -v pr="$pr_cov" -v base="$base_cov" -v tol="$TOLERANCE" \
+               'BEGIN { exit (pr+0 < base+0 - tol) ? 1 : 0 }'; then
+            echo "OK: ${pr_cov}% >= ${base_cov}% (base) - ${TOLERANCE}%"
+          else
+            echo "::error::river-web coverage regressed: ${pr_cov}% < base ${base_cov}% (tolerance ${TOLERANCE}%). Add tests to cover new code, or raise coverage to restore it."
+            exit 1
+          fi
+
   openapi:
     name: openapi (river-api)
     runs-on: ubuntu-latest

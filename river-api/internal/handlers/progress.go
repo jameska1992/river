@@ -1,10 +1,12 @@
 package handlers
 
 import (
+	"errors"
 	"net/http"
 	"strconv"
 
 	"river-api/internal/middleware"
+	"river-api/internal/models"
 	"river-api/internal/services"
 
 	"github.com/gin-gonic/gin"
@@ -27,14 +29,19 @@ type progressRequest struct {
 
 // Get returns the calling user's watch progress for one media item.
 //
+// "No progress yet" is a normal state (every unwatched title), not an error,
+// so a missing row returns 200 with a zero-value record echoing the request
+// (position/duration 0, completed false) rather than 404. This lets callers
+// tell "not started" from a genuine failure, and matches the list-style
+// progress endpoints, which already return 200 with an empty collection.
+//
 // @Summary      Get watch progress
 // @Tags         progress
 // @Produce      json
 // @Param        media_type  query  string  true  "movie | episode | chapter"
 // @Param        media_id    query  string  true  "Media ID"
-// @Success      200  {object}  models.WatchProgress
+// @Success      200  {object}  models.WatchProgress  "The record, or a zero-value record when not started"
 // @Failure      400  {object}  map[string]string
-// @Failure      404  {object}  map[string]string
 // @Security     BearerAuth
 // @Router       /progress [get]
 func (h *ProgressHandler) Get(c *gin.Context) {
@@ -47,7 +54,15 @@ func (h *ProgressHandler) Get(c *gin.Context) {
 	}
 	p, err := h.svc.Get(claims.UserID, mediaType, mediaID)
 	if err != nil {
-		c.JSON(serviceStatus(err), gin.H{"error": "not found"})
+		if errors.Is(err, services.ErrNotFound) {
+			c.JSON(http.StatusOK, &models.WatchProgress{
+				UserID:    claims.UserID,
+				MediaType: mediaType,
+				MediaID:   mediaID,
+			})
+			return
+		}
+		c.JSON(serviceStatus(err), gin.H{"error": "failed to fetch progress"})
 		return
 	}
 	c.JSON(http.StatusOK, p)

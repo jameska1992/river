@@ -81,6 +81,9 @@ type fakeProgressRepo struct {
 	// WebSocket test synchronise on progress reported by the server goroutine
 	// without racing on the rows slice.
 	upserted chan *models.WatchProgress
+	// findErr, when set, is returned by Find instead of a lookup — lets a test
+	// exercise the non-ErrNotFound (genuine failure) path.
+	findErr error
 }
 
 func (f *fakeProgressRepo) match(r *models.WatchProgress, userID, mediaType, mediaID string) bool {
@@ -104,6 +107,9 @@ func (f *fakeProgressRepo) Upsert(p *models.WatchProgress) error {
 	return nil
 }
 func (f *fakeProgressRepo) Find(userID, mediaType, mediaID string) (*models.WatchProgress, error) {
+	if f.findErr != nil {
+		return nil, f.findErr
+	}
 	for _, r := range f.rows {
 		if f.match(r, userID, mediaType, mediaID) {
 			return r, nil

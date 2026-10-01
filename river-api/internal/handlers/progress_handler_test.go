@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"encoding/json"
+	"errors"
 	"net/http"
 	"testing"
 
@@ -11,6 +13,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // progressDeps bundles the fakes a test wants to seed; zero value is fine.
@@ -79,9 +82,25 @@ func TestProgressHandler_Get(t *testing.T) {
 		w := doJSON(r, http.MethodGet, "/progress?media_type=movie&media_id=m1", "")
 		assert.Equal(t, http.StatusOK, w.Code)
 	})
-	t.Run("missing row is 404", func(t *testing.T) {
+	t.Run("missing row is 200 with a zero-value record", func(t *testing.T) {
+		// "Never watched" is a normal state, not a 404 (issue #216).
 		w := doJSON(r, http.MethodGet, "/progress?media_type=movie&media_id=nope", "")
-		assert.Equal(t, http.StatusNotFound, w.Code)
+		assert.Equal(t, http.StatusOK, w.Code)
+
+		var p models.WatchProgress
+		require.NoError(t, json.Unmarshal(w.Body.Bytes(), &p))
+		assert.Equal(t, "movie", p.MediaType)
+		assert.Equal(t, "nope", p.MediaID)
+		assert.Equal(t, "u1", p.UserID)
+		assert.Zero(t, p.Position)
+		assert.Zero(t, p.Duration)
+		assert.False(t, p.Completed)
+	})
+	t.Run("genuine lookup failure is 500", func(t *testing.T) {
+		// A non-ErrNotFound error is a real failure, not "not started".
+		rf := progressRouter(progressDeps{progress: &fakeProgressRepo{findErr: errors.New("db down")}})
+		w := doJSON(rf, http.MethodGet, "/progress?media_type=movie&media_id=m1", "")
+		assert.Equal(t, http.StatusInternalServerError, w.Code)
 	})
 }
 

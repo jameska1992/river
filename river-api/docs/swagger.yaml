@@ -5409,17 +5409,11 @@ paths:
       - application/json
       responses:
         "200":
-          description: OK
+          description: The record, or a zero-value record when not started
           schema:
             $ref: '#/definitions/models.WatchProgress'
         "400":
           description: Bad Request
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "404":
-          description: Not Found
           schema:
             additionalProperties:
               type: string

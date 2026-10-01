@@ -13,6 +13,11 @@ import {
   useAspectRatio,
   type FitMode,
 } from '../hooks/useAspectRatio'
+import {
+  FONT_PRESETS,
+  SUBTITLE_COLORS,
+  useSubtitleStyle,
+} from '../hooks/useSubtitleStyle'
 import { useMediaRecovery } from '../hooks/useMediaRecovery'
 import { imageUrl } from '../util/imageUrl'
 
@@ -148,11 +153,23 @@ function PlayerInner({
   const { recover, onError: onMediaError, recoveringRef, freezeGraceMs } = useMediaRecovery(videoRef, buildSrc, setSrc)
 
   const [showSubsPicker, setShowSubsPicker] = useState(false)
+  const [showSubStylePicker, setShowSubStylePicker] = useState(false)
   const [showAudioPicker, setShowAudioPicker] = useState(false)
   const [showAspectPicker, setShowAspectPicker] = useState(false)
   const [upNextDismissed, setUpNextDismissed] = useState(false)
 
   const { fitMode, zoom, setFitMode, zoomIn, zoomOut, reset: resetAspect } = useAspectRatio()
+  const subtitleStyle = useSubtitleStyle()
+  // Option A (see issue #217): the TV player renders captions via native
+  // <track>, so appearance is applied by injecting a ::cue rule rather than a
+  // custom overlay. ::cue supports font-size / color / background-color, which
+  // covers the controls below. Base cue size is ~4vh so it scales with the TV.
+  const cueCss =
+    `video::cue {` +
+    ` font-size: ${(subtitleStyle.fontScale * 4).toFixed(2)}vh;` +
+    ` color: ${subtitleStyle.color};` +
+    ` background-color: rgba(0, 0, 0, ${subtitleStyle.bgOpacity});` +
+    ` }`
 
   const hideTimer = useRef<number | null>(null)
   const seekPillTimer = useRef<number | null>(null)
@@ -444,6 +461,9 @@ function PlayerInner({
         ))}
       </video>
 
+      {/* Caption appearance (useSubtitleStyle) applied to native ::cue. */}
+      <style>{cueCss}</style>
+
 
       {audioOnly && (
         <div style={styles.coverOverlay}>
@@ -548,6 +568,14 @@ function PlayerInner({
                   onSelect={() => setShowSubsPicker(true)}
                 />
               )}
+              {!audioOnly && subtitles.length > 0 && (
+                <CtrlButton
+                  label="Aa"
+                  ariaLabel="Subtitle appearance"
+                  overrides={{ up: 'seekbar' }}
+                  onSelect={() => setShowSubStylePicker(true)}
+                />
+              )}
               {!audioOnly && (
                 <CtrlButton
                   label="⛶"
@@ -578,6 +606,53 @@ function PlayerInner({
                 onSelect={() => { setActiveSubtitleId(s.id); setShowSubsPicker(false) }}
               />
             ))}
+          </div>
+        </Popup>
+      )}
+
+      {showSubStylePicker && (
+        <Popup onClose={() => setShowSubStylePicker(false)}>
+          <h3 style={styles.popupTitle}>Subtitle appearance</h3>
+          <div style={styles.popupList}>
+            <div style={styles.zoomLabel}>Text size</div>
+            {FONT_PRESETS.map(preset => (
+              <PickerRow
+                key={preset.label}
+                label={preset.label}
+                active={Math.abs(subtitleStyle.fontScale - preset.scale) < 0.001}
+                onSelect={() => subtitleStyle.setFontScale(preset.scale)}
+              />
+            ))}
+            <div style={styles.zoomLabel}>Colour</div>
+            {SUBTITLE_COLORS.map(c => (
+              <PickerRow
+                key={c.value}
+                label={c.label}
+                active={subtitleStyle.color === c.value}
+                onSelect={() => subtitleStyle.setColor(c.value)}
+              />
+            ))}
+            <div style={styles.zoomRow}>
+              <span style={styles.zoomLabel}>Background</span>
+              <div style={styles.zoomControls}>
+                <ZoomButton
+                  label="−"
+                  disabled={subtitleStyle.bgOpacity <= 0.001}
+                  onSelect={() => subtitleStyle.setBgOpacity(subtitleStyle.bgOpacity - 0.1)}
+                />
+                <span style={styles.zoomValue}>{Math.round(subtitleStyle.bgOpacity * 100)}%</span>
+                <ZoomButton
+                  label="+"
+                  disabled={subtitleStyle.bgOpacity >= 0.999}
+                  onSelect={() => subtitleStyle.setBgOpacity(subtitleStyle.bgOpacity + 0.1)}
+                />
+              </div>
+            </div>
+            <PickerRow
+              label="Reset to defaults"
+              active={false}
+              onSelect={() => { subtitleStyle.reset(); setShowSubStylePicker(false) }}
+            />
           </div>
         </Popup>
       )}

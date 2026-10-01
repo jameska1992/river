@@ -398,11 +398,13 @@
   bottom: 90px;
   left: 50%;
   transform: translateX(-50%);
-  background: rgba(0, 0, 0, 0.75);
-  color: #fff;
+  /* Appearance is driven by useSubtitleStyle via inline CSS custom properties
+     set on this element; the fallbacks match the previous hardcoded defaults. */
+  background: rgba(0, 0, 0, var(--subtitle-bg-opacity, 0.75));
+  color: var(--subtitle-color, #fff);
   padding: 4px 14px;
   border-radius: var(--radius-sm);
-  font-size: 1rem;
+  font-size: calc(1rem * var(--subtitle-scale, 1));
   line-height: 1.5;
   text-align: center;
   white-space: pre-line;

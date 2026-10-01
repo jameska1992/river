@@ -19,9 +19,11 @@ import { useWatchParty } from '../hooks/useWatchParty'
 import { useCast } from '../hooks/useCast'
 import { useMediaRecovery } from '../hooks/useMediaRecovery'
 import { useAspectRatio, MIN_ZOOM, MAX_ZOOM } from '../hooks/useAspectRatio'
+import { useSubtitleStyle } from '../hooks/useSubtitleStyle'
 import { WatchPartyOverlay } from '../components/WatchPartyOverlay'
 import { CastButton } from '../components/CastButton'
 import { AspectRatioMenu } from '../components/AspectRatioMenu'
+import { SubtitleStyleMenu } from '../components/SubtitleStyleMenu'
 import { api } from '../api'
 import type { Movie, Subtitle, AudioTrack, WatchParty } from '../api'
 
@@ -114,6 +116,8 @@ export function MovieWatchPage() {
   const [activeAudioIdx, setActiveAudioIdx] = useState(0)
   const [aspectMenuOpen, setAspectMenuOpen] = useState(false)
   const aspect = useAspectRatio()
+  const [subStyleMenuOpen, setSubStyleMenuOpen] = useState(false)
+  const subStyle = useSubtitleStyle()
 
   useEffect(() => {
     if (!id) return
@@ -466,7 +470,16 @@ export function MovieWatchPage() {
       )}
 
       {subtitleText && (
-        <div className={styles.subtitleOverlay}>{subtitleText}</div>
+        <div
+          className={styles.subtitleOverlay}
+          style={{
+            '--subtitle-scale': subStyle.fontScale,
+            '--subtitle-color': subStyle.color,
+            '--subtitle-bg-opacity': subStyle.bgOpacity,
+          } as React.CSSProperties}
+        >
+          {subtitleText}
+        </div>
       )}
 
       {partyId && (
@@ -659,6 +672,20 @@ export function MovieWatchPage() {
                   </div>
                 )}
               </div>
+            )}
+            {activeSubtitleId && (
+              <SubtitleStyleMenu
+                open={subStyleMenuOpen}
+                fontScale={subStyle.fontScale}
+                color={subStyle.color}
+                bgOpacity={subStyle.bgOpacity}
+                onToggle={() => setSubStyleMenuOpen(o => !o)}
+                onSetFontScale={subStyle.setFontScale}
+                onSetColor={subStyle.setColor}
+                onSetBgOpacity={subStyle.setBgOpacity}
+                onReset={subStyle.reset}
+                styles={styles}
+              />
             )}
             <AspectRatioMenu
               open={aspectMenuOpen}

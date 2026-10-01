@@ -4,6 +4,7 @@
 package notifier
 
 import (
+	"fmt"
 	"log"
 	"time"
 
@@ -17,6 +18,8 @@ import (
 type mediaSource interface {
 	GetMovie(id string) (*apiclient.Movie, error)
 	GetTVShow(id string) (*apiclient.TVShow, error)
+	ListSeasons(showID string) ([]apiclient.Season, error)
+	ListEpisodes(showID, seasonID string) ([]apiclient.Episode, error)
 	GetAlbum(id string) (*apiclient.Album, error)
 	GetArtist(id string) (*apiclient.Artist, error)
 	GetAudiobook(id string) (*apiclient.Audiobook, error)
@@ -89,7 +92,7 @@ func (n *Notifier) build(e0 events.LifecycleEvent, evs []events.LifecycleEvent) 
 		if err != nil {
 			return logDrop(e0, err)
 		}
-		return embed.TVShowEpisodes(*s, episodeTitles(evs)), true
+		return embed.TVShowEpisodes(*s, n.episodeLabels(e0.ParentID, evs)), true
 
 	case "music":
 		a, err := n.api.GetAlbum(e0.ParentID)
@@ -148,15 +151,86 @@ func announceKey(e events.LifecycleEvent) string {
 	}
 }
 
-// episodeTitles collects the (non-empty) titles from a batch of episode events.
-func episodeTitles(evs []events.LifecycleEvent) []string {
-	var out []string
+// episodeLabels builds the per-episode lines for the digest, prefixing each
+// title with its SxxExx code (e.g. "S02E05 — The Suitcase") when the numbers
+// resolve from river-api. It is best-effort: the numbers aren't in the webhook
+// envelope, so any lookup failure degrades to the plain title rather than
+// dropping the post. Batch order is preserved.
+func (n *Notifier) episodeLabels(showID string, evs []events.LifecycleEvent) []string {
+	seasonNum := n.seasonNumbers(showID)          // season id → season number
+	episodes := n.episodesByID(showID, evs)       // episode id → episode record
+
+	out := make([]string, 0, len(evs))
 	for _, e := range evs {
-		if e.Title != "" {
-			out = append(out, e.Title)
+		ep, ok := episodes[e.MediaID]
+		title := e.Title
+		if ok && ep.Title != "" {
+			title = ep.Title
+		}
+		var code string
+		if ok {
+			code = episodeCode(seasonNum[ep.SeasonID], ep.Number, ep.IsSpecial)
+		}
+		switch {
+		case code != "" && title != "":
+			out = append(out, code+" — "+title)
+		case code != "":
+			out = append(out, code)
+		case title != "":
+			out = append(out, title)
 		}
 	}
 	return out
+}
+
+// seasonNumbers maps a show's season ids to their numbers. Best-effort: an empty
+// map (on error) just means episodes fall back to title-only labels.
+func (n *Notifier) seasonNumbers(showID string) map[string]int {
+	out := map[string]int{}
+	seasons, err := n.api.ListSeasons(showID)
+	if err != nil {
+		log.Printf("WARN episode labels: list seasons %s: %v", showID, err)
+		return out
+	}
+	for _, s := range seasons {
+		out[s.ID] = s.Number
+	}
+	return out
+}
+
+// episodesByID resolves the batch's episodes, fetching each distinct season's
+// episode list once. Best-effort per the same rationale as seasonNumbers.
+func (n *Notifier) episodesByID(showID string, evs []events.LifecycleEvent) map[string]apiclient.Episode {
+	out := map[string]apiclient.Episode{}
+	fetched := map[string]bool{}
+	for _, e := range evs {
+		if e.SeasonID == "" || fetched[e.SeasonID] {
+			continue
+		}
+		fetched[e.SeasonID] = true
+		eps, err := n.api.ListEpisodes(showID, e.SeasonID)
+		if err != nil {
+			log.Printf("WARN episode labels: list episodes %s/%s: %v", showID, e.SeasonID, err)
+			continue
+		}
+		for _, ep := range eps {
+			out[ep.ID] = ep
+		}
+	}
+	return out
+}
+
+// episodeCode renders an episode's "SxxExx" code, or "Sxx · Special" for a
+// special. Returns "" when the season number is unknown so the caller falls
+// back to the title alone.
+func episodeCode(seasonNum, episodeNum int, special bool) string {
+	if seasonNum <= 0 {
+		return ""
+	}
+	if special {
+		return fmt.Sprintf("S%02d · Special", seasonNum)
+	}
+	return fmt.Sprintf("S%02dE%02d", seasonNum, episodeNum)
 }
 
 func logDrop(e events.LifecycleEvent, err error) (embed.Message, bool) {

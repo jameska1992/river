@@ -1,6 +1,7 @@
 package notifier
 
 import (
+	"errors"
 	"strings"
 	"sync"
 	"testing"
@@ -14,6 +15,8 @@ import (
 type fakeAPI struct {
 	movie     *apiclient.Movie
 	show      *apiclient.TVShow
+	seasons   []apiclient.Season
+	episodes  map[string][]apiclient.Episode // season id → episodes
 	album     *apiclient.Album
 	artist    *apiclient.Artist
 	audiobook *apiclient.Audiobook
@@ -22,6 +25,12 @@ type fakeAPI struct {
 
 func (f *fakeAPI) GetMovie(string) (*apiclient.Movie, error)   { return f.movie, f.err }
 func (f *fakeAPI) GetTVShow(string) (*apiclient.TVShow, error) { return f.show, f.err }
+func (f *fakeAPI) ListSeasons(string) ([]apiclient.Season, error) {
+	return f.seasons, f.err
+}
+func (f *fakeAPI) ListEpisodes(_, seasonID string) ([]apiclient.Episode, error) {
+	return f.episodes[seasonID], f.err
+}
 func (f *fakeAPI) GetAlbum(string) (*apiclient.Album, error)   { return f.album, f.err }
 func (f *fakeAPI) GetArtist(string) (*apiclient.Artist, error) { return f.artist, f.err }
 func (f *fakeAPI) GetAudiobook(string) (*apiclient.Audiobook, error) {
@@ -62,6 +71,18 @@ func (s *fakeSender) count() int {
 }
 
 func readyKinds() map[string]bool { return map[string]bool{events.KindReady: true} }
+
+// episodeFieldValue returns the value of the embed's episode-list field.
+func episodeFieldValue(t *testing.T, msg embed.Message) string {
+	t.Helper()
+	for _, f := range msg.Embeds[0].Fields {
+		if f.Name == "Episode" || f.Name == "Episodes" {
+			return f.Value
+		}
+	}
+	t.Fatal("no episode field in embed")
+	return ""
+}
 
 func waitSend(t *testing.T, s *fakeSender) {
 	t.Helper()
@@ -117,6 +138,64 @@ func TestHandle_TVEpisodesBatchIntoOneMessage(t *testing.T) {
 	content := s.last().msg.Content
 	if content == "" || content == "📺 **Severance** — new episode ready" {
 		t.Fatalf("expected a multi-episode digest, got %q", content)
+	}
+}
+
+func TestHandle_TVEpisodesIncludeSeasonAndEpisodeNumbers(t *testing.T) {
+	api := &fakeAPI{
+		show:    &apiclient.TVShow{ID: "show1", Title: "Severance", Year: 2022},
+		seasons: []apiclient.Season{{ID: "s2", Number: 2}},
+		episodes: map[string][]apiclient.Episode{
+			"s2": {
+				{ID: "e5", SeasonID: "s2", Number: 5, Title: "Trojan's Horse"},
+				{ID: "e6", SeasonID: "s2", Number: 6, Title: "Attila"},
+			},
+		},
+	}
+	s := newSender()
+	n := New(api, s, 20*time.Millisecond, readyKinds(), nil, "https://default")
+
+	n.Handle(events.LifecycleEvent{Kind: events.KindReady, Type: "tvshow", ParentID: "show1", SeasonID: "s2", MediaID: "e5", Title: "Trojan's Horse"})
+	n.Handle(events.LifecycleEvent{Kind: events.KindReady, Type: "tvshow", ParentID: "show1", SeasonID: "s2", MediaID: "e6", Title: "Attila"})
+	waitSend(t, s)
+
+	field := episodeFieldValue(t, s.last().msg)
+	if !strings.Contains(field, "S02E05 — Trojan's Horse") || !strings.Contains(field, "S02E06 — Attila") {
+		t.Fatalf("expected SxxExx-prefixed labels, got %q", field)
+	}
+}
+
+func TestEpisodeLabels_FallBackToTitleOnLookupFailure(t *testing.T) {
+	// river-api unreachable for seasons/episodes → degrade to plain titles
+	// rather than dropping the post.
+	api := &fakeAPI{err: errors.New("api down")}
+	n := New(api, newSender(), time.Millisecond, readyKinds(), nil, "d")
+
+	got := n.episodeLabels("show1", []events.LifecycleEvent{
+		{MediaID: "e1", SeasonID: "s1", Title: "Pilot"},
+		{MediaID: "e2", SeasonID: "s1", Title: ""},
+	})
+	// Only the titled event survives; the untitled one yields no line.
+	if len(got) != 1 || got[0] != "Pilot" {
+		t.Fatalf("expected [Pilot], got %v", got)
+	}
+}
+
+func TestEpisodeCode(t *testing.T) {
+	cases := []struct {
+		season, episode int
+		special         bool
+		want            string
+	}{
+		{2, 5, false, "S02E05"},
+		{1, 10, false, "S01E10"},
+		{3, 1, true, "S03 · Special"},
+		{0, 5, false, ""}, // unknown season → no code, caller uses title
+	}
+	for _, c := range cases {
+		if got := episodeCode(c.season, c.episode, c.special); got != c.want {
+			t.Errorf("episodeCode(%d,%d,%v) = %q, want %q", c.season, c.episode, c.special, got, c.want)
+		}
 	}
 }
 

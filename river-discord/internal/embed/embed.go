@@ -83,8 +83,10 @@ func TVShow(s apiclient.TVShow, episodeTitle string) Message {
 }
 
 // TVShowEpisodes builds one embed for a batch of episodes of the same show that
-// became ready together — the digest form used when a burst is coalesced.
-func TVShowEpisodes(s apiclient.TVShow, episodeTitles []string) Message {
+// became ready together — the digest form used when a burst is coalesced. Each
+// line is a caller-formatted label, e.g. "S02E05 — The Suitcase" (the notifier
+// resolves the SxxExx code; a bare title is used when it can't).
+func TVShowEpisodes(s apiclient.TVShow, episodeLines []string) Message {
 	e := Embed{
 		Title:       titleWithYear(s.Title, s.Year),
 		Description: truncate(s.Description, 500),
@@ -93,16 +95,16 @@ func TVShowEpisodes(s apiclient.TVShow, episodeTitles []string) Message {
 		Image:       imageURL(s.BackdropPath),
 		Footer:      &Footer{Text: "River · Ready to watch"},
 	}
-	e.Fields = appendField(e.Fields, episodeFieldName(len(episodeTitles)), episodeList(episodeTitles), false)
+	e.Fields = appendField(e.Fields, episodeFieldName(len(episodeLines)), episodeList(episodeLines), false)
 	e.Fields = appendField(e.Fields, "Genre", genreValue(s.Genres), true)
 	e.Fields = appendField(e.Fields, "Rating", ratingValue(s.Rating), true)
 
 	content := fmt.Sprintf("📺 **%s** — new episode ready", s.Title)
 	switch {
-	case len(episodeTitles) > 1:
-		content = fmt.Sprintf("📺 **%s** — %d new episodes ready", s.Title, len(episodeTitles))
-	case len(episodeTitles) == 1 && episodeTitles[0] != "":
-		content += ": " + episodeTitles[0]
+	case len(episodeLines) > 1:
+		content = fmt.Sprintf("📺 **%s** — %d new episodes ready", s.Title, len(episodeLines))
+	case len(episodeLines) == 1 && episodeLines[0] != "":
+		content += ": " + episodeLines[0]
 	}
 	return Message{Username: username, Content: content, Embeds: []Embed{e}}
 }

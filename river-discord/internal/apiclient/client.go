@@ -52,6 +52,19 @@ type TVShow struct {
 	BackdropPath  string  `json:"backdrop_path"`
 }
 
+type Season struct {
+	ID     string `json:"id"`
+	Number int    `json:"number"`
+}
+
+type Episode struct {
+	ID        string `json:"id"`
+	SeasonID  string `json:"season_id"`
+	Number    int    `json:"number"`
+	Title     string `json:"title"`
+	IsSpecial bool   `json:"is_special"`
+}
+
 type Album struct {
 	ID        string `json:"id"`
 	LibraryID string `json:"library_id"`
@@ -87,6 +100,20 @@ func (c *Client) GetMovie(id string) (*Movie, error) {
 func (c *Client) GetTVShow(id string) (*TVShow, error) {
 	var s TVShow
 	return &s, c.get("/api/tvshows/"+id, &s)
+}
+
+// ListSeasons returns a show's seasons (number only is used, to resolve the
+// "Sxx" in an episode's SxxExx code).
+func (c *Client) ListSeasons(showID string) ([]Season, error) {
+	var s []Season
+	return s, c.get("/api/tvshows/"+showID+"/seasons", &s)
+}
+
+// ListEpisodes returns the episodes of one season, used to resolve each ready
+// episode's number (and special flag) by id.
+func (c *Client) ListEpisodes(showID, seasonID string) ([]Episode, error) {
+	var e []Episode
+	return e, c.get("/api/tvshows/"+showID+"/seasons/"+seasonID+"/episodes", &e)
 }
 
 func (c *Client) GetAlbum(id string) (*Album, error) {

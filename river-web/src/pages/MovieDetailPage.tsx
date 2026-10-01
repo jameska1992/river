@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
-import { RiArrowLeftLine, RiFilmLine, RiPlayFill, RiRewindStartLine, RiArrowDownSLine, RiStarLine, RiTimeLine, RiDownloadLine, RiUserLine, RiBookmarkLine, RiBookmarkFill, RiGroupLine, RiAlertFill, RiEyeLine, RiEyeOffLine, RiHdLine, RiEditLine, RiLockLine } from 'react-icons/ri'
+import { RiArrowLeftLine, RiFilmLine, RiPlayFill, RiRewindStartLine, RiArrowDownSLine, RiStarLine, RiTimeLine, RiUserLine, RiBookmarkLine, RiBookmarkFill, RiGroupLine, RiAlertFill, RiEyeLine, RiEyeOffLine, RiHdLine, RiEditLine, RiLockLine } from 'react-icons/ri'
 import { useMovies } from '../context/MoviesContext'
 import { useAuth } from '../context/AuthContext'
 import { imageUrl } from '../util/imageUrl'
@@ -18,6 +18,7 @@ import { creditsToRequest } from '../util/credits'
 import { SimilarCarousel } from '../components/SimilarCarousel'
 import { CrewCarousel } from '../components/CrewCarousel'
 import { DropdownMenu } from '../components/DropdownMenu'
+import { MovieDownloadButton } from '../components/MovieDownloadButton'
 import dropdownStyles from '../components/DropdownMenu.module.css'
 import { useBackTo } from '../hooks/useBackTo'
 import styles from './MovieDetailPage.module.css'
@@ -338,16 +339,14 @@ export function MovieDetailPage() {
                   >
                     {isWatched ? <RiEyeOffLine size={18} /> : <RiEyeLine size={18} />}
                   </button>
-                  {movie.file_path && (
-                    <a
-                      href={api.movieDownloadUrl(id!)}
-                      className="btn btn-icon"
-                      title="Download"
-                      aria-label="Download movie"
-                    >
-                      <RiDownloadLine size={18} />
-                    </a>
-                  )}
+                  <MovieDownloadButton
+                    transcodedUrl={movie.file_path ? api.movieDownloadUrl(id!) : undefined}
+                    originalUrl={
+                      movie.source_path && movie.source_path !== movie.file_path
+                        ? api.movieDownloadUrl(id!, 'source')
+                        : undefined
+                    }
+                  />
                 </div>
                 {credits && (isAdmin || credits.cast.length > 0 || credits.crew.length > 0) && (
                   <CreditsSection

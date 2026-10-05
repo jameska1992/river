@@ -26,6 +26,12 @@ var episodePattern = regexp.MustCompile(`(?i)[Ss]\d{1,2}[Ee](\d{1,3})`)
 // trailing digits of strings like "x265" or "H.264".
 var episodeXPattern = regexp.MustCompile(`\b\d{1,2}x(\d{1,3})\b`)
 
+// "Episode 3", "Season 1 Episode 03", "Show.Episode.7". river-video-trans
+// already recognises this form; meta-tv must agree with it on which files
+// are regular episodes, or the same file ends up as both an episode (created
+// by video-trans) and a special (created here).
+var episodeWordPattern = regexp.MustCompile(`(?i)episode[\s._-]*(\d{1,3})`)
+
 // Fallback: plain E/e number e.g. E03, e3
 var episodeFallback = regexp.MustCompile(`(?i)[Ee](\d{1,3})`)
 
@@ -495,14 +501,18 @@ func parseSeasonNumber(seasonName string) int {
 }
 
 func parseEpisodeNumber(filename string) int {
-	// Order matters: SxxExx is the most specific, NxNN is next, and the
-	// bare E\d+ fallback comes last because it can easily false-match
-	// (e.g. "HEVC" / "H.264" sequences).
+	// Order matters: SxxExx is the most specific, NxNN is next, then the
+	// spelled-out "Episode N", and the bare E\d+ fallback comes last because
+	// it can easily false-match (e.g. "HEVC" / "H.264" sequences).
 	if m := episodePattern.FindStringSubmatch(filename); m != nil {
 		n, _ := strconv.Atoi(m[1])
 		return n
 	}
 	if m := episodeXPattern.FindStringSubmatch(filename); m != nil {
+		n, _ := strconv.Atoi(m[1])
+		return n
+	}
+	if m := episodeWordPattern.FindStringSubmatch(filename); m != nil {
 		n, _ := strconv.Atoi(m[1])
 		return n
 	}

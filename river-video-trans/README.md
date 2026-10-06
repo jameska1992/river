@@ -27,7 +27,7 @@ go mod tidy
 
 Selection is automatic based on what `ffprobe` reports and what NVENC accepts.
 
-Source files that are already H.264/AAC/MP4 at ≤1080p are **copied**, not re-encoded. If the source path happens to equal the output path (e.g. `OUTPUT_DIR` unset → output beside source), the copy is skipped entirely.
+Source files that are already H.264/AAC/MP4 at ≤1080p are **remuxed** (lossless stream copy), not re-encoded. The remux applies `-movflags +faststart` so the `moov` atom leads the file — a source with `moov` at the end plays in Chromium (which range-requests the tail to find it) but stalls in Firefox and Safari, which won't begin progressive playback without a leading `moov`. If the source path happens to equal the output path (e.g. `OUTPUT_DIR` unset → output beside source), the remux is skipped entirely, so a non-faststart source left at its canonical path keeps its original atom order.
 
 ## Output layout
 

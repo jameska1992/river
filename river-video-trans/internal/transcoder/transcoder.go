@@ -376,6 +376,61 @@ func Transcode(inputPath, outputPath, tmpDir string, info *FileInfo, cfg Config,
 	return lastErr
 }
 
+// remuxArgs builds the ffmpeg argument list for a lossless stream-copy remux
+// into a faststart MP4. Same stream selection as buildArgs — first video track
+// plus every audio track, dropping cover-art/data streams — but every stream is
+// copied, so it's fast and bit-exact. The point is -movflags +faststart: it
+// moves the moov atom to the front of the file. A source MP4 with moov at the
+// end plays in Chromium (which range-requests the tail to find it) but stalls
+// in Firefox and Safari — and in some native mobile players — which won't begin
+// progressive playback without a leading moov. Running every copied file
+// through this guarantees a browser-portable atom order, matching what the
+// transcode (buildArgs) and per-track variant (CreateVariant) paths already do.
+func remuxArgs(inputPath, outputPath string, info *FileInfo) []string {
+	args := []string{"-i", inputPath, "-y", "-map", "0:v:0"}
+	for i := range info.AudioStreams {
+		args = append(args, "-map", fmt.Sprintf("0:a:%d", i))
+	}
+	return append(args, "-c", "copy", "-movflags", "+faststart", outputPath)
+}
+
+// Remux losslessly repackages an already-compliant source (H.264/AAC/MP4 that
+// NeedsTranscode cleared) into a faststart MP4, replacing a plain byte copy.
+// Output is written through a scratch file under tmpDir and atomically renamed
+// into place, so a crash mid-remux leaves either the prior output or none —
+// never a half-written file at the canonical path. An empty tmpDir falls back
+// to the output's own directory. tmpDir must share a filesystem with
+// outputPath for the final rename to be atomic.
+func Remux(inputPath, outputPath, tmpDir string, info *FileInfo) error {
+	if err := os.MkdirAll(filepath.Dir(outputPath), 0o755); err != nil {
+		return fmt.Errorf("create output dir: %w", err)
+	}
+	if tmpDir == "" {
+		tmpDir = filepath.Dir(outputPath)
+	}
+	if err := os.MkdirAll(tmpDir, 0o755); err != nil {
+		return fmt.Errorf("create tmp dir: %w", err)
+	}
+	tmpFile, err := os.CreateTemp(tmpDir, "remux-*"+filepath.Ext(outputPath))
+	if err != nil {
+		return fmt.Errorf("create tmp file: %w", err)
+	}
+	tmpPath := tmpFile.Name()
+	tmpFile.Close() // ffmpeg reopens via -y; we just needed a unique name
+	defer os.Remove(tmpPath)
+
+	if stderr, err := runFFmpeg(remuxArgs(inputPath, tmpPath, info)); err != nil {
+		if stderr != "" {
+			return fmt.Errorf("remux: %w: %s", err, stderr)
+		}
+		return fmt.Errorf("remux: %w", err)
+	}
+	if err := os.Rename(tmpPath, outputPath); err != nil {
+		return fmt.Errorf("move tmp into output: %w", err)
+	}
+	return nil
+}
+
 type videoEncoder struct {
 	codec   string
 	preset  string

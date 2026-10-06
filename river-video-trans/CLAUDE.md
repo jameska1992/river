@@ -38,7 +38,7 @@ RabbitMQ (media.discovered.movie / media.discovered.tvshow)
 
   When `OUTPUT_DIR` is empty, the transcoded file lands beside the source. Multiple libraries with the same movie title+year (or same show name) will collide at the canonical path — last write wins. The previous source-tree-mirroring layout (and any files written under it) are orphaned by this change and will be re-transcoded on first run.
 - **`internal/apiclient`** — Thread-safe HTTP client. Handles automatic token re-authentication on 401. Paginates list endpoints at 200 items per page.
-- **`internal/transcoder`** — Uses `ffprobe` to inspect streams. `NeedsTranscode()` returns true if codec is not H.264, audio is not AAC, container is not MP4, or resolution exceeds 1080p. Transcodes with CRF 23, preset medium; copies streams that already match the target.
+- **`internal/transcoder`** — Uses `ffprobe` to inspect streams. `NeedsTranscode()` returns true if codec is not H.264, audio is not AAC, container is not MP4, or resolution exceeds 1080p. Transcodes with CRF 23, preset medium; already-compliant sources are losslessly remuxed via `Remux()` (stream copy) rather than re-encoded. Every output path — transcode, remux, and per-track variant — emits `-movflags +faststart` so the `moov` atom leads the file; without it Firefox/Safari and some native players refuse to start progressive playback.
 
 ### Worker concurrency model
 

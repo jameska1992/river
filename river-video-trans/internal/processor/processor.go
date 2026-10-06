@@ -3,7 +3,6 @@ package processor
 import (
 	"errors"
 	"fmt"
-	"io"
 	"log"
 	"os"
 	"path/filepath"
@@ -431,14 +430,14 @@ func (p *Processor) processMovieFile(path, title string, year int, force bool) (
 			log.Printf("INFO %q is already at output path, no copy needed", filepath.Base(path))
 			return info, outPath, nil
 		}
-		log.Printf("INFO %q is already h264/aac/mp4 ≤1080p, copying to %q", filepath.Base(path), outPath)
-		p.api.Log("info", fmt.Sprintf("copying movie %s", filepath.Base(outPath)))
-		if err := copyFile(path, outPath); err != nil {
-			p.api.Log("error", fmt.Sprintf("copy failed for %s: %v", filepath.Base(outPath), err))
-			return nil, "", fmt.Errorf("copy: %w", err)
+		log.Printf("INFO %q is already h264/aac/mp4 ≤1080p, remuxing (faststart) to %q", filepath.Base(path), outPath)
+		p.api.Log("info", fmt.Sprintf("remuxing movie %s", filepath.Base(outPath)))
+		if err := transcoder.Remux(path, outPath, p.tmpDir(), info); err != nil {
+			p.api.Log("error", fmt.Sprintf("remux failed for %s: %v", filepath.Base(outPath), err))
+			return nil, "", fmt.Errorf("remux: %w", err)
 		}
-		log.Printf("INFO copy complete: %q", outPath)
-		p.api.Log("info", fmt.Sprintf("copied movie %s", filepath.Base(outPath)))
+		log.Printf("INFO remux complete: %q", outPath)
+		p.api.Log("info", fmt.Sprintf("remuxed movie %s", filepath.Base(outPath)))
 		return info, outPath, nil
 	}
 
@@ -489,14 +488,14 @@ func (p *Processor) processEpisodeFileTo(path, outPath string, force bool) (*tra
 			log.Printf("INFO %q is already at output path, no copy needed", filepath.Base(path))
 			return info, outPath, nil
 		}
-		log.Printf("INFO %q is already h264/aac/mp4 ≤1080p, copying to %q", filepath.Base(path), outPath)
-		p.api.Log("info", fmt.Sprintf("copying episode %s", filepath.Base(outPath)))
-		if err := copyFile(path, outPath); err != nil {
-			p.api.Log("error", fmt.Sprintf("copy failed for %s: %v", filepath.Base(outPath), err))
-			return nil, "", fmt.Errorf("copy: %w", err)
+		log.Printf("INFO %q is already h264/aac/mp4 ≤1080p, remuxing (faststart) to %q", filepath.Base(path), outPath)
+		p.api.Log("info", fmt.Sprintf("remuxing episode %s", filepath.Base(outPath)))
+		if err := transcoder.Remux(path, outPath, p.tmpDir(), info); err != nil {
+			p.api.Log("error", fmt.Sprintf("remux failed for %s: %v", filepath.Base(outPath), err))
+			return nil, "", fmt.Errorf("remux: %w", err)
 		}
-		log.Printf("INFO copy complete: %q", outPath)
-		p.api.Log("info", fmt.Sprintf("copied episode %s", filepath.Base(outPath)))
+		log.Printf("INFO remux complete: %q", outPath)
+		p.api.Log("info", fmt.Sprintf("remuxed episode %s", filepath.Base(outPath)))
 		return info, outPath, nil
 	}
 
@@ -512,40 +511,6 @@ func (p *Processor) processEpisodeFileTo(path, outPath string, force bool) (*tra
 	log.Printf("INFO transcode complete: %q", outPath)
 	p.api.Log("info", fmt.Sprintf("transcoded episode %s", filepath.Base(outPath)))
 	return info, outPath, nil
-}
-
-// copyFile copies src to dst, creating dst's parent directory. The bytes are
-// streamed to a sibling ".tmp" file and renamed into place atomically, so a
-// process crash mid-copy leaves either the prior dst or no dst at all —
-// never a half-written file at the canonical path.
-func copyFile(src, dst string) error {
-	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
-		return fmt.Errorf("create dir: %w", err)
-	}
-	in, err := os.Open(src)
-	if err != nil {
-		return fmt.Errorf("open source: %w", err)
-	}
-	defer in.Close()
-	tmp := dst + ".tmp"
-	out, err := os.Create(tmp)
-	if err != nil {
-		return fmt.Errorf("create dest: %w", err)
-	}
-	if _, err := io.Copy(out, in); err != nil {
-		out.Close()
-		os.Remove(tmp)
-		return fmt.Errorf("copy: %w", err)
-	}
-	if err := out.Close(); err != nil {
-		os.Remove(tmp)
-		return fmt.Errorf("close dest: %w", err)
-	}
-	if err := os.Rename(tmp, dst); err != nil {
-		os.Remove(tmp)
-		return fmt.Errorf("rename: %w", err)
-	}
-	return nil
 }
 
 // registerAudioTracks creates per-language variant MP4 files (video + one audio

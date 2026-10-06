@@ -128,6 +128,38 @@ func TestBuildArgs_StreamCopy(t *testing.T) {
 	}
 }
 
+func TestRemuxArgs_FaststartStreamCopy(t *testing.T) {
+	// A compliant source that NeedsTranscode cleared: two audio tracks, already
+	// h264/aac. The remux must copy every stream, emit faststart, and select
+	// the first video track plus both audio tracks (dropping anything else).
+	info := &FileInfo{VideoCodec: "h264", PixFmt: "yuv420p", Width: 1920, Height: 1080,
+		AudioStreams: []AudioStream{{CodecName: "aac"}, {CodecName: "aac"}}}
+	args := remuxArgs("in.mp4", "out.mp4", info)
+
+	if !containsSeq(args, "-c", "copy") {
+		t.Errorf("expected whole-file stream copy, got %v", args)
+	}
+	// A faststart leading moov is the entire point: without it Firefox/Safari
+	// and some native players won't start progressive playback.
+	if !containsSeq(args, "-movflags", "+faststart") {
+		t.Errorf("expected +faststart, got %v", args)
+	}
+	if args[len(args)-1] != "out.mp4" {
+		t.Errorf("expected output path last, got %v", args)
+	}
+	if !containsSeq(args, "-map", "0:v:0") ||
+		!containsSeq(args, "-map", "0:a:0") || !containsSeq(args, "-map", "0:a:1") {
+		t.Errorf("expected first video + all audio mapping, got %v", args)
+	}
+	// A pure remux never re-encodes: no encoder, no filter graph.
+	if _, ok := flagValue(args, "-vf"); ok {
+		t.Error("remux should have no filter chain")
+	}
+	if contains(args, "libx264") || contains(args, "h264_nvenc") {
+		t.Error("remux must not invoke a video encoder")
+	}
+}
+
 func TestBuildArgs_SoftwareResizeAndAudioEncode(t *testing.T) {
 	info := &FileInfo{VideoCodec: "h264", PixFmt: "yuv420p", Width: 3840, Height: 2160,
 		AudioStreams: []AudioStream{{CodecName: "ac3"}}}

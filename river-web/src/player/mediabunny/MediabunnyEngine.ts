@@ -12,6 +12,7 @@ import type {
 import { RiverRangeReader, createRiverSource } from './RiverInput'
 import { describeAudioTrack, describeVideoTrack } from './MediaTrackAdapter'
 import { detectWebCodecs } from './capabilities'
+import { needsAacChannelRemap, remapAac51 } from './channelOrder'
 
 /** Seconds of decoded audio scheduled ahead of the playhead. Also the read-ahead backpressure. */
 const AUDIO_LEAD = 2
@@ -25,6 +26,7 @@ const VIDEO_RESYNC_LAG = 1
 const LATENCY_SLEW = 0.002
 /** UI position updates while playing (the canvas itself updates every frame). */
 const POSITION_EMIT_MS = 250
+const CHANNEL_REMAP_NOTE = '5.1 audio reordered from AAC to Web Audio channel order (WebKit decoder)'
 
 interface Session {
   source: PlaybackSource
@@ -102,6 +104,8 @@ export class MediabunnyEngine implements PlaybackEngine {
 
   // Audio pipeline
   private readonly queuedNodes = new Set<AudioBufferSourceNode>()
+  /** WebKit decodes 5.1 AAC in AAC channel order; see channelOrder.ts. */
+  private readonly remapChannels = needsAacChannelRemap()
   private audioScheduledUntil = 0
   private audioDone = false
 
@@ -533,6 +537,9 @@ export class MediabunnyEngine implements PlaybackEngine {
     try {
       for await (const { buffer, timestamp, duration } of it) {
         if (gen !== this.audioGen) break
+        if (this.remapChannels && remapAac51(buffer) && !this.notes.includes(CHANNEL_REMAP_NOTE)) {
+          this.notes.push(CHANNEL_REMAP_NOTE)
+        }
         const node = ctx.createBufferSource()
         node.buffer = buffer
         node.connect(gain)

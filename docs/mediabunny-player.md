@@ -54,6 +54,7 @@ River API   GET /api/movies/:id/stream?token=…   (http.ServeContent → 206 Pa
 | `mediabunny/RiverInput.ts` | Range reader plus Mediabunny `CustomSource`. |
 | `mediabunny/MediaTrackAdapter.ts` | Mediabunny tracks → `MediaTrackInfo` (labels, languages, 5.1 etc.). |
 | `mediabunny/MediabunnyEngine.ts` | The WebCodecs pipeline, clocking, stalls and seeking. |
+| `mediabunny/channelOrder.ts` | Reorders WebKit's 5.1 AAC output into Web Audio channel order. |
 | `native/NativeEngine.ts` | `<video>` behind the same interface. |
 | `subtitles/vtt.ts`, `react/SubtitleOverlay.tsx` | River's sidecar-VTT overlay, engine-independent. |
 | `react/Player.tsx`, `react/DebugPanel.tsx` | Prototype UI and live diagnostics. |
@@ -188,7 +189,7 @@ endpoint, headless, using a scripted Playwright harness (28 checks per run).
 | Chromium 153 (Playwright) | **28/28** | 24/24 |
 | Chromium 152 (Arch system build), basic suite | **22/22** | — |
 | Firefox 155 (Playwright) | **27/27** (no CDP tab-freeze test) | 23/23 |
-| Safari/WebKit | not tested (no WebKit build available) | — |
+| Safari (macOS), manual tester | stereo OK; 5.1 broken before the remap (see below) | — |
 
 All three report WebCodecs decode support for H.264 High@4.0 and for AAC-LC stereo and 5.1.
 
@@ -238,8 +239,16 @@ desktop with speakers and with Bluetooth headphones.
   error instead of silently showing frozen video.
 - **Hidden tabs:** rAF stops, so video stops painting while audio keeps playing (the same as
   `<video>`). It resyncs within one keyframe seek on return.
-- **Safari:** untested. It has no `outputLatency` (falls back to `baseLatency`, which
-  under-compensates). WebCodecs `AudioDecoder` AAC support should be verified.
+- **Safari:** manual testing on macOS found stereo AAC fine, but two 5.1 problems:
+  - *Channel order:* WebKit's `AudioDecoder` emits 5.1 in AAC order (C, L, R, Ls, Rs, LFE).
+    Web Audio reads 6 channels as L, R, C, LFE, SL, SR, so dialogue came out of the left ear
+    only. `channelOrder.ts` now reorders 6-channel buffers on WebKit (all iOS browsers
+    included); the debug panel notes when it applies. **Needs re-test on Safari.**
+  - *Crash:* AAC with malformed channel metadata (e.g. channel configuration 0 / PCE, which
+    river-video-trans passes through unchanged) can crash and reload the page. This is not
+    handled: a renderer crash can't be caught from JS.
+
+  Safari also has no `outputLatency` (falls back to `baseLatency`, which under-compensates).
 - **Hardware decode:** headless test browsers decoded in software. GPU decode and CPU/battery
   cost on real desktops, TVs and mobiles are unmeasured.
 - **Memory:** 32 MiB byte cache, 3 pooled 1080p canvases (~25 MB) and ≤2 s of decoded audio.

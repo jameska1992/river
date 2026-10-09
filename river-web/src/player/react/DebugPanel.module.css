@@ -1,0 +1,39 @@
+.panel {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 13px;
+  padding: 12px 16px;
+  border: 1px solid var(--color-border, rgba(255, 255, 255, 0.15));
+  border-radius: 8px;
+}
+
+.grid {
+  margin: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 160px 1fr;
+  gap: 12px;
+}
+
+.row dt {
+  opacity: 0.65;
+}
+
+.row dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.error {
+  color: #ff7070;
+  margin: 8px 0 0;
+}
+
+.notes {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  opacity: 0.8;
+}

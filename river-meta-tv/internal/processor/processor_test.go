@@ -21,12 +21,18 @@ func TestParseEpisodeNumber(t *testing.T) {
 		{"Law & Order Special Victims Unit - 1x10 - Closure (1).mp4", 10},
 		{"Law & Order Special Victims Unit - 23x22 - A Final Call.mp4", 22},
 
-		// E-only fallback — only if neither of the above hit.
+		// Spelled-out "Episode N" — must agree with river-video-trans, or the
+		// file is imported twice (episode + special).
+		{"The Five Star Weekend (2026) Season 1 Episode 1- Friday- Arrivals - PrimeWire.mp4", 1},
+		{"Show - Episode 05.mkv", 5},
+		{"Show.Episode.7.mkv", 7},
+		{"Show_episode_12.mkv", 12},
+
+		// E-only fallback — only if none of the above hit.
 		{"Doctor Who - E07.mkv", 7},
 
 		// False-positive guards.
 		{"Show.S01E03.1080p.x265-Group.mkv", 3},     // SxxExx wins, x265 ignored
-		{"Show.Episode.7.mkv", 0},                   // no S/E or Nx adjacency
 		{"Show.H.264.NTb.mkv", 0},                   // bare "264" doesn't look like NxNN
 		{"Show.1080p.WEB-DL.mkv", 0},                // no episode marker at all
 

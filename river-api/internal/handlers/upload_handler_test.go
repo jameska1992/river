@@ -114,3 +114,36 @@ func TestUploadHandler_Validation(t *testing.T) {
 		assert.Equal(t, http.StatusBadRequest, doUpload(h, body, ct).Code)
 	})
 }
+
+// Libraries saved from the web UI store paths in the per-path object form
+// (#64); uploads to them used to fail with "library has no configured paths"
+// (#252).
+func TestUploadHandler_ObjectFormPaths(t *testing.T) {
+	h, lib, dir := uploadHandler(t)
+	lib.Paths = `[{"path":"` + dir + `","pre_transcoded":false},{"path":"/elsewhere","pre_transcoded":true}]`
+	body, ct := multipartBody(map[string]string{
+		"type": "movie", "library_id": lib.ID.String(), "title": "Heat",
+	}, "heat.mp4", []byte("bytes"))
+
+	w := doUpload(h, body, ct)
+	require.Equal(t, http.StatusAccepted, w.Code, w.Body.String())
+	_, err := os.Stat(filepath.Join(dir, "Heat", "heat.mp4"))
+	assert.NoError(t, err, "file should be written under the first configured path")
+}
+
+// A library root that doesn't exist in the container (e.g. not bind-mounted)
+// must be refused rather than created inside the container's filesystem.
+func TestUploadHandler_MissingLibraryRoot(t *testing.T) {
+	h, lib, dir := uploadHandler(t)
+	missing := filepath.Join(dir, "not-mounted")
+	lib.Paths = `[{"path":"` + missing + `"}]`
+	body, ct := multipartBody(map[string]string{
+		"type": "movie", "library_id": lib.ID.String(), "title": "Heat",
+	}, "heat.mp4", []byte("bytes"))
+
+	w := doUpload(h, body, ct)
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+	assert.Contains(t, w.Body.String(), "does not exist on the server")
+	_, err := os.Stat(missing)
+	assert.True(t, os.IsNotExist(err), "the missing library root must not be created")
+}

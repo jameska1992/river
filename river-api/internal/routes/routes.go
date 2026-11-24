@@ -24,6 +24,7 @@ func Register(r *gin.Engine, secret string,
 	progressWS *handlers.ProgressWSHandler,
 	recentlyAdded *handlers.RecentlyAddedHandler,
 	credits *handlers.CreditsHandler,
+	peopleSearch *handlers.PeopleSearchHandler,
 	search *handlers.SearchHandler,
 	subtitle *handlers.SubtitleHandler,
 	subtitleSearch *handlers.SubtitleSearchHandler,
@@ -285,6 +286,10 @@ func Register(r *gin.Engine, secret string,
 
 		// People
 		protected.GET("/people/:id", credits.GetPerson)
+		// TMDB person lookup for the credits editor (#254) — admin-only like
+		// the editor itself and identify, since each call spends TMDB quota.
+		protected.GET("/people/tmdb/search", middleware.AdminOnly(), peopleSearch.SearchTMDB)
+		protected.GET("/people/tmdb/:tmdbId", middleware.AdminOnly(), peopleSearch.GetTMDBPerson)
 
 		// Search
 		protected.GET("/search", search.Search)

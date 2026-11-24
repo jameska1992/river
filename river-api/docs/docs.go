@@ -5713,6 +5713,139 @@ const docTemplate = `{
                 }
             }
         },
+        "/people/tmdb/search": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Searches TMDB (via river-meta-movie) for cast/crew by name. Hits already in the library carry their person_id.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "credits"
+                ],
+                "summary": "Search TMDB people",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Name to search for",
+                        "name": "q",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/handlers.ExternalPersonResult"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "502": {
+                        "description": "Bad Gateway",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/people/tmdb/{tmdbId}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "credits"
+                ],
+                "summary": "Get TMDB person",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "TMDB person ID",
+                        "name": "tmdbId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ExternalPersonDetail"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "502": {
+                        "description": "Bad Gateway",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/people/{id}": {
             "get": {
                 "security": [
@@ -9148,6 +9281,64 @@ const docTemplate = `{
                 "type": {
                     "description": "\"movie\" | \"episode\"",
                     "type": "string"
+                }
+            }
+        },
+        "handlers.ExternalPersonDetail": {
+            "type": "object",
+            "properties": {
+                "biography": {
+                    "type": "string"
+                },
+                "birthday": {
+                    "type": "string"
+                },
+                "imdb_id": {
+                    "type": "string"
+                },
+                "known_for_department": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "person_id": {
+                    "type": "string"
+                },
+                "place_of_birth": {
+                    "type": "string"
+                },
+                "profile_path": {
+                    "type": "string"
+                },
+                "tmdb_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "handlers.ExternalPersonResult": {
+            "type": "object",
+            "properties": {
+                "known_for": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "known_for_department": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "person_id": {
+                    "type": "string"
+                },
+                "profile_path": {
+                    "type": "string"
+                },
+                "tmdb_id": {
+                    "type": "integer"
                 }
             }
         },

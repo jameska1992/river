@@ -265,6 +265,30 @@ export interface SetCreditsRequest {
 
 // --- People ---
 
+// A TMDB person search hit (GET /people/tmdb/search, admin-only). person_id is
+// set when that person is already in the library.
+export interface ExternalPersonResult {
+  tmdb_id: number
+  name: string
+  profile_path: string
+  known_for_department: string
+  known_for: string[]
+  person_id: string | null
+}
+
+// A single TMDB person (GET /people/tmdb/{tmdbId}, admin-only).
+export interface ExternalPersonDetail {
+  tmdb_id: number
+  name: string
+  profile_path: string
+  biography: string
+  known_for_department: string
+  birthday: string
+  place_of_birth: string
+  imdb_id: string
+  person_id: string | null
+}
+
 export interface PersonMovieCastItem {
   movie_id: string
   title: string

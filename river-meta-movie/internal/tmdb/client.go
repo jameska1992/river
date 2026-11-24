@@ -13,6 +13,7 @@ var ErrNotFound = errors.New("tmdb: not found")
 type Client struct {
 	keyFn     func() string
 	imageBase string
+	apiBase   string
 	http      *http.Client
 }
 
@@ -58,6 +59,7 @@ func New(keyFn func() string, imageBase string) *Client {
 	return &Client{
 		keyFn:     keyFn,
 		imageBase: imageBase,
+		apiBase:   "https://api.themoviedb.org/3",
 		http:      &http.Client{},
 	}
 }

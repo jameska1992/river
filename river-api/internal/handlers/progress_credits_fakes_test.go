@@ -42,6 +42,8 @@ type fakeCreditsRepo struct {
 	movieCrew []models.MovieCrew
 	tvCast    []models.TVShowCast
 	tvCrew    []models.TVShowCrew
+	byTmdb    []models.Person
+	byTmdbErr error
 }
 
 func (f *fakeCreditsRepo) FindOrCreatePersonByTmdbID(_ int, name, profilePath, _ string) (*models.Person, error) {
@@ -52,6 +54,17 @@ func (f *fakeCreditsRepo) FindOrCreatePersonByName(name, profilePath string) (*m
 }
 func (f *fakeCreditsRepo) FindPersonByID(uuid.UUID) (*models.Person, error) {
 	return f.person, f.personErr
+}
+func (f *fakeCreditsRepo) FindPeopleByTmdbIDs(ids []int) ([]models.Person, error) {
+	var out []models.Person
+	for _, p := range f.byTmdb {
+		for _, id := range ids {
+			if p.TmdbID != nil && *p.TmdbID == id {
+				out = append(out, p)
+			}
+		}
+	}
+	return out, f.byTmdbErr
 }
 func (f *fakeCreditsRepo) GetPersonFilmography(uuid.UUID) ([]repository.PersonMovieCastRow, []repository.PersonMovieCrewRow, []repository.PersonTVShowCastRow, []repository.PersonTVShowCrewRow, error) {
 	return nil, nil, nil, nil, nil

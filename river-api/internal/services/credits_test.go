@@ -65,6 +65,16 @@ func (m *memCreditsRepo) FindOrCreatePersonByName(name, profilePath string) (*mo
 	}
 	return &models.Person{Base: models.Base{ID: id}, Name: name, ProfilePath: profilePath}, nil
 }
+func (m *memCreditsRepo) FindPeopleByTmdbIDs(ids []int) ([]models.Person, error) {
+	var out []models.Person
+	for _, id := range ids {
+		if pid, ok := m.byTmdb[id]; ok {
+			tid := id
+			out = append(out, models.Person{Base: models.Base{ID: pid}, TmdbID: &tid})
+		}
+	}
+	return out, nil
+}
 func (m *memCreditsRepo) FindPersonByID(uuid.UUID) (*models.Person, error) {
 	return m.person, m.personErr
 }
@@ -303,4 +313,14 @@ func TestCreditsService_GetTVShowCredits_MapsCastAndCrew(t *testing.T) {
 	assert.Equal(t, "Mark Snow", res.Crew[0].Name)
 	assert.Equal(t, "Composer", res.Crew[0].Job)
 	assert.Equal(t, "Sound", res.Crew[0].Department)
+}
+
+func TestCreditsService_LocalPersonIDsByTmdbID(t *testing.T) {
+	pid := uuid.New()
+	repo := &memCreditsRepo{byTmdb: map[int]uuid.UUID{287: pid}}
+	svc := NewCreditsService(repo)
+
+	got, err := svc.LocalPersonIDsByTmdbID([]int{287, 999})
+	require.NoError(t, err)
+	assert.Equal(t, map[int]string{287: pid.String()}, got)
 }

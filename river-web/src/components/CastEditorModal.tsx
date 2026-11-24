@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { RiCloseLine, RiAddLine, RiDeleteBinLine, RiArrowUpLine, RiArrowDownLine, RiUserLine } from 'react-icons/ri'
-import type { Credits, SetCreditsRequest } from '../api'
+import type { Credits, ExternalPersonResult, SetCreditsRequest } from '../api'
 import { api, ApiError } from '../api'
 import { imageUrl } from '../util/imageUrl'
+import { PersonSearchInput } from './PersonSearchInput'
 import styles from './CastEditorModal.module.css'
 
 interface Props {
@@ -19,12 +20,15 @@ interface Props {
 // reorders/removals. `tmdbId` is carried through for TMDB-sourced people so a
 // re-save dedupes onto the existing Person; manual rows leave it null and the
 // backend mints a fresh Person (orphans from prior edits are reaped server-side).
+// Picking a TMDB search hit sets tmdbId/name/profilePath, and `biography` once
+// the person's details load (search hits carry none); it's only sent when set.
 interface CastRow {
   key: number
   tmdbId: number | null
   name: string
   character: string
   profilePath: string
+  biography?: string
 }
 
 interface CrewRow {
@@ -34,7 +38,16 @@ interface CrewRow {
   job: string
   department: string
   profilePath: string
+  biography?: string
 }
+
+// The patch a picked TMDB person applies to a row.
+const linkPatch = (p: ExternalPersonResult) => ({
+  tmdbId: p.tmdb_id,
+  name: p.name,
+  profilePath: p.profile_path,
+  biography: undefined,
+})
 
 type Tab = 'cast' | 'crew'
 
@@ -95,6 +108,32 @@ export function CastEditorModal({ type, mediaId, credits, onSaved, onClose }: Pr
   const addCrew = () =>
     setCrewRows(rs => [...rs, { key: nextKey.current++, tmdbId: null, name: '', job: '', department: '', profilePath: '' }])
 
+  // Fill in the biography for a just-picked TMDB person. Best-effort: on
+  // failure the credit still saves linked, just without a bio. Skipped if the
+  // row has since been re-linked to someone else or unlinked.
+  const loadBiography = <R extends { key: number; tmdbId: number | null; biography?: string }>(
+    key: number, tmdbId: number, setRows: React.Dispatch<React.SetStateAction<R[]>>,
+  ) => {
+    api.getTMDBPerson(tmdbId)
+      .then(d => {
+        if (!d.biography) return
+        setRows(rs => rs.map(r => (r.key === key && r.tmdbId === tmdbId ? { ...r, biography: d.biography } : r)))
+      })
+      .catch(() => {})
+  }
+
+  const selectCast = (key: number, p: ExternalPersonResult) => {
+    updateCast(key, linkPatch(p))
+    loadBiography(key, p.tmdb_id, setCastRows)
+  }
+  const selectCrew = (key: number, p: ExternalPersonResult) => {
+    // A crew row's department defaults to what TMDB knows them for.
+    setCrewRows(rs => rs.map(r => (r.key === key
+      ? { ...r, ...linkPatch(p), department: r.department.trim() ? r.department : p.known_for_department }
+      : r)))
+    loadBiography(key, p.tmdb_id, setCrewRows)
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
@@ -116,6 +155,7 @@ export function CastEditorModal({ type, mediaId, credits, onSaved, onClose }: Pr
     const payload: SetCreditsRequest = {
       cast: keptCast.map((r, i) => ({
         ...(r.tmdbId ? { tmdb_id: r.tmdbId } : {}),
+        ...(r.biography ? { biography: r.biography } : {}),
         name: r.name.trim(),
         profile_path: r.profilePath.trim(),
         character: r.character.trim(),
@@ -123,6 +163,7 @@ export function CastEditorModal({ type, mediaId, credits, onSaved, onClose }: Pr
       })),
       crew: keptCrew.map(r => ({
         ...(r.tmdbId ? { tmdb_id: r.tmdbId } : {}),
+        ...(r.biography ? { biography: r.biography } : {}),
         name: r.name.trim(),
         profile_path: r.profilePath.trim(),
         job: r.job.trim(),
@@ -202,7 +243,13 @@ export function CastEditorModal({ type, mediaId, credits, onSaved, onClose }: Pr
                       {imageUrl(r.profilePath) ? <img src={imageUrl(r.profilePath)} alt="" /> : <RiUserLine size={20} />}
                     </div>
                     <div className={styles.fields}>
-                      <input className={styles.input} value={r.name} onChange={e => updateCast(r.key, { name: e.target.value })} placeholder="Name" aria-label="Name" />
+                      <PersonSearchInput
+                        value={r.name}
+                        tmdbId={r.tmdbId}
+                        onChange={name => updateCast(r.key, { name, tmdbId: null, biography: undefined })}
+                        onSelect={p => selectCast(r.key, p)}
+                        onUnlink={() => updateCast(r.key, { tmdbId: null, biography: undefined })}
+                      />
                       <input className={styles.input} value={r.character} onChange={e => updateCast(r.key, { character: e.target.value })} placeholder="Character" aria-label="Character" />
                       <input className={styles.input} type="url" value={r.profilePath} onChange={e => updateCast(r.key, { profilePath: e.target.value })} placeholder="Profile image URL (optional)" aria-label="Profile image URL" />
                     </div>
@@ -228,7 +275,13 @@ export function CastEditorModal({ type, mediaId, credits, onSaved, onClose }: Pr
                       {imageUrl(r.profilePath) ? <img src={imageUrl(r.profilePath)} alt="" /> : <RiUserLine size={20} />}
                     </div>
                     <div className={styles.fields}>
-                      <input className={styles.input} value={r.name} onChange={e => updateCrew(r.key, { name: e.target.value })} placeholder="Name" aria-label="Name" />
+                      <PersonSearchInput
+                        value={r.name}
+                        tmdbId={r.tmdbId}
+                        onChange={name => updateCrew(r.key, { name, tmdbId: null, biography: undefined })}
+                        onSelect={p => selectCrew(r.key, p)}
+                        onUnlink={() => updateCrew(r.key, { tmdbId: null, biography: undefined })}
+                      />
                       <input className={styles.input} value={r.job} onChange={e => updateCrew(r.key, { job: e.target.value })} placeholder="Job (e.g. Director)" aria-label="Job" />
                       <input className={styles.input} value={r.department} onChange={e => updateCrew(r.key, { department: e.target.value })} placeholder="Department (e.g. Directing)" aria-label="Department" />
                       <input className={styles.input} type="url" value={r.profilePath} onChange={e => updateCrew(r.key, { profilePath: e.target.value })} placeholder="Profile image URL (optional)" aria-label="Profile image URL" />

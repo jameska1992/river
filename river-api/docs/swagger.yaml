@@ -31,6 +31,44 @@ definitions:
         description: '"movie" | "episode"'
         type: string
     type: object
+  handlers.ExternalPersonDetail:
+    properties:
+      biography:
+        type: string
+      birthday:
+        type: string
+      imdb_id:
+        type: string
+      known_for_department:
+        type: string
+      name:
+        type: string
+      person_id:
+        type: string
+      place_of_birth:
+        type: string
+      profile_path:
+        type: string
+      tmdb_id:
+        type: integer
+    type: object
+  handlers.ExternalPersonResult:
+    properties:
+      known_for:
+        items:
+          type: string
+        type: array
+      known_for_department:
+        type: string
+      name:
+        type: string
+      person_id:
+        type: string
+      profile_path:
+        type: string
+      tmdb_id:
+        type: integer
+    type: object
   handlers.MovieSearchResult:
     properties:
       added:
@@ -5358,6 +5396,92 @@ paths:
       security:
       - BearerAuth: []
       summary: Get person
+      tags:
+      - credits
+  /people/tmdb/{tmdbId}:
+    get:
+      parameters:
+      - description: TMDB person ID
+        in: path
+        name: tmdbId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.ExternalPersonDetail'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "502":
+          description: Bad Gateway
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "503":
+          description: Service Unavailable
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get TMDB person
+      tags:
+      - credits
+  /people/tmdb/search:
+    get:
+      description: Searches TMDB (via river-meta-movie) for cast/crew by name. Hits
+        already in the library carry their person_id.
+      parameters:
+      - description: Name to search for
+        in: query
+        name: q
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/handlers.ExternalPersonResult'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "502":
+          description: Bad Gateway
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "503":
+          description: Service Unavailable
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Search TMDB people
       tags:
       - credits
   /progress:

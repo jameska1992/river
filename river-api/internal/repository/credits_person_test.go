@@ -52,3 +52,22 @@ func TestFindOrCreatePersonByName_BlankNameNotDeduped(t *testing.T) {
 
 	assert.Equal(t, int64(2), personCount(t, db), "blank/whitespace names are never merged together")
 }
+
+func TestFindPeopleByTmdbIDs(t *testing.T) {
+	db := newCreditsTestDB(t)
+	repo := NewCreditsRepository(db)
+
+	a, b := 287, 500
+	require.NoError(t, db.Create(&models.Person{Name: "Brad Pitt", TmdbID: &a}).Error)
+	require.NoError(t, db.Create(&models.Person{Name: "Tom Cruise", TmdbID: &b}).Error)
+	require.NoError(t, db.Create(&models.Person{Name: "Manual"}).Error)
+
+	got, err := repo.FindPeopleByTmdbIDs([]int{287, 999})
+	require.NoError(t, err)
+	require.Len(t, got, 1)
+	assert.Equal(t, "Brad Pitt", got[0].Name)
+
+	none, err := repo.FindPeopleByTmdbIDs(nil)
+	require.NoError(t, err)
+	assert.Empty(t, none, "empty input short-circuits")
+}

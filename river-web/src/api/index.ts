@@ -10,6 +10,7 @@ export type {
   FailedJob, FailedJobsResponse,
   CastCredit, CrewCredit, Credits,
   SetCastCredit, SetCrewCredit, SetCreditsRequest,
+  ExternalPersonResult, ExternalPersonDetail,
   Person, PersonMovieCastItem, PersonMovieCrewItem, PersonTVShowCastItem, PersonTVShowCrewItem,
   Artist, Album, Track, Audiobook, AudiobookChapter,
   RecentlyAddedItem, WatchProgress, ContinueWatchingItem, NextUpItem, ShowWatchState,

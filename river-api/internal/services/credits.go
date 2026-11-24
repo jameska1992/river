@@ -142,6 +142,22 @@ func (s *CreditsService) GetPerson(personID string) (*PersonResult, error) {
 	return res, nil
 }
 
+// LocalPersonIDsByTmdbID maps each of tmdbIDs that is already a Person in
+// the library to that person's id. IDs with no local person are absent.
+func (s *CreditsService) LocalPersonIDsByTmdbID(tmdbIDs []int) (map[int]string, error) {
+	people, err := s.repo.FindPeopleByTmdbIDs(tmdbIDs)
+	if err != nil {
+		return nil, err
+	}
+	out := make(map[int]string, len(people))
+	for _, p := range people {
+		if p.TmdbID != nil {
+			out[*p.TmdbID] = p.ID.String()
+		}
+	}
+	return out, nil
+}
+
 // SetMovieCredits replaces a movie's cast + crew. locked controls the
 // manual-edit lock: nil leaves it unchanged, true/false set it (the web
 // editor passes true on save so a later TMDB refresh won't overwrite).

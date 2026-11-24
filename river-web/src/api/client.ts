@@ -9,7 +9,7 @@ import type {
   CreateAlbumRequest, UpdateAlbumRequest, CreateTrackRequest,
   Audiobook, AudiobookChapter, CreateAudiobookRequest, UpdateAudiobookRequest,
   CreateChapterRequest,
-  Credits, SetCreditsRequest, Person,
+  Credits, SetCreditsRequest, Person, ExternalPersonResult, ExternalPersonDetail,
   SearchResult,
   Subtitle, AudioTrack,
   Collection, CollectionDetail, CollectionItem,
@@ -551,6 +551,16 @@ export class RiverClient {
 
   async getPerson(id: string): Promise<Person> {
     return this.request<Person>('GET', `/people/${id}`)
+  }
+
+  // TMDB person lookup for the credits editor (admin-only). river-api proxies
+  // to the metadata service, so the TMDB key never reaches the browser.
+  async searchTMDBPeople(q: string): Promise<ExternalPersonResult[]> {
+    return this.request<ExternalPersonResult[]>('GET', `/people/tmdb/search?${new URLSearchParams({ q })}`)
+  }
+
+  async getTMDBPerson(tmdbId: number): Promise<ExternalPersonDetail> {
+    return this.request<ExternalPersonDetail>('GET', `/people/tmdb/${tmdbId}`)
   }
 
   async search(params: { q?: string; genre?: string }): Promise<SearchResult> {

@@ -53,6 +53,7 @@ type CreditsRepository interface {
 	FindOrCreatePersonByTmdbID(tmdbID int, name, profilePath, biography string) (*models.Person, error)
 	FindOrCreatePersonByName(name, profilePath string) (*models.Person, error)
 	FindPersonByID(personID uuid.UUID) (*models.Person, error)
+	FindPeopleByTmdbIDs(tmdbIDs []int) ([]models.Person, error)
 	GetPersonFilmography(personID uuid.UUID) ([]PersonMovieCastRow, []PersonMovieCrewRow, []PersonTVShowCastRow, []PersonTVShowCrewRow, error)
 	SetMovieCredits(movieID uuid.UUID, cast []models.MovieCast, crew []models.MovieCrew, locked *bool) error
 	GetMovieCredits(movieID uuid.UUID) ([]models.MovieCast, []models.MovieCrew, error)
@@ -119,6 +120,17 @@ func (r *gormCreditsRepository) FindPersonByID(personID uuid.UUID) (*models.Pers
 		return nil, err
 	}
 	return &p, nil
+}
+
+// FindPeopleByTmdbIDs returns the people already linked to any of tmdbIDs.
+// Used to mark external search hits that are already in the library.
+func (r *gormCreditsRepository) FindPeopleByTmdbIDs(tmdbIDs []int) ([]models.Person, error) {
+	var people []models.Person
+	if len(tmdbIDs) == 0 {
+		return people, nil
+	}
+	err := r.db.Where("tmdb_id IN ?", tmdbIDs).Find(&people).Error
+	return people, err
 }
 
 func (r *gormCreditsRepository) GetPersonFilmography(personID uuid.UUID) (

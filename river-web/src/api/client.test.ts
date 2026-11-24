@@ -338,6 +338,30 @@ describe('representative endpoints (path / verb / body / transforms)', () => {
     expect(lastCall().init.method).toBe('GET')
   })
 
+  it('searchTMDBPeople → GET /people/tmdb/search with an encoded query', async () => {
+    queue(json([{ tmdb_id: 287, name: 'Brad Pitt', person_id: null }]))
+    const client = new RiverClient()
+
+    const res = await client.searchTMDBPeople('brad pitt & co')
+
+    const c = lastCall()
+    expect(c.init.method).toBe('GET')
+    const url = new URL(c.url, 'http://x')
+    expect(url.pathname).toBe('/api/people/tmdb/search')
+    expect(url.searchParams.get('q')).toBe('brad pitt & co')
+    expect(res[0].tmdb_id).toBe(287)
+  })
+
+  it('getTMDBPerson → GET /people/tmdb/:tmdbId', async () => {
+    queue(json({ tmdb_id: 287, name: 'Brad Pitt', biography: 'Bio.' }))
+    const client = new RiverClient()
+
+    const res = await client.getTMDBPerson(287)
+
+    expect(lastCall().url).toBe('/api/people/tmdb/287')
+    expect(res.biography).toBe('Bio.')
+  })
+
   it('createWebhook → POST /admin/webhooks returning the one-time secret', async () => {
     queue(json({ secret: 'whsec_x', webhook: { id: 'w1' } }))
     const client = new RiverClient()

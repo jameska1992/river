@@ -179,17 +179,24 @@ func (r *gormCreditsRepository) GetPersonFilmography(personID uuid.UUID) (
 	return mc, mw, sc, sw, nil
 }
 
+// FindOrCreatePersonByTmdbID resolves a TMDB-sourced person. The lookup is
+// Unscoped: deleteOrphanedPeople soft-deletes, and the soft-deleted row still
+// holds the unique tmdb_id, so creating a fresh row for a person who was once
+// reaped would violate idx_people_tmdb_id. Such a row is restored instead.
 func (r *gormCreditsRepository) FindOrCreatePersonByTmdbID(tmdbID int, name, profilePath, biography string) (*models.Person, error) {
 	var existing models.Person
-	if err := r.db.Where("tmdb_id = ?", tmdbID).First(&existing).Error; err == nil {
+	if err := r.db.Unscoped().Where("tmdb_id = ?", tmdbID).First(&existing).Error; err == nil {
 		needsUpdate := existing.Name != name || existing.ProfilePath != profilePath ||
-			(biography != "" && existing.Biography != biography)
+			(biography != "" && existing.Biography != biography) || existing.DeletedAt.Valid
 		if needsUpdate {
-			updates := map[string]any{"name": name, "profile_path": profilePath}
+			updates := map[string]any{"name": name, "profile_path": profilePath, "deleted_at": nil}
 			if biography != "" {
 				updates["biography"] = biography
 			}
-			r.db.Model(&existing).Updates(updates)
+			if err := r.db.Unscoped().Model(&existing).Updates(updates).Error; err != nil {
+				return nil, err
+			}
+			existing.DeletedAt = gorm.DeletedAt{}
 		}
 		return &existing, nil
 	} else if !errors.Is(err, gorm.ErrRecordNotFound) {

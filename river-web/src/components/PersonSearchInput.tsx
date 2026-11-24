@@ -35,6 +35,7 @@ export function PersonSearchInput({ value, tmdbId, onChange, onSelect, onUnlink 
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined)
   // Drops responses for a query the user has already typed past.
   const latest = useRef(0)
+  const listRef = useRef<HTMLUListElement>(null)
 
   useEffect(() => () => clearTimeout(timer.current), [])
 
@@ -110,6 +111,12 @@ export function PersonSearchInput({ value, tmdbId, onChange, onSelect, onUnlink 
   const showList = open && query.trim().length >= MIN_QUERY_LENGTH
   const activeId = showList && active >= 0 && results[active] ? `${listId}-${active}` : undefined
 
+  // The editor's rows scroll, and new rows go at the bottom — so without this
+  // the list opens below the fold and only the first hit or two shows.
+  useEffect(() => {
+    if (showList) listRef.current?.scrollIntoView?.({ block: 'nearest' })
+  }, [showList, results.length])
+
   return (
     <div className={styles.wrap}>
       <div className={styles.inputRow}>
@@ -151,7 +158,7 @@ export function PersonSearchInput({ value, tmdbId, onChange, onSelect, onUnlink 
       </div>
 
       {showList && (
-        <ul className={styles.list} id={listId} role="listbox" aria-label="TMDB people">
+        <ul className={styles.list} ref={listRef} id={listId} role="listbox" aria-label="TMDB people">
           {loading && results.length === 0 && <li className={styles.status}>Searching TMDB…</li>}
           {error && <li className={`${styles.status} ${styles.error}`}>{error}</li>}
           {!loading && !error && results.length === 0 && (
@@ -166,7 +173,9 @@ export function PersonSearchInput({ value, tmdbId, onChange, onSelect, onUnlink 
               className={`${styles.option} ${i === active ? styles.optionActive : ''}`}
               // mousedown, not click: fires before the input's blur closes the list.
               onMouseDown={e => { e.preventDefault(); choose(p) }}
-              onMouseEnter={() => setActive(i)}
+              // mousemove, not mouseenter: the list opening (or scrolling into
+              // view) under a resting pointer must not pre-pick a hit for Enter.
+              onMouseMove={() => { if (active !== i) setActive(i) }}
             >
               <span className={styles.thumb}>
                 {imageUrl(p.profile_path) ? <img src={imageUrl(p.profile_path)} alt="" /> : <RiUserLine size={16} />}

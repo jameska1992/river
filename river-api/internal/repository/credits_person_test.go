@@ -71,3 +71,25 @@ func TestFindPeopleByTmdbIDs(t *testing.T) {
 	require.NoError(t, err)
 	assert.Empty(t, none, "empty input short-circuits")
 }
+
+// A reaped (soft-deleted) TMDB person still holds its unique tmdb_id, so
+// re-adding them must restore that row rather than insert a duplicate.
+func TestFindOrCreatePersonByTmdbID_RestoresSoftDeletedPerson(t *testing.T) {
+	db := newCreditsTestDB(t)
+	repo := NewCreditsRepository(db)
+
+	p1, err := repo.FindOrCreatePersonByTmdbID(287, "Brad Pitt", "/old.jpg", "")
+	require.NoError(t, err)
+	require.NoError(t, db.Delete(&models.Person{}, "id = ?", p1.ID).Error)
+
+	p2, err := repo.FindOrCreatePersonByTmdbID(287, "Brad Pitt", "/new.jpg", "Bio.")
+	require.NoError(t, err)
+	assert.Equal(t, p1.ID, p2.ID, "the soft-deleted row is reused")
+	assert.False(t, p2.DeletedAt.Valid)
+
+	var got models.Person
+	require.NoError(t, db.First(&got, "id = ?", p1.ID).Error, "visible to scoped queries again")
+	assert.Equal(t, "/new.jpg", got.ProfilePath)
+	assert.Equal(t, "Bio.", got.Biography)
+	assert.Equal(t, int64(1), personCount(t, db))
+}

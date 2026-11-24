@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react'
 import { Routes, Route, Navigate, Outlet } from 'react-router-dom'
 import { HeroBanner } from './components/HeroBanner'
 import { ContinueWatching as ContinueWatchingSection } from './components/ContinueWatching'
@@ -51,6 +52,12 @@ import { TVShowsProvider } from './context/TVShowsContext'
 import { MusicProvider } from './context/MusicContext'
 import { AudiobooksProvider } from './context/AudiobooksContext'
 import { WatchlistProvider } from './context/WatchlistContext'
+
+// Prototype playback engine (Mediabunny/WebCodecs). Lazy so Mediabunny is
+// split into its own chunk and never loaded by the production pages.
+const MediabunnyPlayerPage = lazy(() =>
+  import('./pages/debug/MediabunnyPlayerPage').then(m => ({ default: m.MediabunnyPlayerPage })),
+)
 
 // Wraps all media contexts around an <Outlet> so both Layout and
 // bare routes (e.g. the watch page) share the same provider tree.
@@ -138,6 +145,8 @@ export default function App() {
                 <Route path="api-tokens" element={<ApiTokensPage />} />
                 <Route path="settings" element={<AdminSettingsPage />} />
               </Route>
+              {/* Debug only, not linked from the UI. */}
+              <Route path="/debug/mediabunny-player" element={<Suspense><MediabunnyPlayerPage /></Suspense>} />
             </Route>
 
             <Route path="*" element={<Navigate to="/" replace />} />

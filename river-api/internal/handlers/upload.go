@@ -61,11 +61,18 @@ func (h *UploadHandler) resolveUpload(fields map[string]string, fileName string)
 	if err != nil {
 		return nil, http.StatusBadRequest, "library not found"
 	}
-	var paths []string
-	if err := json.Unmarshal([]byte(lib.Paths), &paths); err != nil || len(paths) == 0 {
+	paths, err := lib.PathList()
+	if err != nil || len(paths) == 0 {
 		return nil, http.StatusBadRequest, "library has no configured paths"
 	}
 	libraryPath := paths[0]
+	// The library root must already exist in this container. Creating it
+	// here would write the upload into the container's own filesystem when
+	// the path isn't bind-mounted, where river-scan can't see it and it's
+	// lost on recreate (#252).
+	if fi, err := os.Stat(libraryPath); err != nil || !fi.IsDir() {
+		return nil, http.StatusInternalServerError, fmt.Sprintf("library path %q does not exist on the server; check river-api's media volume mounts", libraryPath)
+	}
 
 	r := &resolvedUpload{libType: string(lib.Type), libraryID: libraryID}
 	ext := filepath.Ext(fileName)

@@ -1,5 +1,7 @@
 package models
 
+import "encoding/json"
+
 type LibraryType string
 
 const (
@@ -28,4 +30,32 @@ type Library struct {
 	// every path's effective flag until an admin re-saves the library.
 	// Existing rows default to false via GORM auto-migrate.
 	PreTranscoded bool `gorm:"not null;default:false" json:"pre_transcoded"`
+}
+
+// PathList returns the library's configured paths in order. It accepts both
+// the current object form ({"path":"…","pre_transcoded":bool}) and the legacy
+// bare-string form ("…"), mirroring river-scan's PathConfig parsing, and skips
+// empty entries.
+func (l *Library) PathList() ([]string, error) {
+	var raw []json.RawMessage
+	if err := json.Unmarshal([]byte(l.Paths), &raw); err != nil {
+		return nil, err
+	}
+	paths := make([]string, 0, len(raw))
+	for _, el := range raw {
+		var s string
+		if err := json.Unmarshal(el, &s); err != nil {
+			var obj struct {
+				Path string `json:"path"`
+			}
+			if err := json.Unmarshal(el, &obj); err != nil {
+				return nil, err
+			}
+			s = obj.Path
+		}
+		if s != "" {
+			paths = append(paths, s)
+		}
+	}
+	return paths, nil
 }

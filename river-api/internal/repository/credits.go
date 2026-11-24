@@ -53,6 +53,7 @@ type CreditsRepository interface {
 	FindOrCreatePersonByTmdbID(tmdbID int, name, profilePath, biography string) (*models.Person, error)
 	FindOrCreatePersonByName(name, profilePath string) (*models.Person, error)
 	FindPersonByID(personID uuid.UUID) (*models.Person, error)
+	FindPeopleByTmdbIDs(tmdbIDs []int) ([]models.Person, error)
 	GetPersonFilmography(personID uuid.UUID) ([]PersonMovieCastRow, []PersonMovieCrewRow, []PersonTVShowCastRow, []PersonTVShowCrewRow, error)
 	SetMovieCredits(movieID uuid.UUID, cast []models.MovieCast, crew []models.MovieCrew, locked *bool) error
 	GetMovieCredits(movieID uuid.UUID) ([]models.MovieCast, []models.MovieCrew, error)
@@ -121,6 +122,17 @@ func (r *gormCreditsRepository) FindPersonByID(personID uuid.UUID) (*models.Pers
 	return &p, nil
 }
 
+// FindPeopleByTmdbIDs returns the people already linked to any of tmdbIDs.
+// Used to mark external search hits that are already in the library.
+func (r *gormCreditsRepository) FindPeopleByTmdbIDs(tmdbIDs []int) ([]models.Person, error) {
+	var people []models.Person
+	if len(tmdbIDs) == 0 {
+		return people, nil
+	}
+	err := r.db.Where("tmdb_id IN ?", tmdbIDs).Find(&people).Error
+	return people, err
+}
+
 func (r *gormCreditsRepository) GetPersonFilmography(personID uuid.UUID) (
 	[]PersonMovieCastRow, []PersonMovieCrewRow, []PersonTVShowCastRow, []PersonTVShowCrewRow, error,
 ) {
@@ -167,17 +179,24 @@ func (r *gormCreditsRepository) GetPersonFilmography(personID uuid.UUID) (
 	return mc, mw, sc, sw, nil
 }
 
+// FindOrCreatePersonByTmdbID resolves a TMDB-sourced person. The lookup is
+// Unscoped: deleteOrphanedPeople soft-deletes, and the soft-deleted row still
+// holds the unique tmdb_id, so creating a fresh row for a person who was once
+// reaped would violate idx_people_tmdb_id. Such a row is restored instead.
 func (r *gormCreditsRepository) FindOrCreatePersonByTmdbID(tmdbID int, name, profilePath, biography string) (*models.Person, error) {
 	var existing models.Person
-	if err := r.db.Where("tmdb_id = ?", tmdbID).First(&existing).Error; err == nil {
+	if err := r.db.Unscoped().Where("tmdb_id = ?", tmdbID).First(&existing).Error; err == nil {
 		needsUpdate := existing.Name != name || existing.ProfilePath != profilePath ||
-			(biography != "" && existing.Biography != biography)
+			(biography != "" && existing.Biography != biography) || existing.DeletedAt.Valid
 		if needsUpdate {
-			updates := map[string]any{"name": name, "profile_path": profilePath}
+			updates := map[string]any{"name": name, "profile_path": profilePath, "deleted_at": nil}
 			if biography != "" {
 				updates["biography"] = biography
 			}
-			r.db.Model(&existing).Updates(updates)
+			if err := r.db.Unscoped().Model(&existing).Updates(updates).Error; err != nil {
+				return nil, err
+			}
+			existing.DeletedAt = gorm.DeletedAt{}
 		}
 		return &existing, nil
 	} else if !errors.Is(err, gorm.ErrRecordNotFound) {

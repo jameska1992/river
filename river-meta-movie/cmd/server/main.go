@@ -58,7 +58,8 @@ func main() {
 	log.Printf("INFO authenticated with river-api at %s", cfg.RiverAPIURL)
 	api.Log("info", "started")
 
-	tmdbClient := tmdb.New(cachedTMDBKey(api.GetTMDBKey, 5*time.Minute), cfg.TMDBImageBase)
+	tmdbKey := cachedTMDBKey(api.GetTMDBKey, 5*time.Minute)
+	tmdbClient := tmdb.New(tmdbKey, cfg.TMDBImageBase)
 
 	// Use one connection for initial exchange/queue setup, then close it.
 	setupCons, err := consumer.New(cfg.RabbitMQURL, cfg.RabbitMQExchange, cfg.MaxRetries, cfg.RetryBackoff, api.ReportFailedJob)
@@ -104,6 +105,8 @@ func main() {
 			}
 			w.WriteHeader(http.StatusAccepted)
 		})
+		people := cachedPeople{tmdb.NewPeopleSearchCache(tmdbClient.SearchPeople, 10*time.Minute, 500), tmdbClient}
+		registerPeopleRoutes(mux, people, tmdbKey)
 		log.Printf("INFO HTTP trigger server on :%s", cfg.Port)
 		if err := http.ListenAndServe(":"+cfg.Port, mux); err != nil {
 			log.Printf("ERROR HTTP server: %v", err)

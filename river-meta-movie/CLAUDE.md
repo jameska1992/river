@@ -38,6 +38,13 @@ Both river-trans and river-meta-movie receive every movie event independently. B
 - `internal/tmdb` — TMDB API v3 client; searches by title+year, falls back to title-only if no results, fetches full details. The API key is supplied by a provider function (`keyFn`) rather than a static value — `main.go` wires a cached fetch of the key from river-api's settings store (see `cachedTMDBKey`), so the key lives in the DB, not the environment.
 - `internal/processor` — ties everything together: parses `"Title (YYYY)"` from `DirectoryName`, matches the API record by title, fetches TMDB metadata, marshals genres as a JSON string, and calls `UpdateMovie`
 
+### HTTP server
+
+Alongside the consumers, `main.go` runs a small HTTP server on `PORT` that river-api calls (via `RIVER_META_MOVIE_URL`):
+
+- `POST /refresh/{id}` — on-demand metadata refresh (optional `{"imdb_id"}` body), used by identify/refresh-metadata.
+- `GET /people/search?q=` / `GET /people/{tmdbId}` — TMDB person search and detail for the credits editor's picker (#254; `cmd/server/people.go`). TMDB's person namespace is shared, so these serve the TV editor too — river-meta-tv has no equivalent. Searches are cached in memory (`tmdb.PeopleSearchCache`, 10 min TTL). A missing TMDB key is a 503, a TMDB failure a 502.
+
 ### Key conventions (shared with river-trans/river-scan)
 
 - **Worker model**: `main.go` spins up `WORKER_COUNT` goroutines, each with its own AMQP connection. RabbitMQ round-robins messages across them.

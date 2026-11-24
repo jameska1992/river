@@ -159,6 +159,7 @@ func main() {
 		handlers.NewProgressWSHandler(progressSvc),
 		handlers.NewRecentlyAddedHandler(movieSvc, tvShowSvc),
 		handlers.NewCreditsHandler(creditsSvc),
+		handlers.NewPeopleSearchHandler(cfg.RiverMetaMovieURL, creditsSvc),
 		handlers.NewSearchHandler(searchSvc),
 		handlers.NewSubtitleHandler(subtitleSvc),
 		handlers.NewSubtitleSearchHandler(subtitleSearchSvc),

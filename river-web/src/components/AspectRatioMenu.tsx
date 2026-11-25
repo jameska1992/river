@@ -17,6 +17,9 @@ interface Props {
   // Record<string, string> to match Vite's CSSModuleClasses import shape;
   // we look up keys by name and tolerate undefined for any that are missing.
   styles: Record<string, string>
+  // Extra class for the root, e.g. the page's .secondary so the menu moves
+  // into the narrow-screen overflow row (#251).
+  className?: string
 }
 
 const FIT_LABELS: Record<FitMode, string> = {
@@ -38,7 +41,7 @@ export function AspectRatioMenu(p: Props) {
   const atMax = p.zoom >= p.maxZoom - 0.001
 
   return (
-    <div className={p.styles.subMenu}>
+    <div className={p.className ? `${p.styles.subMenu} ${p.className}` : p.styles.subMenu}>
       <button
         className={`btn btn-icon ${p.styles.controlBtn}`}
         onClick={e => { e.stopPropagation(); p.onToggle() }}

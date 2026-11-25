@@ -12,6 +12,7 @@ import {
   RiRestartLine,
   RiDownloadLine,
   RiTimeLine,
+  RiMoreFill,
 } from 'react-icons/ri'
 import { useMovies } from '../context/MoviesContext'
 import { useAuth } from '../context/AuthContext'
@@ -115,6 +116,8 @@ export function MovieWatchPage() {
   const [audioMenuOpen, setAudioMenuOpen] = useState(false)
   const [activeAudioIdx, setActiveAudioIdx] = useState(0)
   const [aspectMenuOpen, setAspectMenuOpen] = useState(false)
+  // Narrow screens only: toggles the row of secondary controls (#251).
+  const [moreOpen, setMoreOpen] = useState(false)
   const aspect = useAspectRatio()
   const [subStyleMenuOpen, setSubStyleMenuOpen] = useState(false)
   const subStyle = useSubtitleStyle()
@@ -540,10 +543,10 @@ export function MovieWatchPage() {
           />
         </div>
 
-        <div className={styles.buttonRow}>
+        <div className={`${styles.buttonRow} ${moreOpen ? styles.moreOpen : ''}`}>
           <div className={styles.left}>
             <button
-              className={`btn btn-icon ${styles.controlBtn}`}
+              className={`btn btn-icon ${styles.controlBtn} ${styles.secondary}`}
               onClick={restart}
               aria-label="Restart from beginning"
               title="Restart from beginning"
@@ -582,12 +585,13 @@ export function MovieWatchPage() {
               />
             </div>
             <span className={`label-sm ${styles.timeDisplay}`}>
-              {formatTime(currentTime)} / {formatTime(duration)}
+              {formatTime(currentTime)}<span className={styles.timeTotal}> / {formatTime(duration)}</span>
             </span>
           </div>
           <div className={styles.right}>
+            <span className={styles.spacer} aria-hidden="true" />
             {audioTracks.length > 0 && (
-              <div className={styles.subMenu}>
+              <div className={`${styles.subMenu} ${styles.secondary}`}>
                 <button
                   className={`btn btn-icon ${styles.controlBtn}`}
                   onClick={e => { e.stopPropagation(); setAudioMenuOpen(o => !o) }}
@@ -642,7 +646,7 @@ export function MovieWatchPage() {
               </div>
             )}
             {activeSubtitleId && (
-              <div className={styles.subMenu}>
+              <div className={`${styles.subMenu} ${styles.secondary}`}>
                 <button
                   className={`btn btn-icon ${styles.controlBtn}`}
                   onClick={e => { e.stopPropagation(); setOffsetMenuOpen(o => !o) }}
@@ -685,6 +689,7 @@ export function MovieWatchPage() {
                 onSetBgOpacity={subStyle.setBgOpacity}
                 onReset={subStyle.reset}
                 styles={styles}
+                className={styles.secondary}
               />
             )}
             <AspectRatioMenu
@@ -699,10 +704,11 @@ export function MovieWatchPage() {
               onZoomOut={aspect.zoomOut}
               onReset={() => { aspect.reset(); setAspectMenuOpen(false) }}
               styles={styles}
+              className={styles.secondary}
             />
             {document.pictureInPictureEnabled && (
               <button
-                className={`btn btn-icon ${styles.controlBtn} ${pip ? styles.controlBtnActive : ''}`}
+                className={`btn btn-icon ${styles.controlBtn} ${styles.secondary} ${pip ? styles.controlBtnActive : ''}`}
                 onClick={e => { e.stopPropagation(); togglePip() }}
                 aria-label="Picture in picture"
               >
@@ -710,12 +716,21 @@ export function MovieWatchPage() {
               </button>
             )}
             {castReady && (
-              <CastButton className={styles.castBtn} />
+              <CastButton className={`${styles.castBtn} ${styles.secondary}`} />
             )}
+            <button
+              className={`btn btn-icon ${styles.controlBtn} ${styles.moreBtn} ${moreOpen ? styles.controlBtnActive : ''}`}
+              onClick={() => setMoreOpen(o => !o)}
+              aria-label="More controls"
+              aria-expanded={moreOpen}
+            >
+              <RiMoreFill size={20} />
+            </button>
             <button className={`btn btn-icon ${styles.controlBtn}`} onClick={toggleFullscreen} aria-label="Fullscreen">
               {fullscreen ? <RiFullscreenExitLine size={20} /> : <RiFullscreenLine size={20} />}
             </button>
           </div>
+          <span className={styles.rowBreak} aria-hidden="true" />
         </div>
       </div>
     </div>

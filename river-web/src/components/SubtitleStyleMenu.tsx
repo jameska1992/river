@@ -15,6 +15,9 @@ interface Props {
   // submenu styling as the audio/subtitle/offset popovers. Typed loosely to
   // match Vite's CSSModuleClasses import shape (mirrors AspectRatioMenu).
   styles: Record<string, string>
+  // Extra class for the root, e.g. the page's .secondary so the menu moves
+  // into the narrow-screen overflow row (#251).
+  className?: string
 }
 
 // SubtitleStyleMenu is the player popover for caption *appearance* — text
@@ -24,7 +27,7 @@ interface Props {
 // properties. Shared by MovieWatchPage and EpisodeWatchPage.
 export function SubtitleStyleMenu(p: Props) {
   return (
-    <div className={p.styles.subMenu}>
+    <div className={p.className ? `${p.styles.subMenu} ${p.className}` : p.styles.subMenu}>
       <button
         className={`btn btn-icon ${p.styles.controlBtn}`}
         onClick={e => { e.stopPropagation(); p.onToggle() }}

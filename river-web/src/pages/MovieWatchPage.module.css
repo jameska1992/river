@@ -412,3 +412,91 @@
   pointer-events: none;
   z-index: 2;
 }
+
+/* ── Narrow screens (#251) ────────────────────────────── */
+
+/* With every control showing, the episode page's bar needs ~960px, so below
+   that (phones in either orientation, portrait tablets) the controls marked
+   .secondary move into a row above the main one that the
+   ⋯ button (.moreBtn) shows and hides. .left / .right become display: contents
+   so every control is a flex item of .buttonRow: .secondary items get
+   order: -1 and .rowBreak (last in the DOM, also order: -1) pushes the rest
+   onto their own line. .spacer keeps the right-hand group on the right. */
+
+.moreBtn,
+.spacer,
+.rowBreak {
+  display: none;
+}
+
+@media (max-width: 959px) {
+  .controls {
+    padding-inline: var(--space-2);
+  }
+
+  .buttonRow {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    gap: var(--space-1) 2px;
+  }
+
+  .left,
+  .right {
+    display: contents;
+  }
+
+  .controlBtn {
+    padding: 6px;
+  }
+
+  .buttonRow .secondary {
+    display: none;
+    order: -1;
+  }
+
+  .buttonRow.moreOpen .secondary {
+    display: flex;
+  }
+
+  .buttonRow .moreBtn {
+    display: inline-flex;
+  }
+
+  .spacer {
+    display: block;
+    flex: 1;
+  }
+
+  .buttonRow.moreOpen .rowBreak {
+    display: block;
+    flex-basis: 100%;
+    height: 0;
+    order: -1;
+  }
+
+  /* Anchor popovers to .controls (already positioned) so they stay inside the
+     player instead of hanging off whichever button opened them. */
+  .subMenu {
+    position: static;
+  }
+
+  .subMenuList {
+    right: var(--space-2);
+    max-width: calc(100% - 2 * var(--space-2));
+  }
+
+  /* The open row makes the bar 48px taller; lift what sits just above it. */
+  .container:has(.controls.visible .moreOpen) .subtitleOverlay {
+    bottom: 138px;
+  }
+
+  .container:has(.controls.visible .moreOpen) .upNextAboveControls {
+    bottom: 148px;
+  }
+}
+
+@media (max-width: 399px) {
+  .timeTotal {
+    display: none;
+  }
+}
